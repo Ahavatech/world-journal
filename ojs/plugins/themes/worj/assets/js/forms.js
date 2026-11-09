@@ -39,4 +39,36 @@
     reviewerGroup.addEventListener('click', toggle);
     toggle();
   }
+
+  // Server-side form errors: put focus on the message so it is announced, and
+  // tie it to the fields it is about (aria-invalid + aria-describedby). Without
+  // JavaScript the message is still on the page, in reading order, as text.
+  var box = document.getElementById('formErrors') || document.querySelector('form .pkp_form_error');
+  if (box) {
+    if (!box.id) { box.id = 'worj-form-error'; }
+    box.setAttribute('role', 'alert');
+    box.setAttribute('tabindex', '-1');
+    var describe = function (field) {
+      if (!field) { return; }
+      field.setAttribute('aria-invalid', 'true');
+      var ids = (field.getAttribute('aria-describedby') || '').split(' ').filter(Boolean);
+      if (ids.indexOf(box.id) === -1) { ids.push(box.id); }
+      field.setAttribute('aria-describedby', ids.join(' '));
+    };
+    var links = box.querySelectorAll('a[href^="#"]');
+    if (links.length) {
+      // list of errors: each link points at its field
+      Array.prototype.forEach.call(links, function (link) {
+        var name = link.getAttribute('href').slice(1);
+        describe(document.getElementById(name) || document.querySelector('[name="' + name + '"]'));
+      });
+    } else {
+      // a single message (for example a failed login) is about the credential fields
+      var form = box.closest('form');
+      if (form) {
+        Array.prototype.forEach.call(form.querySelectorAll('input[name=username], input[name=password]'), describe);
+      }
+    }
+    box.focus();
+  }
 }());
