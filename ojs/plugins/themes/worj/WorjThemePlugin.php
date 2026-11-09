@@ -41,6 +41,14 @@ class WorjThemePlugin extends \PKP\plugins\ThemePlugin
 
         $this->addScript('worj-nav', 'assets/js/nav.js');
 
+        // Parent options that do nothing here: this theme replaces the parent's
+        // typeface and colour styles and its homepage. Controls that do nothing
+        // mislead whoever administers the site. displayStats stays: the parent's
+        // article template still reads it.
+        foreach (['typography', 'baseColour', 'showDescriptionInJournalIndex', 'useHomepageImageAsHeader'] as $option) {
+            $this->removeOption($option);
+        }
+
         // Off by default: the Awards page is built in a later phase, and a card
         // that links to a missing page must not ship. Turn on once /awards exists.
         $this->addOption('showAwardsCard', 'FieldOptions', [
