@@ -101,7 +101,8 @@
   text-decoration: none;
 }
 
-.obj_galley_link:hover {
+.obj_galley_link:hover,
+.obj_galley_link:focus {
   background: var(--worj-surface);
   color: var(--worj-primary-dark);
 }

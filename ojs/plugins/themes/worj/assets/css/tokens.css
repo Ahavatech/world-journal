@@ -2,6 +2,7 @@
    Brand colours were sampled from worj.jpeg (see docs/BRAND.md).
    Contrast on white, computed (scripts/check-contrast.py):
    primary 14.4:1, text-muted 7.5:1, accent-text 5.3:1, accent 3.0:1.
+   --worj-focus holds >= 3.6:1 against white, panel grey, navy and dark navy.
    --worj-accent (gold) is for fills, rules and LARGE text only. Use
    --worj-accent-text when gold must be small text. */
 :root {
@@ -17,7 +18,7 @@
   --worj-border: #c3ccda;
   --worj-border-strong: #6b7a90;
   --worj-on-primary: #fff;
-  --worj-focus: #0b5fff;
+  --worj-focus: #2f7bf5;
   --worj-error: #a4262c;
   --worj-banner-bg: #fff3cd;
   --worj-banner-text: #5c4400;
