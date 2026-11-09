@@ -22,10 +22,15 @@
 
 	{* Hero *}
 	<section class="worj-hero" aria-labelledby="worj-hero-title">
-		<img class="worj-hero__logo" src="{$baseUrl}/plugins/themes/worj/assets/img/logo-lockup.jpg" width="900" height="415" alt="">
+		{* Full lockup (with the tagline baked into the client's logo file) on wide
+		   screens; the header crop without the tagline below 48em, where the
+		   tagline would be illegible. Decorative: the h1 and the header logo name the journal. *}
+		<picture>
+			<source media="(max-width: 47.99em)" srcset="{$baseUrl}/plugins/themes/worj/assets/img/logo-header.jpg" width="760" height="318">
+			<img class="worj-hero__logo" src="{$baseUrl}/plugins/themes/worj/assets/img/logo-lockup.jpg" width="900" height="415" alt="">
+		</picture>
 		<div class="worj-hero__text">
 			<p class="worj-hero__name" id="worj-hero-title">{$currentJournal->getLocalizedName()|escape}</p>
-			<p class="worj-hero__tagline"><span class="worj-placeholder">[PLACEHOLDER: tagline]</span></p>
 			<p class="worj-hero__actions">
 				<a class="worj-button worj-button--primary" href="{url router=PKP\core\PKPApplication::ROUTE_PAGE page="about" op="submissions"}">{translate key="plugins.themes.worj.makeSubmission"}</a>
 				<a class="worj-button" href="{url router=PKP\core\PKPApplication::ROUTE_PAGE page="issue" op="current"}">{translate key="plugins.themes.worj.currentIssue"}</a>

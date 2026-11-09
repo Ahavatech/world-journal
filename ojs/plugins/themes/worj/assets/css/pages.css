@@ -19,22 +19,22 @@
 }
 
 .worj-hero__logo {
+  /* the JPEG has a white background; multiply lets it take the band colour
+     without cutting the image out (the client's SVG or transparent PNG is
+     still an open item in docs/BRAND.md) */
+  mix-blend-mode: multiply;
   width: 100%;
   max-width: 24rem;
   height: auto;
 }
 
 .worj-hero__name {
-  margin: 0 0 var(--worj-space-2);
+  margin: 0 0 var(--worj-space-3);
   color: var(--worj-primary);
   font-family: var(--worj-font-serif);
   font-size: var(--worj-text-h1);
   font-weight: 700;
   line-height: 1.2;
-}
-
-.worj-hero__tagline {
-  margin: 0 0 var(--worj-space-3);
 }
 
 .worj-hero__actions {
