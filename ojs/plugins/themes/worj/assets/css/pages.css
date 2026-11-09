@@ -111,6 +111,12 @@
   font-size: var(--worj-text-small);
 }
 
+.cmp_breadcrumbs a {
+  display: inline-block;
+  min-height: 1.75rem;
+  padding-block: 0.2rem;
+}
+
 .cmp_breadcrumbs .separator {
   margin-left: var(--worj-space-2);
   color: var(--worj-text-muted);
