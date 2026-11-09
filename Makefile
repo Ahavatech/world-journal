@@ -1,12 +1,18 @@
 SHELL := /bin/bash
 THEME := ojs/plugins/themes/worj
 
-.PHONY: setup lint eval check-placeholders
+.PHONY: setup lint eval check-placeholders sandbox-up sandbox-down
 
 setup:
 	scripts/fetch-ojs.sh
 	mkdir -p ojs-core/plugins/themes
 	ln -sfn "$(CURDIR)/$(THEME)" ojs-core/plugins/themes/worj
+
+sandbox-up: setup
+	scripts/sandbox-ojs.sh up
+
+sandbox-down:
+	scripts/sandbox-ojs.sh down
 
 lint:
 	shellcheck -x scripts/*.sh
