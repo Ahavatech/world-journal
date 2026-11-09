@@ -40,6 +40,20 @@ class WorjThemePlugin extends \PKP\plugins\ThemePlugin
         $this->removeStyle('swiper');
 
         $this->addScript('worj-nav', 'assets/js/nav.js');
+
+        // Off by default: the Awards page is built in a later phase, and a card
+        // that links to a missing page must not ship. Turn on once /awards exists.
+        $this->addOption('showAwardsCard', 'FieldOptions', [
+            'label' => __('plugins.themes.worj.option.showAwardsCard.label'),
+            'description' => __('plugins.themes.worj.option.showAwardsCard.description'),
+            'options' => [
+                [
+                    'value' => true,
+                    'label' => __('plugins.themes.worj.option.showAwardsCard.option'),
+                ],
+            ],
+            'default' => false,
+        ]);
     }
 
     /**

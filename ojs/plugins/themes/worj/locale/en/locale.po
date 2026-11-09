@@ -38,3 +38,12 @@ msgstr "Research Awards"
 
 msgid "plugins.themes.worj.awardsLink"
 msgstr "About the awards"
+
+msgid "plugins.themes.worj.option.showAwardsCard.label"
+msgstr "Research Awards card"
+
+msgid "plugins.themes.worj.option.showAwardsCard.description"
+msgstr "Shows a Research Awards call-out on the homepage. Turn this on only after the Awards page exists at /awards."
+
+msgid "plugins.themes.worj.option.showAwardsCard.option"
+msgstr "Show the Research Awards card on the homepage."

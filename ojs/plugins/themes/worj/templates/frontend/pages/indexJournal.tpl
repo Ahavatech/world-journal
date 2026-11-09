@@ -65,12 +65,15 @@
 		</section>
 	{/if}
 
-	{* Research Awards call-out. The Awards page itself is Phase 3.4 content. *}
-	<aside class="worj-card worj-awards" aria-labelledby="worj-awards-title">
-		<h2 id="worj-awards-title">{translate key="plugins.themes.worj.awardsTitle"}</h2>
-		<p><span class="worj-placeholder">[PLACEHOLDER: awards call-out text]</span></p>
-		<p><a class="worj-button" href="{url router=PKP\core\PKPApplication::ROUTE_PAGE page="awards"}">{translate key="plugins.themes.worj.awardsLink"}</a></p>
-	</aside>
+	{* Research Awards call-out. Theme option showAwardsCard, off by default: the
+	   Awards page is Phase 3.4 content and the card must not link to a 404. *}
+	{if $activeTheme && $activeTheme->getOption('showAwardsCard')}
+		<aside class="worj-card worj-awards" aria-labelledby="worj-awards-title">
+			<h2 id="worj-awards-title">{translate key="plugins.themes.worj.awardsTitle"}</h2>
+			<p><span class="worj-placeholder">[PLACEHOLDER: awards call-out text]</span></p>
+			<p><a class="worj-button" href="{url router=PKP\core\PKPApplication::ROUTE_PAGE page="awards"}">{translate key="plugins.themes.worj.awardsLink"}</a></p>
+		</aside>
+	{/if}
 
 	{* Current issue preview *}
 	{if $issue}
