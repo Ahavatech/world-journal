@@ -1,0 +1,31 @@
+{
+  "note": "All records are fake. Delete them from OJS before launch; fixtures never ship to production.",
+  "records": [
+    {
+      "type": "issue",
+      "title": "Sample Issue (not a real publication)",
+      "sample": true
+    },
+    {
+      "type": "article",
+      "title": "Sample Article 1",
+      "author": "Placeholder Author",
+      "pdf": "ojs/fixtures/pdfs/sample-article-1.pdf",
+      "sample": true
+    },
+    {
+      "type": "article",
+      "title": "Sample Article 2",
+      "author": "Placeholder Author",
+      "pdf": "ojs/fixtures/pdfs/sample-article-2.pdf",
+      "sample": true
+    },
+    {
+      "type": "article",
+      "title": "Sample Article 3",
+      "author": "Placeholder Author",
+      "pdf": "ojs/fixtures/pdfs/sample-article-3.pdf",
+      "sample": true
+    }
+  ]
+}
