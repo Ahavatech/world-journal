@@ -8,7 +8,7 @@ Task 0.1 must probe the sandbox (php, composer, node, mariadb, docker, chromium 
 ## Repo layout
 ```
 /
-  logo.*                         provided by client (root, immutable)
+  worj.jpeg                       provided by client (root, immutable)
   CLAUDE.md
   Makefile
   .env.example
