@@ -23,8 +23,8 @@ A cleared session resumes from this file and the git history, not from the chat.
 | 2.2 tokens, fonts, logo variants | done |
 | 2.3 header, CSS-only nav, footer | done |
 | 2.4 homepage | done |
-| 2.5 about page and sidebar (zero blocks and some blocks) | next |
-| 2.6 article, issue, archive (fix the 7 px article overflow at 320 and 768; long DOIs, URLs, titles) | to do |
+| 2.5 about page and sidebar (zero blocks, blocks, configured-but-empty) | done |
+| 2.6 article, issue, archive. Known overflow: article page 7 px at 320 and 768; issue archive 7 px at 768. Check long DOIs, URLs, titles at 320 | next |
 | 2.7 accessibility pass | to do |
 | 2.8 evaluator | to do |
 | PR | one PR at the end of Phase 2 |
@@ -43,6 +43,10 @@ node scripts/sandbox-api.js GET /worj/api/v1/contexts/1/theme
 The sandbox needs the `world-journal` environment network allowlist (`pkp.sfu.ca`, `docs.pkp.sfu.ca`). Announcements and the description in the sandbox journal are throwaway placeholders created through the API, not committed.
 
 ## Things learned (do not rediscover)
+
+- Sidebar states are set with `SANDBOX_SIDEBAR=blocks|none|empty node scripts/sandbox-seed.js`. All three are verified: no empty aside and no empty grid column when blocks render nothing (`:has(> .pkp_structure_sidebar)` for the grid, `{if $sidebarCode|trim}` for the aside).
+- A fresh journal does not enable the Make a Submission block plugin (the sandbox script enables it). Task 4.1 must include enabling it.
+- The About page has no photo and uses no stock image: text at a 46rem measure, with the sidebar beside it when blocks exist.
 
 - The parent sets `html { font-size: 14px }`; `base.css` resets it to 100%.
 - The parent styles `.pkp_navigation_user` and `.pkp_navigation_primary` heavily. The worj header passes its own `ulClass` to `load_menu` to avoid that.
