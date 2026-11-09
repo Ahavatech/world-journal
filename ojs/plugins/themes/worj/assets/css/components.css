@@ -114,3 +114,69 @@
 .worj-issue-preview .obj_issue_toc .cover {
   display: none;
 }
+
+/* sidebar blocks (they come from block plugins configured in OJS; none is
+   assumed to exist, and no Indexing block is styled or special-cased) */
+.pkp_block {
+  margin: 0 0 var(--worj-space-4);
+  padding: var(--worj-space-3);
+  background: var(--worj-surface);
+  border-radius: var(--worj-radius);
+}
+
+.pkp_block:last-child {
+  margin-bottom: 0;
+}
+
+.pkp_block .title {
+  display: block;
+  margin: 0 0 var(--worj-space-2);
+  padding: 0 0 var(--worj-space-1);
+  border-bottom: 3px solid var(--worj-accent);
+  color: var(--worj-primary);
+  font-family: var(--worj-font-serif);
+  font-size: var(--worj-text-h3);
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.pkp_block ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pkp_block li {
+  margin: 0;
+  padding: var(--worj-space-1) 0;
+}
+
+.pkp_block li + li {
+  border-top: 1px solid var(--worj-border);
+}
+
+/* "Make a Submission" block: the same button as the homepage */
+.pkp_structure_sidebar .pkp_block .block_make_submission_link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.5rem var(--worj-space-3);
+  border: 2px solid var(--worj-primary);
+  border-radius: var(--worj-radius);
+  background: var(--worj-primary);
+  color: var(--worj-on-primary);
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+}
+
+.pkp_structure_sidebar .pkp_block .block_make_submission_link:hover {
+  background: var(--worj-primary-dark);
+  color: var(--worj-on-primary);
+}
+
+.pkp_block:has(.block_make_submission_link) {
+  padding: 0;
+  background: none;
+}

@@ -82,3 +82,40 @@
     grid-template-columns: 12rem minmax(0, 1fr);
   }
 }
+
+/* About and other text pages: a readable line length, with or without a sidebar */
+.page_about,
+.page_information,
+.page_contact,
+.page_privacy,
+.page_announcement,
+.page_announcements,
+.page_editorial_masthead {
+  max-width: 46rem;
+}
+
+.pkp_structure_main > .page > h1 {
+  margin-top: 0;
+  padding-bottom: var(--worj-space-2);
+  border-bottom: 3px solid var(--worj-accent);
+}
+
+/* breadcrumbs */
+.cmp_breadcrumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--worj-space-1) var(--worj-space-2);
+  margin: 0 0 var(--worj-space-3);
+  padding: 0;
+  list-style: none;
+  font-size: var(--worj-text-small);
+}
+
+.cmp_breadcrumbs .separator {
+  margin-left: var(--worj-space-2);
+  color: var(--worj-text-muted);
+}
+
+.cmp_breadcrumbs .current {
+  color: var(--worj-text-muted);
+}

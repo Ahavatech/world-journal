@@ -16,7 +16,8 @@
 	{* Sidebars *}
 	{if empty($isFullWidth)}
 		{capture assign="sidebarCode"}{call_hook name="Templates::Common::Sidebar"}{/capture}
-		{if $sidebarCode}
+		{* trim: configured blocks that render nothing must not leave an empty aside *}
+		{if $sidebarCode|trim}
 			<aside class="pkp_structure_sidebar left" aria-label="{translate|escape key="plugins.themes.worj.sidebar"}">
 				{$sidebarCode}
 			</aside><!-- pkp_sidebar.left -->

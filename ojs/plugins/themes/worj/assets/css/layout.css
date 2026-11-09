@@ -280,8 +280,19 @@
 }
 
 /* ---------- page scaffold (replaces the parent's float layout) ---------- */
+
+/* keep the footer at the bottom of short pages */
+.pkp_structure_page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
 .pkp_structure_content {
-  width: auto;
+  flex: 1 0 auto;
+  box-sizing: border-box;
+  width: 100%;
   max-width: var(--worj-content-width);
   margin: 0 auto;
   padding: var(--worj-space-4) var(--worj-space-3) 0;
@@ -316,7 +327,9 @@
 }
 
 @media (min-width: 62em) {
-  .pkp_structure_content.has_sidebar {
+  /* :has() so the column exists only when a sidebar is really rendered; older
+     browsers fall back to a single column, which is still correct */
+  .pkp_structure_content:has(> .pkp_structure_sidebar) {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 17rem;
     gap: var(--worj-space-5);
