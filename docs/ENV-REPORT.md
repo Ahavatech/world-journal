@@ -1,6 +1,6 @@
 # ENV-REPORT: sandbox probe (Phase 0.1)
 
-Probed 2026-11-09 in the Claude Code cloud sandbox (Linux, Ubuntu 24.04 userland). OJS is **not pinned here**; that is Phase 1.
+Probed 2026-11-09 in the Claude Code cloud sandbox (Linux, Ubuntu 24.04 userland). The OJS pin is recorded in the Phase 1 update at the end of this file.
 
 ## Tools
 
@@ -47,3 +47,13 @@ Pick one:
 - **B:** download the pinned OJS 3.5.x tarball and its checksum from the PKP site yourself and give me the checksum, as Phase 1.1 already requires. The archive itself must still reach `ojs-core/` by a route the sandbox allows, or be fetched on the staging VPS.
 
 Either way, give me the exact OJS 3.5.x patch version to pin.
+
+## Phase 1 update (2026-11-09)
+
+- The environment now allows `pkp.sfu.ca` and `docs.pkp.sfu.ca`; both return 200. The PKP block described above is resolved.
+- **Pinned OJS: 3.5.0-6**, from the PKP download page (`scripts/ojs-version.env`). Archive size 120,980,607 bytes.
+- **Checksum:** PKP publishes none (`.sha256`, `.md5` and `.asc` next to the tarball return 404; no checksum on the download, archive or releases pages). The pinned SHA-256 was computed on first download. It detects corruption or later tampering, not that the original is authentic. Replace it if the client obtains a checksum from a trusted source.
+- **PHP:** the 3.5.0 release notebook and the pinned release's `README.md` require PHP 8.2 or later. The sandbox's 8.3.6 meets that.
+- **PHP extensions:** the release README lists `ext-bcmath` as required. The sandbox PHP does **not** have bcmath, so OJS cannot run here even with a database. The VPS provisioning script (Phase 5) must install `php8.x-bcmath`.
+- **Database:** the release README states MySQL 5.7.22+, MariaDB 4.1+ or PostgreSQL 9.5+. The README gives no more specific MariaDB version, so the server version is chosen in Phase 5.
+- `make setup` and `make lint` ran clean in the sandbox (see the Phase 1 PR for output).
