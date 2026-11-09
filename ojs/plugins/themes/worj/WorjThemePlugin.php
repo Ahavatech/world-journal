@@ -31,15 +31,18 @@ class WorjThemePlugin extends \PKP\plugins\ThemePlugin
             $this->addStyle('worj-' . $name, 'assets/css/' . $name . '.css');
         }
 
-        // The parent's slider and Bootstrap dropdown scripts only serve its
+        // The parent's slider, Bootstrap dropdown and main.js only serve its
         // JavaScript menu and the homepage highlights slider, which this theme
-        // does not use. main.js stays: it also drives the registration form.
-        foreach (['popper', 'bsUtil', 'bsDropdown', 'swiper', 'swiper-i18n'] as $name) {
+        // does not use. main.js also runs `new Swiper()` unconditionally, which
+        // throws without Swiper, so it is replaced by forms.js (the registration
+        // form behaviour and chart colours, in plain JavaScript).
+        foreach (['popper', 'bsUtil', 'bsDropdown', 'swiper', 'swiper-i18n', 'default'] as $name) {
             $this->removeScript($name);
         }
         $this->removeStyle('swiper');
 
         $this->addScript('worj-nav', 'assets/js/nav.js');
+        $this->addScript('worj-forms', 'assets/js/forms.js');
 
         // Parent options that do nothing here: this theme replaces the parent's
         // typeface and colour styles and its homepage. Controls that do nothing
