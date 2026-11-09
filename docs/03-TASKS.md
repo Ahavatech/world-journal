@@ -44,7 +44,7 @@ Work phase by phase. For every phase: plan first, wait for approval, then execut
 - 3.5 `scripts/check-placeholders.sh` scans for `[PLACEHOLDER`, `Sample Article`, `Placeholder Author`, `example.org`, `lorem`, and prints file:line.
 
 ## Phase 4: OJS configuration
-- 4.1 `docs/ADMIN-SETUP-CHECKLIST.md`: ordered, click-by-click settings for: journal masthead, contact, sections, submission checklist, roles, review forms and reminders, email templates, notifications, DOI settings (disabled until credentials), licence, search settings, static pages, announcements, navigation menus, theme activation and options. Each step has an expected visible result. Mark steps `HUMAN`.
+- 4.1 `docs/ADMIN-SETUP-CHECKLIST.md`: ordered, click-by-click settings for: journal masthead, contact, sections, submission checklist, roles, review forms and reminders, email templates, notifications, DOI settings (disabled until credentials), licence, search settings, static pages, announcements, navigation menus, theme activation and options. Each step has an expected visible result. Mark steps `HUMAN`. Include a line: "Highlights are not used by this theme; use Announcements" (the theme does not render the homepage highlights slider, so an editor who adds one would see nothing). Also: turn on the theme option `showAwardsCard` once the Awards page exists at `/awards` (it is off by default so the homepage never links to a missing page).
 - 4.2 Where OJS offers a CLI or import (Native XML import of issues and articles, user import), script it in `scripts/` and document usage; verify tool names against the pinned release first.
 - 4.3 `config.inc.php.template`.
 
