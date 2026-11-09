@@ -27,7 +27,7 @@ class WorjThemePlugin extends \PKP\plugins\ThemePlugin
         $this->removeStyle('font');
 
         // Plain CSS, added after the parent's styles so it overrides them.
-        foreach (['fonts', 'tokens', 'base', 'layout', 'components', 'pages'] as $name) {
+        foreach (['fonts', 'tokens', 'base', 'layout', 'components', 'pages', 'article'] as $name) {
             $this->addStyle('worj-' . $name, 'assets/css/' . $name . '.css');
         }
 
