@@ -22,6 +22,14 @@ class WorjThemePlugin extends \PKP\plugins\ThemePlugin
     public function init()
     {
         $this->setParent('defaultthemeplugin');
+
+        // The parent's own typeface stylesheet is replaced by ours (fonts.css).
+        $this->removeStyle('font');
+
+        // Plain CSS, added after the parent's styles so it overrides them.
+        foreach (['fonts', 'tokens', 'base'] as $name) {
+            $this->addStyle('worj-' . $name, 'assets/css/' . $name . '.css');
+        }
     }
 
     /**
