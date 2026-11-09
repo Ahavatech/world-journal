@@ -40,7 +40,7 @@ Author registration and submission with checklist; reviewer invitation and revie
 
 ## 7. Discoverability requirements
 1. One landing page per article, abstract visible without login.
-2. Page-source tags: `citation_title`, `citation_author` (one per author), `citation_publication_date`, `citation_journal_title`, `citation_issn`, `citation_volume`, `citation_issue`, `citation_firstpage`, `citation_lastpage`, `citation_pdf_url`, `citation_doi` when assigned.
+2. Page-source tags: `citation_title`, `citation_author` (one per author), `citation_publication_date` or `citation_date` (OJS 3.5.0-6 emits `citation_date`; Google Scholar accepts either), `citation_journal_title`, `citation_issn`, `citation_volume`, `citation_issue`, `citation_firstpage`, `citation_lastpage`, `citation_pdf_url`, `citation_doi` when assigned.
 3. PDFs: selectable text, title and authors on page 1, under 5 MB.
 4. Sitemap, robots.txt, Search Console verification, OAI-PMH enabled.
 5. Canonical URLs, HTTPS only.

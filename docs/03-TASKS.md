@@ -56,7 +56,7 @@ Work phase by phase. For every phase: plan first, wait for approval, then execut
 - **Done when** `shellcheck` clean and a dry-run mode (`--check`) prints actions without changing anything.
 
 ## Phase 6: Discoverability
-- 6.1 `scripts/check-citation-meta.sh <url|file>`: fetches or reads an article landing page and verifies every required `citation_*` tag is present, non-empty, one `citation_author` per author, date format `YYYY/MM/DD`, `citation_pdf_url` returns a PDF.
+- 6.1 `scripts/check-citation-meta.sh <url|file>`: fetches or reads an article landing page and verifies every required `citation_*` tag is present, non-empty, one `citation_author` per author, date tag is `citation_publication_date` or `citation_date` (OJS 3.5.0-6 emits `citation_date`) in format `YYYY/MM/DD`, `citation_pdf_url` returns a PDF. A missing `citation_issn` is reported as `EXPECTED-MISSING` only with `--placeholder-issn` (see 8.3).
 - 6.2 `scripts/check-pdf.sh`: text extractable (`pdftotext`), size under 5 MB, title on page 1.
 - 6.3 `robots.txt`, sitemap check, OAI-PMH check (`verb=Identify`, `ListRecords`).
 - 6.4 `docs/SEARCH-CONSOLE.md`: human steps for DNS verification and sitemap submission.
@@ -68,7 +68,7 @@ Work phase by phase. For every phase: plan first, wait for approval, then execut
 ## Phase 8: QA, launch gate, handover
 - 8.1 Full `make eval`; fix failures.
 - 8.2 Manual end-to-end test script `docs/QA-SCRIPT.md` (author submits, editor assigns, reviewer reviews, decision, revision, accept, copyedit, publish) with expected results.
-- 8.3 Launch gate checklist: placeholders empty; fixtures removed; real ISSN and policies in; SMTP verified; backup and restore tested; HTTPS and redirects; robots and sitemap; Search Console verified; admin account hardened (2FA if supported, unique strong password in client's password manager).
+- 8.3 Launch gate checklist: placeholders empty; fixtures removed; real ISSN and policies in, and the `--placeholder-issn` flag removed from every `check-citation-meta.sh` call (Makefile `check-citation`, the eval gate) so a missing ISSN fails; SMTP verified; backup and restore tested; HTTPS and redirects; robots and sitemap; Search Console verified; admin account hardened (2FA if supported, unique strong password in client's password manager).
 - 8.4 `docs/HANDOVER.md` (admin guide, how to publish an issue, who to contact, 14-day support terms).
 
 ## Phase 9: Optional autoresearch polish
