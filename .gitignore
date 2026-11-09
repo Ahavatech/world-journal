@@ -1,3 +1,4 @@
 ojs-core/
+ojs-core.old.*/
 .env
 node_modules/
