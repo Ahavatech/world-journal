@@ -23,3 +23,18 @@ msgstr "Footer"
 
 msgid "plugins.themes.worj.publishedWith"
 msgstr "Published with Open Journal Systems"
+
+msgid "plugins.themes.worj.makeSubmission"
+msgstr "Make a Submission"
+
+msgid "plugins.themes.worj.currentIssue"
+msgstr "Current Issue"
+
+msgid "plugins.themes.worj.aboutMore"
+msgstr "Read more about the journal"
+
+msgid "plugins.themes.worj.awardsTitle"
+msgstr "Research Awards"
+
+msgid "plugins.themes.worj.awardsLink"
+msgstr "About the awards"

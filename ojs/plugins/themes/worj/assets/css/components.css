@@ -1,0 +1,116 @@
+/* Reusable pieces: buttons, cards, announcements, issue contents. */
+.worj-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.5rem 1.25rem;
+  border: 2px solid var(--worj-primary);
+  border-radius: var(--worj-radius);
+  background: var(--worj-bg);
+  color: var(--worj-primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.worj-button:hover {
+  background: var(--worj-surface);
+  color: var(--worj-primary-dark);
+}
+
+.worj-button--primary {
+  background: var(--worj-primary);
+  color: var(--worj-on-primary);
+}
+
+.worj-button--primary:hover {
+  background: var(--worj-primary-dark);
+  color: var(--worj-on-primary);
+}
+
+.worj-card {
+  padding: var(--worj-space-4);
+  background: var(--worj-surface);
+  border-left: 6px solid var(--worj-accent);
+  border-radius: var(--worj-radius);
+}
+
+.worj-card h2 {
+  margin-top: 0;
+}
+
+/* announcements on the homepage */
+.worj-announcements__list {
+  display: grid;
+  gap: var(--worj-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.worj-announcement {
+  padding-top: var(--worj-space-3);
+  border-top: 3px solid var(--worj-accent);
+}
+
+.worj-announcement h3 {
+  margin: 0 0 var(--worj-space-1);
+  font-size: 1.15rem;
+}
+
+.worj-announcement__date {
+  margin: 0 0 var(--worj-space-2);
+  color: var(--worj-text-muted);
+  font-size: var(--worj-text-small);
+}
+
+.worj-announcement__summary > :last-child {
+  margin-bottom: 0;
+}
+
+@media (min-width: 48em) {
+  .worj-announcements__list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* issue table of contents (issue page, archive entry, homepage preview) */
+.obj_issue_toc .galleys,
+.obj_issue_toc .section {
+  position: static;
+  margin: var(--worj-space-4) 0;
+  padding: 0;
+}
+
+.obj_issue_toc .galleys::before,
+.obj_issue_toc .section::before {
+  content: none;
+}
+
+.obj_issue_toc .galleys > h2,
+.obj_issue_toc .galleys > h3,
+.obj_issue_toc .section > h2,
+.obj_issue_toc .section > h3 {
+  display: block;
+  position: static;
+  left: auto;
+  margin: 0 0 var(--worj-space-3);
+  padding: 0 0 var(--worj-space-1);
+  background: none;
+  border-bottom: 3px solid var(--worj-accent);
+  color: var(--worj-primary);
+  font-size: var(--worj-text-h3);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.obj_issue_toc .cover {
+  float: none;
+  width: auto;
+  margin: 0 0 var(--worj-space-3);
+}
+
+/* the homepage preview draws its own cover (or placeholder) beside the list */
+.worj-issue-preview .obj_issue_toc .cover {
+  display: none;
+}

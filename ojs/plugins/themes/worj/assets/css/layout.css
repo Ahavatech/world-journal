@@ -278,3 +278,51 @@
   border: 1px solid var(--worj-accent);
   border-radius: var(--worj-radius);
 }
+
+/* ---------- page scaffold (replaces the parent's float layout) ---------- */
+.pkp_structure_content {
+  width: auto;
+  max-width: var(--worj-content-width);
+  margin: 0 auto;
+  padding: var(--worj-space-4) var(--worj-space-3) 0;
+}
+
+/* the parent's clearfix pseudo-elements would become grid items */
+.pkp_structure_content::before,
+.pkp_structure_content::after,
+.pkp_structure_main::before,
+.pkp_structure_main::after {
+  content: none;
+}
+
+.pkp_structure_main,
+.pkp_structure_sidebar {
+  float: none;
+  width: auto;
+  min-width: 0;
+  margin-top: 0;
+  padding: 0;
+}
+
+.pkp_structure_main:first-child:last-child {
+  float: none;
+  width: auto;
+  margin: 0;
+  padding: 0;
+}
+
+.pkp_structure_sidebar {
+  margin-top: var(--worj-space-5);
+}
+
+@media (min-width: 62em) {
+  .pkp_structure_content.has_sidebar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 17rem;
+    gap: var(--worj-space-5);
+  }
+
+  .pkp_structure_sidebar {
+    margin-top: 0;
+  }
+}
