@@ -1,7 +1,8 @@
 SHELL := /bin/bash
+.SHELLFLAGS := -o pipefail -ec
 THEME := ojs/plugins/themes/worj
 
-.PHONY: setup lint eval check-placeholders sandbox-up sandbox-down
+.PHONY: setup lint eval check-placeholders sandbox-up sandbox-down sandbox-seed check-citation
 
 setup:
 	scripts/fetch-ojs.sh
@@ -13,6 +14,17 @@ sandbox-up: setup
 
 sandbox-down:
 	scripts/sandbox-ojs.sh down
+
+sandbox-seed:
+	node scripts/sandbox-seed.js
+	scripts/sandbox-import-sample.sh
+
+# Citation tags on the three sample articles (needs the sandbox running).
+# --placeholder-issn: the journal has no real ISSN yet.
+check-citation:
+	@for n in 1 2 3; do \
+	  scripts/check-citation-meta.sh --placeholder-issn "$${SANDBOX_URL:-http://127.0.0.1:8082}/worj/article/view/$$n" | tail -1; \
+	done
 
 lint:
 	shellcheck -x scripts/*.sh
