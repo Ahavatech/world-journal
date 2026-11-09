@@ -36,3 +36,16 @@ Palette in one line: deep navy plus gold on white. Phase 2.2 derives `--worj-pri
 - [ ] **Ask the client for an SVG or transparent PNG** of the logo (ideally also a mark-only version without tagline).
 - [ ] Ask for the client's brand colours if they exist.
 - Until then, Phase 2 uses a white header background and derived, cropped variants in `ojs/plugins/themes/worj/assets/`.
+
+## Derived assets and theme tokens (Phase 2.2)
+
+Brand colours re-sampled from the wordmark pixels (median of dark navy and of gold pixels): navy `#022760`, gold `#c08b0a`. Contrast on white (`scripts/check-contrast.py`): navy 14.4:1, gold only 3.03:1, so gold is used for fills, rules and large text only, with `#8a6500` (5.3:1) when gold must be small text. Tokens live in `ojs/plugins/themes/worj/assets/css/tokens.css`.
+
+Derived from `worj.jpeg` by cropping only (the original is untouched, no background removal):
+
+| File | Size | Use |
+|---|---|---|
+| `assets/img/logo-header.jpg` | 760x318 | header, wordmark and globe, tagline cropped off |
+| `assets/img/logo-lockup.jpg` | 900x415 | hero, full lockup with tagline |
+
+Both keep the JPEG's white background, so they sit on a white or near-white band. A mark-only crop was tried and dropped: the book and the "W" touch, so a rectangular crop leaves an artefact. That needs the SVG or transparent PNG from the client.
