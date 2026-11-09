@@ -1,6 +1,6 @@
 # WORJ Claude Code pack
 
-Drop these files into the root of the GitHub repo (next to `logo.*`).
+Drop these files into the root of the GitHub repo (next to `worj.jpeg`).
 
 1. `CLAUDE.md` (project memory, keep lean)
 2. `docs/01-SPEC.md` ... `06-INDEXING-ROADMAP.md`

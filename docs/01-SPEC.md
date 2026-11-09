@@ -4,7 +4,7 @@
 | Field | Value |
 |---|---|
 | Journal name | World Open Research Journal |
-| Logo | `logo.*` in repo root (do not modify) |
+| Logo | `worj.jpeg` in repo root (do not modify) |
 | Publisher | `[PLACEHOLDER: publisher name]` |
 | Domain | `[PLACEHOLDER: domain]` (use `example.org` in configs) |
 | ISSN / eISSN | `[PLACEHOLDER: pending]` (never invent) |
