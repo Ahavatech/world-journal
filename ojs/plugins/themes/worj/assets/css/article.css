@@ -58,6 +58,11 @@
   font-weight: 600;
 }
 
+/* the parent's label grey (54% black) is 3.9:1 on the panel; use the muted token */
+.obj_article_details .item .sub_item .label {
+  color: var(--worj-text-muted);
+}
+
 /* the metadata column reads as a panel */
 .obj_article_details .entry_details {
   align-self: start;

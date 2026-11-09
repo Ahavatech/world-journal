@@ -180,3 +180,12 @@
   padding: 0;
   background: none;
 }
+
+/* notices (for example the "log in or register" box on the submissions page) */
+.cmp_notification {
+  padding: var(--worj-space-3);
+  background: var(--worj-surface);
+  border-left: 6px solid var(--worj-accent);
+  border-radius: var(--worj-radius);
+  color: var(--worj-text);
+}

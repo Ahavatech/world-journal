@@ -28,6 +28,8 @@ PAIRS = [
     ("focus", "surface", 3.0, "focus ring on panels"),
     ("border-strong", "bg", 3.0, "form control borders"),
     ("banner-text", "banner-bg", 4.5, "[PLACEHOLDER] banner"),
+    ("error", "bg", 4.5, "form error text on white"),
+    ("error", "surface", 4.5, "form error text on panels"),
 ]
 
 
