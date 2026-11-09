@@ -1,0 +1,17 @@
+{
+  // The project spec docs use a compact style (no blank lines around headings,
+  // lists and tables). These stylistic rules are off so lint checks structure
+  // rather than forcing a rewrite of the spec docs.
+  "config": {
+    "MD013": false,
+    "MD022": false,
+    "MD031": false,
+    "MD032": false,
+    "MD033": false,
+    "MD034": false,
+    "MD040": false,
+    "MD041": false,
+    "MD058": false
+  },
+  "ignores": ["node_modules", "ojs-core"]
+}

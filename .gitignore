@@ -1,3 +1,5 @@
 ojs-core/
+ojs-core.old.*/
 .env
+.env.sandbox
 node_modules/

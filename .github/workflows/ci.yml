@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+      - run: npm ci
+      - name: Lint (shellcheck, php -l, markdownlint, stylelint)
+        run: make lint
+      # Warn only until Phase 8: the target is not implemented yet, and
+      # placeholders are expected before launch.
+      - name: Check placeholders (warn only)
+        run: make check-placeholders
+        continue-on-error: true
+      # make eval is not run here: the locked scorer does not exist yet.

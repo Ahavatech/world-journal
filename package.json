@@ -1,0 +1,10 @@
+{
+  "name": "worj",
+  "private": true,
+  "description": "Dev tooling only for World Open Research Journal",
+  "devDependencies": {
+    "markdownlint-cli2": "^0.17.0",
+    "stylelint": "^16.0.0",
+    "stylelint-config-standard": "^36.0.0"
+  }
+}

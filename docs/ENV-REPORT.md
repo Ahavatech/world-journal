@@ -1,6 +1,6 @@
 # ENV-REPORT: sandbox probe (Phase 0.1)
 
-Probed 2026-11-09 in the Claude Code cloud sandbox (Linux, Ubuntu 24.04 userland). OJS is **not pinned here**; that is Phase 1.
+Probed 2026-11-09 in the Claude Code cloud sandbox (Linux, Ubuntu 24.04 userland). The OJS pin is recorded in the Phase 1 update at the end of this file.
 
 ## Tools
 
@@ -47,3 +47,25 @@ Pick one:
 - **B:** download the pinned OJS 3.5.x tarball and its checksum from the PKP site yourself and give me the checksum, as Phase 1.1 already requires. The archive itself must still reach `ojs-core/` by a route the sandbox allows, or be fetched on the staging VPS.
 
 Either way, give me the exact OJS 3.5.x patch version to pin.
+
+## Phase 1 update (2026-11-09)
+
+- The environment now allows `pkp.sfu.ca` and `docs.pkp.sfu.ca`; both return 200. The PKP block described above is resolved.
+- **Pinned OJS: 3.5.0-6**, from the PKP download page (`scripts/ojs-version.env`). Archive size 120,980,607 bytes.
+- **Checksum:** PKP publishes none (`.sha256`, `.md5` and `.asc` next to the tarball return 404; no checksum on the download, archive or releases pages). The pinned SHA-256 was computed on first download. It detects corruption or later tampering, not that the original is authentic. Replace it if the client obtains a checksum from a trusted source.
+- **PHP:** the 3.5.0 release notebook and the pinned release's `README.md` require PHP 8.2 or later. The sandbox's 8.3.6 meets that.
+- **PHP extensions:** the release README lists `ext-bcmath` as required. The sandbox PHP does **not** have bcmath, so OJS cannot run here even with a database. The VPS provisioning script (Phase 5) must install `php8.x-bcmath`.
+- **Database:** the release README states MySQL 5.7.22+, MariaDB 4.1+ or PostgreSQL 9.5+. The README gives no more specific MariaDB version, so the server version is chosen in Phase 5.
+- `make setup` and `make lint` ran clean in the sandbox (see the Phase 1 PR for output).
+
+## Local OJS in the sandbox (`scripts/sandbox-ojs.sh`, `make sandbox-up`)
+
+The missing bcmath/MariaDB/nginx are installable from apt, so OJS **does** run here once `sandbox-up` has been run. This is throwaway, not a launch test.
+
+- Stack: PHP 8.3.6 + php8.3-bcmath, MariaDB 10.11.14, nginx 1.24.0, php-fpm. Same Ubuntu 24.04 userland as the target VPS.
+- Verified: OJS 3.5.0.6 installs headless (`tools/install.php`, answers piped on stdin); the site, login, search and OAI-PMH (`verb=Identify`) endpoints return 200; a journal "World Open Research Journal" (path `worj`) was created through the admin REST API (`POST /index/api/v1/contexts`) with a Playwright session.
+- Container constraints the script works around: no systemd (services started by hand), no IPv6 (nginx runs from its own config), nginx workers must be `www-data` to reach the php-fpm socket.
+- OJS gotchas found: the installer rewrites `allowed_hosts` to `[""]`, which rejects every request; the script sets it to `["127.0.0.1"]`. With `restful_urls = On`, nginx must route through `/index.php$uri` so PATH_INFO is set. Phase 5's nginx block must handle both.
+- Harmless noise: php-fpm cannot resolve `pkp.sfu.ca` (version check, IP geo database, ROR dataset), and there is no sendmail.
+- Not verified: theme activation (the `worj` theme folder is still empty), article metadata output (no articles yet), Docker.
+- The stack is lost when the container ends; rerun `make sandbox-up` (a few minutes, idempotent).
