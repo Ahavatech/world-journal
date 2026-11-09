@@ -45,7 +45,7 @@ async function main() {
   }
   const ctxs = (await call('GET', '/index/api/v1/contexts')).items;
   const id = ctxs.find((c) => c.urlPath === 'worj').id;
-  await call('PUT', `/worj/api/v1/contexts/${id}`, { themePluginPath: 'worj' });
+  await call('PUT', `/worj/api/v1/contexts/${id}`, { themePluginPath: 'worj', description: { en: '[PLACEHOLDER: short description of the journal, aims and scope]' } });
   console.log(`journal worj (id ${id}) uses theme worj`);
   await browser.close();
 }
