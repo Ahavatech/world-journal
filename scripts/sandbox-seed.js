@@ -47,6 +47,21 @@ async function main() {
   const id = ctxs.find((c) => c.urlPath === 'worj').id;
   await call('PUT', `/worj/api/v1/contexts/${id}`, { themePluginPath: 'worj', description: { en: '[PLACEHOLDER: short description of the journal, aims and scope]' } });
   console.log(`journal worj (id ${id}) uses theme worj`);
+
+  // Sidebar state for layout testing: SANDBOX_SIDEBAR=blocks (default) | none | empty
+  //   blocks: Make a Submission + Information (with placeholder text)
+  //   none:   no sidebar configured
+  //   empty:  a block is configured but renders nothing
+  const state = process.env.SANDBOX_SIDEBAR || 'blocks';
+  const info = (t) => ({ en: t ? `<p>[PLACEHOLDER: information for ${t}]</p>` : '' });
+  const sidebars = {
+    blocks: { sidebar: ['makesubmissionblockplugin', 'informationblockplugin'], readerInformation: info('readers'), authorInformation: info('authors'), librarianInformation: info('librarians') },
+    none: { sidebar: [] },
+    empty: { sidebar: ['informationblockplugin'], readerInformation: info(''), authorInformation: info(''), librarianInformation: info('') },
+  };
+  if (!sidebars[state]) throw new Error(`SANDBOX_SIDEBAR must be blocks, none or empty (got ${state})`);
+  await call('PUT', `/worj/api/v1/contexts/${id}`, sidebars[state]);
+  console.log(`sidebar state: ${state}`);
   await browser.close();
 }
 main().catch((e) => { console.error(e.message); process.exit(1); });

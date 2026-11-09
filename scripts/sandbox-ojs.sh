@@ -142,6 +142,10 @@ if [ -f "$core/plugins/themes/worj/version.xml" ]; then
   mariadb "$SANDBOX_DB_NAME" -e "INSERT IGNORE INTO plugin_settings (plugin_name, context_id, setting_name, setting_value, setting_type) VALUES
     ('worjthemeplugin', NULL, 'enabled', '1', 'bool'), ('worjthemeplugin', 1, 'enabled', '1', 'bool');"
 fi
+# Fresh journals do not enable the Make a Submission block plugin; enable it so
+# the sidebar states can be tested. (Task 4.1 covers this for the real journal.)
+mariadb "$SANDBOX_DB_NAME" -e "INSERT IGNORE INTO plugin_settings (plugin_name, context_id, setting_name, setting_value, setting_type) VALUES
+  ('makesubmissionblockplugin', NULL, 'enabled', '1', 'bool'), ('makesubmissionblockplugin', 1, 'enabled', '1', 'bool');"
 mkdir -p "$core/cache" "$core/public"
 chmod -R a+rwX "$core/cache" "$core/public"
 
