@@ -11,3 +11,15 @@ msgstr "World Open Research Journal Theme"
 
 msgid "plugins.themes.worj.description"
 msgstr "Child theme of the default theme for World Open Research Journal."
+
+msgid "plugins.themes.worj.menu"
+msgstr "Menu"
+
+msgid "plugins.themes.worj.sidebar"
+msgstr "Sidebar"
+
+msgid "plugins.themes.worj.footerNav"
+msgstr "Footer"
+
+msgid "plugins.themes.worj.publishedWith"
+msgstr "Published with Open Journal Systems"

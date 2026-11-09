@@ -1,4 +1,11 @@
 /* Base typography, links and focus. Loaded after the parent theme. */
+
+/* The parent sets the root to 14px. Use the browser default so rem sizes in
+   tokens.css mean what they say and user font-size settings are respected. */
+html {
+  font-size: 100%;
+}
+
 body {
   color: var(--worj-text);
   background: var(--worj-bg);

@@ -27,9 +27,19 @@ class WorjThemePlugin extends \PKP\plugins\ThemePlugin
         $this->removeStyle('font');
 
         // Plain CSS, added after the parent's styles so it overrides them.
-        foreach (['fonts', 'tokens', 'base'] as $name) {
+        foreach (['fonts', 'tokens', 'base', 'layout'] as $name) {
             $this->addStyle('worj-' . $name, 'assets/css/' . $name . '.css');
         }
+
+        // The parent's slider and Bootstrap dropdown scripts only serve its
+        // JavaScript menu and the homepage highlights slider, which this theme
+        // does not use. main.js stays: it also drives the registration form.
+        foreach (['popper', 'bsUtil', 'bsDropdown', 'swiper', 'swiper-i18n'] as $name) {
+            $this->removeScript($name);
+        }
+        $this->removeStyle('swiper');
+
+        $this->addScript('worj-nav', 'assets/js/nav.js');
     }
 
     /**
