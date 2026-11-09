@@ -25,8 +25,8 @@ A cleared session resumes from this file and the git history, not from the chat.
 | 2.4 homepage | done |
 | 2.5 about page and sidebar (zero blocks, blocks, configured-but-empty) | done |
 | 2.6 article, issue, archive (overflow fixed; stress-tested with a long title, DOI-like string and URL at 320, 768, 1280, then reverted) | done |
-| 2.7 accessibility pass (focus states, skip links, contrast, landmarks, reduced motion; breadcrumbs `<nav>` has no label, check with axe) | next |
-| 2.8 evaluator | to do |
+| 2.7 accessibility pass (results in `docs/A11Y-REPORT.md`) | done |
+| 2.8 evaluator (reuse `autoresearch/eval/checks/*` and `lib/pages.js`; add overflow, external-request, CSS+JS size and JS-off gates and the `COMPONENT`/`GATES`/`SCORE` output; no checksum lock) | next |
 | PR | one PR at the end of Phase 2 |
 
 Per phase: `make lint`, `scripts/test-nav.js` (15 of 15 must pass) and `make check-citation` after every theme commit. Report the viewport checks at 320, 768 and 1280, the CSS+JS and font sizes, the axe results and the citation output in the PR.
@@ -43,6 +43,14 @@ node scripts/sandbox-api.js GET /worj/api/v1/contexts/1/theme
 The sandbox needs the `world-journal` environment network allowlist (`pkp.sfu.ca`, `docs.pkp.sfu.ca`). Announcements and the description in the sandbox journal are throwaway placeholders created through the API, not committed.
 
 ## Things learned (do not rediscover)
+
+- 2.7 tooling lives in `autoresearch/eval/` (`npm ci` there): `checks/axe.js`, `checks/a11y-manual.js`, `checks/forms-errors.js`, `lib/pages.js`. The 404 page is flagged `core: true` (OJS prints a bare `<h1>`); its findings are reported, not failed. Phase 5 needs a static 404 page.
+- The parent `main.js` ran `new Swiper()` unconditionally and threw on every page after Swiper was removed; `assets/js/forms.js` replaces it. Check the browser console for errors, not only layout.
+- Parent options removed from the admin form: typography, baseColour, showDescriptionInJournalIndex, useHomepageImageAsHeader. `displayStats` stays (the parent article template reads it). Stored values live under the parent plugin name (`defaultthemeplugin`) and are harmless.
+- Focus colour is `#2f7bf5`: it holds 3:1 against white, panel grey, navy and dark navy. The old `#0b5fff` was 2.80:1 against navy buttons.
+- Parent CSS often wins on specificity (`.page_register #formErrors .pkp_form_error_list a`); prefix with `body .pkp_structure_main` or use the same id/class chain.
+- Public pages have zero inline scripts and event handlers.
+- One run of `checks/forms-errors.js` failed 4 checks and then passed in 4 reruns; cause unknown (the test now waits for `networkidle` after submitting). If it recurs, investigate.
 
 - Any grid or flex container that is also a parent-theme clearfix (`.pkp_helpers_clear`) needs its `::before`/`::after` set to `content: none`, or the pseudo-elements become grid items (seen on `.pkp_structure_content` and `.obj_article_details .row`).
 - Stress test recipe: `node scripts/sandbox-api.js PUT /worj/api/v1/submissions/3/publications/3 '{"title":{"en":"...long..."}}'`, check overflow, then PUT the original title and abstract back.

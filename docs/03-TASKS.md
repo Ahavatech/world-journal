@@ -50,7 +50,7 @@ Work phase by phase. For every phase: plan first, wait for approval, then execut
 
 ## Phase 5: Infra scripts (PLAN first; Claude cannot run these on the VPS)
 - 5.1 `provision-ubuntu.sh` (idempotent; packages, PHP-FPM tuning, MariaDB, Nginx, certbot, firewall, unattended-upgrades).
-- 5.2 Nginx server block and security headers; PHP ini; MariaDB tuning for 4 GB RAM.
+- 5.2 Nginx server block and security headers; PHP ini; MariaDB tuning for 4 GB RAM. Also: a static, accessible 404 page served with `fastcgi_intercept_errors on; error_page 404 ...`, because OJS core prints a bare `<h1>404 Not Found</h1>` with no `lang`, title or landmarks that no theme can change (see `docs/A11Y-REPORT.md`). The public pages currently have no inline scripts or inline event handlers, so a Content-Security-Policy with `script-src 'self'` looks feasible; verify before enabling it.
 - 5.3 `backup.sh`, `restore.sh`, cron; off-box copy via rclone.
 - 5.4 `docs/DEPLOY.md`: exact human steps, rollback steps, DNS and Cloudflare steps (SSL mode "Full (strict)"), smoke tests.
 - **Done when** `shellcheck` clean and a dry-run mode (`--check`) prints actions without changing anything.
