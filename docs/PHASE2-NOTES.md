@@ -24,8 +24,8 @@ A cleared session resumes from this file and the git history, not from the chat.
 | 2.3 header, CSS-only nav, footer | done |
 | 2.4 homepage | done |
 | 2.5 about page and sidebar (zero blocks, blocks, configured-but-empty) | done |
-| 2.6 article, issue, archive. Known overflow: article page 7 px at 320 and 768; issue archive 7 px at 768. Check long DOIs, URLs, titles at 320 | next |
-| 2.7 accessibility pass | to do |
+| 2.6 article, issue, archive (overflow fixed; stress-tested with a long title, DOI-like string and URL at 320, 768, 1280, then reverted) | done |
+| 2.7 accessibility pass (focus states, skip links, contrast, landmarks, reduced motion; breadcrumbs `<nav>` has no label, check with axe) | next |
 | 2.8 evaluator | to do |
 | PR | one PR at the end of Phase 2 |
 
@@ -44,6 +44,8 @@ The sandbox needs the `world-journal` environment network allowlist (`pkp.sfu.ca
 
 ## Things learned (do not rediscover)
 
+- Any grid or flex container that is also a parent-theme clearfix (`.pkp_helpers_clear`) needs its `::before`/`::after` set to `content: none`, or the pseudo-elements become grid items (seen on `.pkp_structure_content` and `.obj_article_details .row`).
+- Stress test recipe: `node scripts/sandbox-api.js PUT /worj/api/v1/submissions/3/publications/3 '{"title":{"en":"...long..."}}'`, check overflow, then PUT the original title and abstract back.
 - Sidebar states are set with `SANDBOX_SIDEBAR=blocks|none|empty node scripts/sandbox-seed.js`. All three are verified: no empty aside and no empty grid column when blocks render nothing (`:has(> .pkp_structure_sidebar)` for the grid, `{if $sidebarCode|trim}` for the aside).
 - A fresh journal does not enable the Make a Submission block plugin (the sandbox script enables it). Task 4.1 must include enabling it.
 - The About page has no photo and uses no stock image: text at a 46rem measure, with the sidebar beside it when blocks exist.
