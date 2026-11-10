@@ -236,7 +236,7 @@ p_noindex_listing() { lacks "$(cu "$S/public/")" "Index of"; }
 printf '<?php echo "EXECUTED"; ?>' >"$core/public/worj-harness-upload.php"
 printf 'secret-backup' >"$core/public/worj-harness.sql.bak"
 printf 'hidden' >"$core/public/.worj-harness-dot"; printf '{}' >"$core/public/composer.json"; touched+=(public/.worj-harness-dot public/composer.json)
-libreg="$(ls "$core/lib/pkp/registry" | sed -n 1p)"
+libreg="$(find "$core/lib/pkp/registry" -maxdepth 1 -type f -name "*.txt" -printf "%f\n" | sort | sed -n 1p)"
 mutate "https and canonical host" 'RewriteRule ^ https://' p_https
 mutate "index.php to clean URL" 'RewriteRule ^index\.php(?:/(.*))?$' p_clean
 mutate "dotfiles" 'RewriteRule (^|/)\.(?!well-known/)' p_dot
@@ -249,6 +249,7 @@ mutate "source-like extensions" '\.(tpl|inc|bak' p_ext
 mutate "composer.json" '(composer\.json|composer\.lock' p_composer
 mutate "code directories" 'RewriteRule ^(cache|tools|dbscripts' p_dirs
 mutate "lib/pkp code directories" 'RewriteRule ^lib/pkp/(classes' p_libpkp
+# shellcheck disable=SC2016  # the pattern is literal text, not an expansion
 mutate "OJS clean-URL routing" 'RewriteRule ^(.*)$ index.php/$1' p_route
 mutate "HSTS" 'Strict-Transport-Security' p_hsts
 mutate "nosniff" 'X-Content-Type-Options' p_nosniff
