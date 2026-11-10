@@ -1,0 +1,341 @@
+/* Site header, navigation and footer. Mobile first.
+   Without JavaScript the menu is always visible. nav.js adds .worj-js to <html>
+   and unhides the toggle button, which then collapses the menu on small screens. */
+
+/* ---------- header ---------- */
+.worj-header {
+  background: var(--worj-bg);
+  border-bottom: 1px solid var(--worj-border);
+}
+
+.worj-header__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--worj-space-2) var(--worj-space-4);
+  max-width: var(--worj-content-width);
+  margin: 0 auto;
+  padding: var(--worj-space-2) var(--worj-space-3);
+}
+
+.worj-logo {
+  display: block;
+  line-height: 0;
+}
+
+.worj-logo img {
+  display: block;
+  width: auto;
+  height: 3.25rem;
+}
+
+.worj-user ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--worj-space-1) var(--worj-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--worj-text-small);
+}
+
+.worj-user a {
+  display: inline-block;
+  padding: var(--worj-space-1) 0;
+  color: var(--worj-primary);
+  font-weight: 600;
+}
+
+/* ---------- navigation bar ---------- */
+.worj-header__navbar {
+  background: var(--worj-primary);
+  color: var(--worj-on-primary);
+}
+
+.worj-header__navbar .worj-header__inner {
+  padding-block: 0;
+}
+
+.worj-nav {
+  position: relative;
+  display: flex;
+  flex: 1 1 100%;
+  flex-direction: column;
+}
+
+/* skip-link target: keep it out of the flex layout */
+.worj-nav #siteNav {
+  position: absolute;
+  top: 0;
+  height: 0;
+}
+
+.worj-nav ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.worj-nav a {
+  display: block;
+  padding: 0.75rem var(--worj-space-3);
+  color: var(--worj-on-primary);
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 3px solid transparent;
+}
+
+.worj-nav a:hover,
+.worj-nav li:focus-within > a {
+  background: var(--worj-primary-dark);
+  color: var(--worj-on-primary);
+  border-bottom-color: var(--worj-accent);
+}
+
+/* Focus ring needs to show against the navy bar */
+.worj-nav a:focus-visible,
+.worj-nav-toggle:focus-visible {
+  outline: 3px solid var(--worj-on-primary);
+  outline-offset: -3px;
+}
+
+/* sub-menus on small screens: inline and indented */
+.worj-nav ul ul {
+  padding-left: var(--worj-space-3);
+}
+
+.worj-nav ul ul a {
+  font-weight: 400;
+}
+
+.worj-search-link .fa {
+  margin-right: var(--worj-space-1);
+}
+
+/* toggle button (shown by nav.js; the hidden attribute keeps it off without JS) */
+.worj-nav-toggle {
+  display: block;
+  width: 100%;
+  padding: 0.75rem var(--worj-space-3);
+  border: 0;
+  background: transparent;
+  color: var(--worj-on-primary);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.worj-nav-toggle[hidden] {
+  display: none;
+}
+
+.worj-nav-toggle::after {
+  content: "\25BE";
+  margin-left: var(--worj-space-2);
+}
+
+.worj-nav-toggle[aria-expanded="true"]::after {
+  content: "\25B4";
+}
+
+@media (max-width: 61.99em) {
+  .worj-js .worj-nav:not(.is-open) {
+    display: none;
+  }
+}
+
+/* ---------- wide screens ---------- */
+@media (min-width: 62em) {
+  .worj-logo img {
+    height: 4.5rem;
+  }
+
+  .worj-nav-toggle {
+    display: none;
+  }
+
+  .worj-nav {
+    flex-direction: row;
+    align-items: stretch;
+    justify-content: space-between;
+  }
+
+  .worj-nav > ul {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .worj-nav li {
+    position: relative;
+  }
+
+  /* dropdowns: open on hover and when focus is inside, so keyboard users get them */
+  .worj-nav ul ul {
+    position: absolute;
+    z-index: 20;
+    top: 100%;
+    left: 0;
+    display: none;
+    min-width: 16rem;
+    padding: var(--worj-space-1) 0;
+    background: var(--worj-bg);
+    border: 1px solid var(--worj-border-strong);
+    box-shadow: 0 6px 16px rgb(1 26 69 / 18%);
+  }
+
+  .worj-nav li:hover > ul,
+  .worj-nav li:focus-within > ul {
+    display: block;
+  }
+
+  .worj-nav li.worj-dismissed > ul {
+    display: none;
+  }
+
+  .worj-nav ul ul a {
+    color: var(--worj-primary);
+    font-weight: 400;
+    border-bottom: 0;
+  }
+
+  .worj-nav ul ul a:hover,
+  .worj-nav ul ul li:focus-within > a {
+    background: var(--worj-surface);
+    color: var(--worj-primary-dark);
+    text-decoration: underline;
+  }
+
+  .worj-nav ul ul a:focus-visible {
+    outline: var(--worj-focus-ring);
+    outline-offset: -3px;
+  }
+}
+
+/* ---------- footer ---------- */
+.worj-footer {
+  margin-top: var(--worj-space-5);
+  background: var(--worj-primary);
+  color: var(--worj-on-primary);
+  font-size: var(--worj-text-small);
+}
+
+.worj-footer__inner {
+  display: grid;
+  gap: var(--worj-space-4);
+  max-width: var(--worj-content-width);
+  margin: 0 auto;
+  padding: var(--worj-space-5) var(--worj-space-3);
+}
+
+.worj-footer p {
+  margin: 0 0 var(--worj-space-1);
+}
+
+.worj-footer__title {
+  font-family: var(--worj-font-serif);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.worj-footer a {
+  color: var(--worj-on-primary);
+  text-decoration: underline;
+}
+
+.worj-footer a:focus-visible {
+  outline: 3px solid var(--worj-on-primary);
+  outline-offset: 3px;
+}
+
+.worj-footer__links ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.worj-footer__links li {
+  margin-bottom: var(--worj-space-2);
+}
+
+@media (min-width: 48em) {
+  .worj-footer__inner {
+    grid-template-columns: 2fr 1fr;
+  }
+
+  .worj-footer__custom {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Visible marker for values the journal has not configured yet. Content, not decoration. */
+.worj-placeholder {
+  display: inline-block;
+  padding: 0 var(--worj-space-2);
+  background: var(--worj-banner-bg);
+  color: var(--worj-banner-text);
+  border: 1px solid var(--worj-accent);
+  border-radius: var(--worj-radius);
+}
+
+/* ---------- page scaffold (replaces the parent's float layout) ---------- */
+
+/* keep the footer at the bottom of short pages */
+.pkp_structure_page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.pkp_structure_content {
+  flex: 1 0 auto;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--worj-content-width);
+  margin: 0 auto;
+  padding: var(--worj-space-4) var(--worj-space-3) 0;
+}
+
+/* the parent's clearfix pseudo-elements would become grid items */
+.pkp_structure_content::before,
+.pkp_structure_content::after,
+.pkp_structure_main::before,
+.pkp_structure_main::after {
+  content: none;
+}
+
+.pkp_structure_main,
+.pkp_structure_sidebar {
+  float: none;
+  width: auto;
+  min-width: 0;
+  margin-top: 0;
+  padding: 0;
+}
+
+.pkp_structure_main:first-child:last-child {
+  float: none;
+  width: auto;
+  margin: 0;
+  padding: 0;
+}
+
+.pkp_structure_sidebar {
+  margin-top: var(--worj-space-5);
+}
+
+@media (min-width: 62em) {
+  /* :has() so the column exists only when a sidebar is really rendered; older
+     browsers fall back to a single column, which is still correct */
+  .pkp_structure_content:has(> .pkp_structure_sidebar) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 17rem;
+    gap: var(--worj-space-5);
+  }
+
+  .pkp_structure_sidebar {
+    margin-top: 0;
+  }
+}

@@ -1,0 +1,49 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "plugins.themes.worj.name"
+msgstr "World Open Research Journal Theme"
+
+msgid "plugins.themes.worj.description"
+msgstr "Child theme of the default theme for World Open Research Journal."
+
+msgid "plugins.themes.worj.menu"
+msgstr "Menu"
+
+msgid "plugins.themes.worj.sidebar"
+msgstr "Sidebar"
+
+msgid "plugins.themes.worj.footerNav"
+msgstr "Footer"
+
+msgid "plugins.themes.worj.publishedWith"
+msgstr "Published with Open Journal Systems"
+
+msgid "plugins.themes.worj.makeSubmission"
+msgstr "Make a Submission"
+
+msgid "plugins.themes.worj.currentIssue"
+msgstr "Current Issue"
+
+msgid "plugins.themes.worj.aboutMore"
+msgstr "Read more about the journal"
+
+msgid "plugins.themes.worj.awardsTitle"
+msgstr "Research Awards"
+
+msgid "plugins.themes.worj.awardsLink"
+msgstr "About the awards"
+
+msgid "plugins.themes.worj.option.showAwardsCard.label"
+msgstr "Research Awards card"
+
+msgid "plugins.themes.worj.option.showAwardsCard.description"
+msgstr "Shows a Research Awards call-out on the homepage. Turn this on only after the Awards page exists at /awards."
+
+msgid "plugins.themes.worj.option.showAwardsCard.option"
+msgstr "Show the Research Awards card on the homepage."

@@ -1,0 +1,54 @@
+/* Base typography, links and focus. Loaded after the parent theme. */
+
+/* The parent sets the root to 14px. Use the browser default so rem sizes in
+   tokens.css mean what they say and user font-size settings are respected. */
+html {
+  font-size: 100%;
+}
+
+body {
+  color: var(--worj-text);
+  background: var(--worj-bg);
+  font-family: var(--worj-font-sans);
+  font-size: var(--worj-text-base);
+  line-height: var(--worj-leading);
+}
+
+h1,
+h2,
+h3,
+h4,
+.pkp_site_name .is_text {
+  font-family: var(--worj-font-serif);
+  color: var(--worj-primary);
+  line-height: 1.25;
+}
+
+h1 { font-size: var(--worj-text-h1); }
+h2 { font-size: var(--worj-text-h2); }
+h3 { font-size: var(--worj-text-h3); }
+
+a {
+  color: var(--worj-primary);
+  text-underline-offset: 0.15em;
+}
+
+a:hover {
+  color: var(--worj-primary-dark);
+}
+
+:focus-visible {
+  outline: var(--worj-focus-ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

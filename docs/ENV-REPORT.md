@@ -69,3 +69,10 @@ The missing bcmath/MariaDB/nginx are installable from apt, so OJS **does** run h
 - Harmless noise: php-fpm cannot resolve `pkp.sfu.ca` (version check, IP geo database, ROR dataset), and there is no sendmail.
 - Not verified: theme activation (the `worj` theme folder is still empty), article metadata output (no articles yet), Docker.
 - The stack is lost when the container ends; rerun `make sandbox-up` (a few minutes, idempotent).
+
+## QA tooling in the sandbox (Phase 2.8)
+
+- Chromium (Playwright 1.63.0, `/opt/pw-browsers`) runs headless; axe-core 4.14.0 works through `@axe-core/playwright`.
+- Lighthouse 13.6.0 runs against the sandbox with `CHROME_PATH` pointing at the Playwright Chromium (about 11 s per page). It installs 119 packages (about 190 MB in `autoresearch/eval/node_modules`, not committed). Accessibility, SEO and best-practices scores were identical across repeat runs.
+- **Limitation:** Lighthouse performance is not measured. It needs throttled, median-of-three runs per page (about 6 to 7 minutes for 11 pages, over the 5-minute budget in `autoresearch/EVAL-SPEC.md`) and is the flaky category on a shared CPU. `make eval` reports `perf=SKIPPED` and re-scales the score; no number is estimated.
+- `make eval` takes about 110 s (`autoresearch/eval/README.md`).

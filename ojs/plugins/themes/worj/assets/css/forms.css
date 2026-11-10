@@ -1,0 +1,115 @@
+/* Forms: login, register, search, submission entry points. Colours come from
+   tokens.css, and every control keeps the shared focus ring from base.css. */
+
+/* The parent collapses the reviewer interests field (max-height 0, overflow
+   hidden, opacity 0) until "Reviewer" is ticked, but leaves it focusable: a
+   keyboard user can Tab into an invisible field. display:none removes it from
+   the tab order and the accessibility tree. forms.js adds .is_visible when the
+   box is ticked; without JavaScript the field stays visible and usable. */
+.worj-js .fields .reviewer_interests:not(.is_visible) {
+  display: none;
+}
+
+.page_login label,
+.page_register label,
+.page_search label {
+  font-weight: 600;
+}
+
+.page_login input[type="text"],
+.page_login input[type="password"],
+.page_login input[type="email"],
+.page_register input[type="text"],
+.page_register input[type="password"],
+.page_register input[type="email"],
+.page_register select,
+.page_search input[type="text"],
+.page_search input[type="search"],
+.page_search select {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-height: 2.75rem;
+  padding: var(--worj-space-1) var(--worj-space-2);
+  border: 1px solid var(--worj-border-strong);
+  border-radius: var(--worj-radius);
+  background: var(--worj-bg);
+  color: var(--worj-text);
+  font: inherit;
+}
+
+/* checkboxes and radios: at least 24x24 CSS px (WCAG 2.5.8) */
+input[type="checkbox"],
+input[type="radio"] {
+  width: 1.5rem;
+  height: 1.5rem;
+  margin: 0 var(--worj-space-2) 0 0;
+  vertical-align: middle;
+  accent-color: var(--worj-primary);
+}
+
+button[type="submit"],
+.cmp_button_wire,
+.pkp_button {
+  min-height: 2.75rem;
+}
+
+/* primary form buttons in the brand navy, as on the homepage */
+.page_login button.submit,
+.page_register button.submit,
+.page_search button.submit,
+.pkp_button.submit,
+button.submit {
+  padding: 0.5rem var(--worj-space-4);
+  border: 2px solid var(--worj-primary);
+  border-radius: var(--worj-radius);
+  background: var(--worj-primary);
+  color: var(--worj-on-primary);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button.submit:hover,
+button.submit:focus {
+  background: var(--worj-primary-dark);
+  color: var(--worj-on-primary);
+}
+
+/* validation messages from OJS: strong text colour plus a marker, not colour alone */
+.pkp_form_error,
+.cmp_notification.error,
+.error {
+  color: var(--worj-error);
+}
+
+/* ids and div.pkp_form_error beat the parent's white-on-red box (3.46:1) */
+body .pkp_structure_main #formErrors,
+body .pkp_structure_main #worj-form-error,
+body .pkp_structure_main div.pkp_form_error {
+  margin: 0 0 var(--worj-space-3);
+  padding: var(--worj-space-3);
+  background: var(--worj-surface);
+  border-left: 6px solid var(--worj-error);
+  border-radius: var(--worj-radius);
+  color: var(--worj-text);
+}
+
+body .pkp_structure_main #formErrors .pkp_form_error,
+body .pkp_structure_main #formErrors ul,
+body .pkp_structure_main #formErrors li {
+  background: transparent;
+  color: var(--worj-error);
+}
+
+body .pkp_structure_main #formErrors .pkp_form_error {
+  font-weight: 700;
+}
+
+body .pkp_structure_main #formErrors .pkp_form_error_list a {
+  color: var(--worj-primary);
+}
+
+[aria-invalid="true"] {
+  border-color: var(--worj-error);
+  border-width: 2px;
+}

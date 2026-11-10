@@ -19,6 +19,13 @@ Before every run, verify `git diff --name-only` contains only editable-surface p
 ## Metric
 `make eval` prints `SCORE: <0..100>` (higher is better) and `GATES: PASS|FAIL <reason>`. See `EVAL-SPEC.md`. A change is kept only if **GATES: PASS** and `SCORE >= best + 0.3`. A change that gives equal score with **less code** (fewer lines or bytes) is also kept (simplicity wins ties).
 
+### Component set must match the baseline (start-of-loop check)
+`make eval` prints `COMPONENTS: ran=... skipped=...` and then `COMPONENT-SET: MATCHES baseline (...)` or `COMPONENT-SET: DIFFERS from baseline (...)`. The recorded set lives in `autoresearch/eval/baseline.json` (`components`). A score from one set of components is not comparable with a score from another (for example with and without Lighthouse installed: 98.8 over five components against 100.0 over two).
+
+- **Before the first experiment**, run `make eval` once. If the line says `DIFFERS`, do not start the loop: append `blocked: component set differs from baseline` to `results.tsv` and stop.
+- **At the start of every experiment**, check that line again. If it ever says `DIFFERS` mid-loop (the environment changed), stop and log `blocked`; never compare `SCORE` values across component sets.
+- Never edit `baseline.json` or install or remove Lighthouse to make the sets match. Only the human changes the recorded set.
+
 ## One experiment
 1. Read the last 15 lines of `results.tsv` and `git log --oneline -n 10`. Do not re-read the whole history.
 2. Pick **one** hypothesis (e.g. "raise link contrast on sidebar", "replace render-blocking CSS import", "add width/height to hero image to stop layout shift"). Write it in one line.

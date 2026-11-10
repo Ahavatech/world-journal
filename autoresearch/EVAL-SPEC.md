@@ -13,6 +13,7 @@ Rendered pages from either (a) a local OJS instance seeded with fixtures, or (b)
 5. Theme CSS + JS size <= 150 KB uncompressed.
 6. Pages work with JS disabled (nav reachable, content present).
 7. No `[PLACEHOLDER` banner removed by the loop (banners are content, not theme).
+8. No uncaught JavaScript errors and no console errors on any page (added after a parent script threw `Swiper is not defined` on every page and passed gates 1 to 7).
 
 ## Score (0 to 100)
 | Component | Weight | Source |

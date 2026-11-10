@@ -1,0 +1,46 @@
+/* Design tokens. Retune the whole theme here.
+   Brand colours were sampled from worj.jpeg (see docs/BRAND.md).
+   Contrast on white, computed (scripts/check-contrast.py):
+   primary 14.4:1, text-muted 7.5:1, accent-text 5.3:1, accent 3.0:1.
+   --worj-focus holds >= 3.6:1 against white, panel grey, navy and dark navy.
+   --worj-accent (gold) is for fills, rules and LARGE text only. Use
+   --worj-accent-text when gold must be small text. */
+:root {
+  /* colour */
+  --worj-primary: #022760;
+  --worj-primary-dark: #011a45;
+  --worj-accent: #c08b0a;
+  --worj-accent-text: #8a6500;
+  --worj-text: #1a2233;
+  --worj-text-muted: #4a5568;
+  --worj-bg: #fff;
+  --worj-surface: #f3f5f9;
+  --worj-border: #c3ccda;
+  --worj-border-strong: #6b7a90;
+  --worj-on-primary: #fff;
+  --worj-focus: #2f7bf5;
+  --worj-error: #a4262c;
+  --worj-banner-bg: #fff3cd;
+  --worj-banner-text: #5c4400;
+
+  /* type */
+  --worj-font-serif: "WORJ Serif", "Georgia", "Times New Roman", serif;
+  --worj-font-sans: "WORJ Sans", system-ui, -apple-system, "Segoe UI", "Roboto", "Arial", sans-serif;
+  --worj-text-base: 1.0625rem;
+  --worj-text-small: 0.9375rem;
+  --worj-text-h1: clamp(1.75rem, 1.3rem + 2vw, 2.5rem);
+  --worj-text-h2: clamp(1.4rem, 1.15rem + 1.1vw, 1.875rem);
+  --worj-text-h3: 1.25rem;
+  --worj-leading: 1.6;
+
+  /* space and shape */
+  --worj-space-1: 0.25rem;
+  --worj-space-2: 0.5rem;
+  --worj-space-3: 1rem;
+  --worj-space-4: 1.5rem;
+  --worj-space-5: 2.5rem;
+  --worj-space-6: 4rem;
+  --worj-radius: 4px;
+  --worj-content-width: 72rem;
+  --worj-focus-ring: 3px solid var(--worj-focus);
+}

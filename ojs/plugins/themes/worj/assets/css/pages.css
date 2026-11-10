@@ -1,0 +1,127 @@
+/* Page-specific layout. Homepage first. */
+.worj-home > section,
+.worj-home > aside {
+  margin-block: var(--worj-space-5);
+  margin-inline: 0;
+}
+
+.worj-home > .worj-hero {
+  display: grid;
+  gap: var(--worj-space-4);
+  align-items: center;
+  margin-top: calc(-1 * var(--worj-space-4));
+  padding: var(--worj-space-5) 0;
+  background: var(--worj-surface);
+
+  /* full-width band without a wrapper element */
+  box-shadow: 0 0 0 100vmax var(--worj-surface);
+  clip-path: inset(0 -100vmax);
+}
+
+.worj-hero__logo {
+  /* the JPEG has a white background; multiply lets it take the band colour
+     without cutting the image out (the client's SVG or transparent PNG is
+     still an open item in docs/BRAND.md) */
+  mix-blend-mode: multiply;
+  width: 100%;
+  max-width: 24rem;
+  height: auto;
+}
+
+.worj-hero__name {
+  margin: 0 0 var(--worj-space-3);
+  color: var(--worj-primary);
+  font-family: var(--worj-font-serif);
+  font-size: var(--worj-text-h1);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.worj-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--worj-space-3);
+  margin: 0;
+}
+
+.worj-issue-preview__grid {
+  display: grid;
+  gap: var(--worj-space-4);
+}
+
+.worj-issue-preview__cover img {
+  display: block;
+  max-width: 12rem;
+  height: auto;
+}
+
+.worj-cover-placeholder {
+  display: grid;
+  place-items: center;
+  max-width: 12rem;
+  aspect-ratio: 3 / 4;
+  padding: var(--worj-space-2);
+  border: 2px dashed var(--worj-border-strong);
+  background: var(--worj-surface);
+  text-align: center;
+}
+
+.current_issue_title {
+  margin: 0 0 var(--worj-space-3);
+  font-family: var(--worj-font-serif);
+  font-size: var(--worj-text-h3);
+  font-weight: 600;
+}
+
+@media (min-width: 48em) {
+  .worj-hero {
+    grid-template-columns: 5fr 7fr;
+  }
+
+  .worj-issue-preview__grid {
+    grid-template-columns: 12rem minmax(0, 1fr);
+  }
+}
+
+/* About and other text pages: a readable line length, with or without a sidebar */
+.page_about,
+.page_information,
+.page_contact,
+.page_privacy,
+.page_announcement,
+.page_announcements,
+.page_editorial_masthead {
+  max-width: 46rem;
+}
+
+.pkp_structure_main > .page > h1 {
+  margin-top: 0;
+  padding-bottom: var(--worj-space-2);
+  border-bottom: 3px solid var(--worj-accent);
+}
+
+/* breadcrumbs */
+.cmp_breadcrumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--worj-space-1) var(--worj-space-2);
+  margin: 0 0 var(--worj-space-3);
+  padding: 0;
+  list-style: none;
+  font-size: var(--worj-text-small);
+}
+
+.cmp_breadcrumbs a {
+  display: inline-block;
+  min-height: 1.75rem;
+  padding-block: 0.2rem;
+}
+
+.cmp_breadcrumbs .separator {
+  margin-left: var(--worj-space-2);
+  color: var(--worj-text-muted);
+}
+
+.cmp_breadcrumbs .current {
+  color: var(--worj-text-muted);
+}

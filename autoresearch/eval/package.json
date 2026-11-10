@@ -1,0 +1,11 @@
+{
+  "name": "worj-eval",
+  "private": true,
+  "description": "QA tooling for the WORJ theme. Playwright itself comes from the sandbox (1.63.0, matching its browsers). Lighthouse is optional: without it the Lighthouse-based components are reported SKIPPED.",
+  "dependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "axe-core": "4.14.0",
+    "pngjs": "7.0.0",
+    "lighthouse": "13.6.0"
+  }
+}

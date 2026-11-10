@@ -136,7 +136,18 @@ if ! grep -q '^installed = On' "$core/config.inc.php"; then
 fi
 # The installer rewrites allowed_hosts to [""], which rejects every request.
 sed -i "s#^allowed_hosts = .*#allowed_hosts = '[\"127.0.0.1\"]'#" "$core/config.inc.php"
+# Register and enable the worj theme if its folder is linked into ojs-core/.
+if [ -f "$core/plugins/themes/worj/version.xml" ]; then
+  (cd "$core" && php lib/pkp/tools/installPluginVersion.php plugins/themes/worj/version.xml >/dev/null)
+  mariadb "$SANDBOX_DB_NAME" -e "INSERT IGNORE INTO plugin_settings (plugin_name, context_id, setting_name, setting_value, setting_type) VALUES
+    ('worjthemeplugin', NULL, 'enabled', '1', 'bool'), ('worjthemeplugin', 1, 'enabled', '1', 'bool');"
+fi
+# Fresh journals do not enable the Make a Submission block plugin; enable it so
+# the sidebar states can be tested. (Task 4.1 covers this for the real journal.)
+mariadb "$SANDBOX_DB_NAME" -e "INSERT IGNORE INTO plugin_settings (plugin_name, context_id, setting_name, setting_value, setting_type) VALUES
+  ('makesubmissionblockplugin', NULL, 'enabled', '1', 'bool'), ('makesubmissionblockplugin', 1, 'enabled', '1', 'bool');"
 mkdir -p "$core/cache" "$core/public"
 chmod -R a+rwX "$core/cache" "$core/public"
 
 echo "sandbox up: http://127.0.0.1:$port/  (admin credentials in .env.sandbox)"
+echo "next: node scripts/sandbox-seed.js  (journal + theme; needs Playwright)"
