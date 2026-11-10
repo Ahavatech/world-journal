@@ -3,6 +3,7 @@
 
   scripts/check-placeholders.sh --url http://127.0.0.1:8082/worj
 
+Also reports wording OJS ships as default settings text (scripts/ojs-default-wording.txt).
 Crawls the journal sitemap and the nav, footer and sidebar links on the home page.
 For every page it scans the visible text, the <title>, the meta tags (description,
 citation_*, DC.*, og:*, twitter:*) and image alt / aria-label text. For every
@@ -24,6 +25,14 @@ PATTERN = re.compile(
     r"example\.org|example\.invalid|lorem|NOT A REAL PUBLICATION|not a real publication",
     re.IGNORECASE,
 )
+# Fragments of the wording OJS ships as default settings text (see
+# scripts/extract-ojs-default-wording.py). Text left as shipped goes live as the
+# journal's own policy, so it is reported like a placeholder.
+DEFAULT_WORDING_FILE = __import__("pathlib").Path(__file__).resolve().parent / "ojs-default-wording.txt"
+DEFAULT_WORDING = [l.strip() for l in DEFAULT_WORDING_FILE.read_text().splitlines()
+                   if l.strip() and not l.startswith("#")] if DEFAULT_WORDING_FILE.exists() else []
+CORE_PAGES = ["/about", "/about/privacy", "/about/submissions", "/about/contact", "/about/editorialMasthead",
+              "/information/readers", "/information/authors", "/information/librarians"]
 META_NAME = re.compile(r"^(description|citation_.*|dc\..*|og:.*|twitter:.*)$", re.IGNORECASE)
 
 
@@ -88,6 +97,10 @@ def scan_html(url, body, findings):
     for field, value in [("title", p.title)] + p.fields + [("text", " ".join(p.text))]:
         for m in PATTERN.finditer(value):
             findings.append((url, field, value[max(0, m.start() - 20): m.end() + 40].strip().replace("\n", " ")))
+    visible = re.sub(r"\s+", " ", " ".join(p.text)).lower()
+    for frag in DEFAULT_WORDING:
+        if frag in visible:
+            findings.append((url, "ojs default wording", frag))
     return p
 
 
@@ -120,13 +133,19 @@ def main():
     nav = {urllib.parse.urljoin(base + "/", h.split("#")[0]) for h in home.nav_links
            if h and not h.startswith(("#", "mailto:", "javascript:", "tel:"))}
     nav = {u for u in nav if u.startswith(origin)}
-    urls = {base + "/"} | set(sitemap_urls) | nav
+    # Core pages that print journal settings (some default text only shows here, and the
+    # Information pages are linked only when the sidebar block is on). A 404 on one of
+    # these is not a failure: the page may be switched off.
+    optional = {base + path for path in CORE_PAGES}
+    urls = {base + "/"} | set(sitemap_urls) | nav | optional
 
     pdfs, pages_done = set(), 0
     for url in sorted(urls):
         st, body, ctype = fetch(url)
         is_nav = url in nav
         if st != 200:
+            if url in optional and url not in nav and url not in sitemap_urls:
+                continue
             failures.append((url, f"{'nav link' if is_nav else 'sitemap URL'} returned {st or 'a network error'}"))
             continue
         if "html" not in ctype and not body.lstrip().startswith(b"<"):
