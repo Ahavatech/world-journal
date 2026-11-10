@@ -25,7 +25,7 @@ Walkthroughs run in the sandbox against a **throwaway journal `probe`** (path `/
 | Sections (section 2) | written, `VERIFIED-SANDBOX 2026-11-10` |
 | Submission settings, review settings and forms, users and roles (sections 3, 4, 5) | written; checked on screen except where marked UNVERIFIED |
 | Email templates, notifications and delivery (section 6) | written; reviewer-invitation email UNVERIFIED (no submission in review) |
-| DOI, licence, search settings and description | pending |
+| Distribution: DOI, licence, search description (section 7) | written; DOI-off and meta description checked in the sandbox |
 | Navigation menus, theme options, blocks, `showAwardsCard`, Highlights note | pending |
 | Admin hardening, email credentials, importer note, launch notes | pending |
 
@@ -52,3 +52,10 @@ Walkthroughs run in the sandbox against a **throwaway journal `probe`** (path `/
 - Result: registration with `require_validation = Off` sends no email; with `On` it sends "Validate Your Account" (from = Technical Support Contact, absolute link, signature, no unreplaced variables).
 - Reviewer-invitation email not rendered (needs a submission in review with a reviewer; Phase 8.2 script).
 - Carry to 4.3: `[email] require_validation` is a config decision; `default`, `smtp_*` are set at provisioning from `.env`.
+
+## Distribution findings (session 1)
+
+- DOIs are **on** by default in 3.5.0-6; unticking and saving removes the **DOIs** sidebar item (checked).
+- Setting Search Indexing > Description makes the homepage emit `<meta name="description">`; before it, none (checked by fetching the homepage).
+- Public COUNTER SUSHI statistics are on by default (D20); OAI on by default.
+- Not walked: Access, Archiving, Registration, PKP Preservation Network, LOCKSS/CLOCKSS tabs.
