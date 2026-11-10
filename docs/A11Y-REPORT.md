@@ -78,3 +78,7 @@ The token pairs (focus ring against white, panel, navy, dark navy and the placeh
 - Real content: headings, link text, images and alt text, tables and language changes written by editors.
 - Email notifications.
 - Usability testing with disabled users.
+
+## Conditional exception: registration with ALTCHA (decision D21, not enabled)
+
+Bot protection is a client decision (`docs/ADMIN-SETUP-CHECKLIST.md`, D21, step 5.5). **If ALTCHA is chosen, the registration page (and the login page if `altcha_on_login` stays on) requires JavaScript**: in the sandbox, submitting the register form with JavaScript off failed with "You must complete the validation check used to prevent spam submissions", and with JavaScript on it succeeded. That is an exception to the project rule that every public page works with JavaScript disabled, **limited to the pages that carry the ALTCHA widget**. Record the client's choice here when it is made, with the date. Nothing in this report covers the widget's own accessibility (keyboard use, screen reader announcements): test it before enabling it. reCAPTCHA is not recommended (remote script, third-party privacy disclosure). Today neither is enabled, so no exception is in force.

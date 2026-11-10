@@ -25,7 +25,7 @@ Nothing here has been run on a VPS.
 
 ## Importing real users and articles
 
-Use `scripts/import-ojs-xml.sh` (usage and safeguards in `docs/IMPORT.md`), never the raw tool. **Take a backup first and run each file once.** `--i-have-a-backup` is only a speed bump: nothing verifies the backup. A users import emails every new user, so test the mail settings first. Real files live in `ojs/import/` (gitignored, personal data).
+Use `scripts/import-ojs-xml.sh` (usage and safeguards in `docs/IMPORT.md`), never the raw tool. **Take a backup first and run each file once.** `--i-have-a-backup` is only a speed bump: nothing verifies the backup. **WARNING: a users import sends a registration email to every newly created user.** The client decides (decision D22 in `docs/ADMIN-SETUP-CHECKLIST.md`) whether to import real users at all or let them self-register. **Never run it against real addresses until SMTP works, the sending domain passes SPF, DKIM and DMARC, and every enabled email template has been read and approved.** Real files live in `ojs/import/` (gitignored, personal data).
 
 ## DNS for the sending domain (SPF, DKIM, DMARC)
 

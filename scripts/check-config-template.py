@@ -6,6 +6,7 @@
 Fails (exit 1) on:
   unknown key       a key that the shipped config.TEMPLATE.inc.php does not have (typo, or removed by an OJS upgrade)
   missing key       an ACTIVE key of the shipped template that our template lacks
+  salt, api secret  `security.salt` and `security.api_key_secret` must be the @@TOKEN@@ (never empty: provisioning generates them)
   secret            a secret-bearing key (app_key, salt, api_key_secret, database password, smtp_password,
                     recaptcha_private_key, altcha_hmackey) holding anything but an empty value or an @@TOKEN@@,
                     or ANY active value that looks like a real secret (long random string, base64: key)
@@ -27,6 +28,7 @@ COMMENTED = re.compile(r"^;\s*([a-z][a-z0-9_]*)\s*=\s*(.*)$")
 TOKEN = re.compile(r"^[\"']?@@[A-Z0-9_]+@@[\"']?$|^'\[\"@@[A-Z0-9_]+@@\"\]'$")
 SECRET_KEYS = {"general.app_key", "security.salt", "security.api_key_secret", "database.password",
                "email.smtp_password", "captcha.recaptcha_private_key", "captcha.altcha_hmackey"}
+MUST_BE_TOKEN = {"security.salt", "security.api_key_secret"}
 KNOWN_PLACEHOLDER = re.compile(r"your_(public|private)_key|Example key|YouMustSetASecretKeyHere", re.I)
 
 
@@ -84,7 +86,9 @@ def main():
             problems.append(f"missing required key `{key}` (active in the shipped template)")
     for key, (n, value) in present.items():
         bare = value.strip().strip("\"'")
-        if key in SECRET_KEYS:
+        if key in MUST_BE_TOKEN and not TOKEN.match(value):
+            problems.append(f"line {n}: `{key}` must be the @@TOKEN@@ that provisioning replaces with a generated value (empty or literal is not allowed: the installer leaves the shipped default salt and an empty API secret)")
+        elif key in SECRET_KEYS:
             if bare and not TOKEN.match(value) or KNOWN_PLACEHOLDER.search(value):
                 problems.append(f"line {n}: `{key}` must be empty or an @@TOKEN@@ filled at provisioning, not a literal value")
         elif looks_secret(value) and not TOKEN.match(value):
