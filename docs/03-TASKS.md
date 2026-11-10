@@ -59,6 +59,7 @@ Work phase by phase. For every phase: plan first, wait for approval, then execut
 - 6.1 `scripts/check-citation-meta.sh <url|file>`: fetches or reads an article landing page and verifies every required `citation_*` tag is present, non-empty, one `citation_author` per author, date tag is `citation_publication_date` or `citation_date` (OJS 3.5.0-6 emits `citation_date`) in format `YYYY/MM/DD`, `citation_pdf_url` returns a PDF. A missing `citation_issn` is reported as `EXPECTED-MISSING` only with `--placeholder-issn` (see 8.3).
 - 6.2 `scripts/check-pdf.sh`: text extractable (`pdftotext`), size under 5 MB, title on page 1.
 - 6.3 `robots.txt`, sitemap check, OAI-PMH check (`verb=Identify`, `ListRecords`).
+- 6.5 Canonical check: article pages (the page type that matters for indexing) must emit `<link rel="canonical">` pointing at the page's own clean URL. OJS emits none on custom pages (see `docs/PHASE3-NOTES.md`); do not fix that unless the human asks. Sandbox finding (3.5.0-6): article pages emit none either, so expect this check to fail until the human decides on a head hook.
 - 6.4 `docs/SEARCH-CONSOLE.md`: human steps for DNS verification and sitemap submission.
 
 ## Phase 7: DOI and Crossref readiness (mostly blocked on client)
