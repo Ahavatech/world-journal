@@ -48,6 +48,19 @@ async function main() {
   await call('PUT', `/worj/api/v1/contexts/${id}`, { themePluginPath: 'worj', description: { en: '[PLACEHOLDER: short description of the journal, aims and scope]' } });
   console.log(`journal worj (id ${id}) uses theme worj`);
 
+  // Three placeholder announcements for the homepage (created once)
+  await call('PUT', `/worj/api/v1/contexts/${id}`, { enableAnnouncements: true, numAnnouncementsHomepage: 3 });
+  const existing = await call('GET', '/worj/api/v1/announcements?count=50');
+  for (let n = existing.items.length + 1; n <= 3; n += 1) {
+    await call('POST', '/worj/api/v1/announcements', {
+      contextId: id,
+      title: { en: `[PLACEHOLDER] Sample announcement ${n}` },
+      descriptionShort: { en: `[PLACEHOLDER: sample announcement text ${n}. Not real news.]` },
+      description: { en: '<p>[PLACEHOLDER: sample announcement body.]</p>' },
+    });
+    console.log(`created placeholder announcement ${n}`);
+  }
+
   // Sidebar state for layout testing: SANDBOX_SIDEBAR=blocks (default) | none | empty
   //   blocks: Make a Submission + Information (with placeholder text)
   //   none:   no sidebar configured
