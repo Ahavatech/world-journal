@@ -32,8 +32,8 @@ The Editor Dashboard groups submissions into views such as *Needs editor, All in
 
 Things to know before changing anything:
 
-- **Submissions can be switched off** (Settings > Workflow > Disable Submissions). The text authors then see is OJS's own wording; see `docs/QA-SCRIPT.md` finding P4.
-- **Mail notices go to the journal contact email**, so it must be a monitored role address (`docs/QA-SCRIPT.md` P3, decision D23).
+- **Submissions can be switched off** (Settings > Workflow > Disable Submissions). The text authors then see is OJS's own wording; see `docs/QA-SCRIPT.md` finding QF4.
+- **Mail notices go to the journal contact email**, so it must be a monitored role address (`docs/QA-SCRIPT.md` QF3, decision D23).
 - **Do not turn on DOIs or install a registration agency** until `docs/DOI-SETUP.md` is complete.
 
 ## How to publish an issue
@@ -42,7 +42,7 @@ Seen in the sandbox in a throwaway journal (`VERIFIED-SANDBOX 2026-11-10`), on a
 
 1. **Create the issue:** Issues > Future Issues > *Create Issue*. Fill *Volume*, *Number* and *Year* and tick their "show" boxes (or give a *Title*); OJS refuses to save otherwise. *Save*.
 2. **Add the galley:** open the article > Publication > *Galleys* > *Add galley*; give the label (for example PDF), save, then upload the real PDF file. The PDF's first page must show the title and every author.
-3. **Assign the issue and fill the details:** Publication > *Issue*: choose the issue and the section, and **fill *Pages*** (the citation tags need it, `docs/QA-SCRIPT.md` P2). Press *Schedule For Publication* and confirm.
+3. **Assign the issue and fill the details:** Publication > *Issue*: choose the issue and the section, and **fill *Pages*** (the citation tags need it, `docs/QA-SCRIPT.md` QF2). Press *Schedule For Publication* and confirm.
 4. **Publish the issue:** Issues > Future Issues > *Publish Issue*. **The box "Send an email about this to all registered users" is ticked by default: untick it unless you want every registered user emailed.** Press *OK*.
 5. **Check the result:** open the article page and the PDF, then ask the operator to run `scripts/check-citation-meta.sh URL` and `scripts/check-pdf.sh URL` on the article (both must pass), and `scripts/check-discovery.sh --robots-mode production URL` after a batch.
 
