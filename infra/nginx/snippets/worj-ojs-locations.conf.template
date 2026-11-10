@@ -10,7 +10,9 @@ location ~* /(composer\.json|composer\.lock|package(-lock)?\.json|Makefile)$ { r
 
 # 3. directories that hold code or private data and are never requested by a browser
 location ~ ^/(cache|tools|dbscripts|registry|docs|classes|controllers|pages|jobs|schemas|templates|locale|plugins/[^/]+/[^/]+/(classes|templates|locale|schema|filter|controllers))(/|$) { return 404; }
-location ~ ^/lib/pkp/(classes|controllers|pages|templates|schemas|locale|tools|registry|docs|jobs|xml|lib/vendor|plugins/[^/]+/[^/]+/(classes|templates))(/|$) { return 404; }
+# lib/pkp/lib/vendor is NOT denied as a directory: the admin UI loads TinyMCE and Plupload from it. Its PHP is
+# unreachable anyway (rule 4: only /index.php runs) and its README, composer and test files match rule 2.
+location ~ ^/lib/pkp/(classes|controllers|pages|templates|schemas|locale|tools|registry|docs|jobs|xml|plugins/[^/]+/[^/]+/(classes|templates))(/|$) { return 404; }
 
 # 4. PHP: only /index.php runs. Any other .php (including one uploaded into public/) is a 404:
 #    it is never executed and never shown as text.

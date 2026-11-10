@@ -3,9 +3,13 @@ SHELL := /bin/bash
 THEME := ojs/plugins/themes/worj
 
 # Needs php-fpm8.3, mariadbd and nginx in this sandbox; not part of `make lint` (CI has no FPM or MariaDB).
-.PHONY: infra-test
+.PHONY: infra-test infra-test-nginx
 infra-test:
 	scripts/test-infra-config.sh
+
+# Needs the sandbox (make sandbox-up sandbox-seed), root, and `cd autoresearch/eval && npm ci`. Takes a few minutes.
+infra-test-nginx:
+	scripts/test-nginx-harness.sh
 
 .PHONY: setup lint eval check-placeholders sandbox-up sandbox-down sandbox-seed check-citation check-placeholders-url
 
