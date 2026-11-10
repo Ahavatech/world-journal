@@ -7,6 +7,7 @@ THEME := ojs/plugins/themes/worj
 infra-test:
 	scripts/test-infra-config.sh
 	scripts/test-provision-preflight.sh | tail -1
+	scripts/test-provision-ssh-firewall.sh | tail -1
 
 # Needs root, the sandbox up, and age + rclone (apt-get install -y age rclone).
 infra-test-backup:

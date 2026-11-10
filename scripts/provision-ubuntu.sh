@@ -292,8 +292,141 @@ CONF
   elif [ "$CHECK" = 0 ]; then die "no database password to give the backup job: run the mariadb stage first"; fi
 }
 
-stage_firewall() { say "  not implemented in this commit (Phase 5 commit 10)"; }
-stage_ssh() { say "  not implemented in this commit (Phase 5 commit 10; --confirm-ssh=$CONFIRM_SSH)"; }
+# ---- safety timers ("dead-man"): a change that could lock the operator out reverts itself after 10 minutes
+# unless --confirm-ssh is run from a SECOND terminal that logged in successfully with the key.
+DEADMAN_MINUTES=10
+deadman() { # schedule NAME MINUTES COMMAND | cancel NAME | pending NAME
+  if [ -n "${WORJ_DEADMAN_HOOK:-}" ]; then "$WORJ_DEADMAN_HOOK" "$@"; return; fi   # test-only: no systemd in the sandbox
+  case "$1" in
+    schedule) systemd-run --quiet --unit="$2" --on-active="${3}min" /bin/sh -c "$4" ;;
+    cancel) systemctl stop "$2.timer" 2>/dev/null || true ;;
+    pending) systemctl is-active --quiet "$2.timer" 2>/dev/null ;;
+  esac
+}
+SSH_DROPIN=/etc/ssh/sshd_config.d/00-worj.conf
+
+in_ssh_session() { # true if this process was started from an ssh login
+  [ -z "${WORJ_TEST_SSH_SESSION:-}" ] || return 0
+  local pid=$$ comm
+  while [ "$pid" -gt 1 ]; do
+    comm="$(cat "/proc/$pid/comm" 2>/dev/null || true)"
+    case "$comm" in sshd*) return 0 ;; esac
+    pid="$(awk '{print $4}' "/proc/$pid/stat" 2>/dev/null || echo 1)"
+  done
+  return 1
+}
+ssh_session_port() { # the local port of the current ssh connection, or empty
+  [ -z "${WORJ_TEST_SSH_PORT:-}" ] || { echo "$WORJ_TEST_SSH_PORT"; return; }
+  [ -z "${SSH_CONNECTION:-}" ] || { echo "$SSH_CONNECTION" | awk '{print $4}'; return; }
+  echo ""
+}
+recent_key_login() { # user
+  local u="$1" log="${WORJ_AUTHLOG:-}"
+  if [ -n "$log" ]; then grep -q "Accepted publickey for $u " "$log" 2>/dev/null; return; fi
+  { journalctl -u ssh -u sshd --since "7 days ago" --no-pager 2>/dev/null; cat /var/log/auth.log 2>/dev/null; } | grep -q "Accepted publickey for $u "
+}
+
+stage_firewall() {
+  command -v ufw >/dev/null || { [ "$CHECK" = 1 ] && { chg "install ufw (package stage)"; return 0; }; die "ufw is not installed (run the packages stage)"; }
+  local want=() line r
+  want+=("ufw allow $SSH_PORT/tcp")
+  if [ "$FIREWALL_CLOUDFLARE_ONLY" = yes ]; then
+    local cf=/etc/nginx/worj-cloudflare-realip.conf
+    [ -f "$cf" ] || die "FIREWALL_CLOUDFLARE_ONLY=yes needs $cf (run the cloudflare-ip stage first): without the ranges 80 and 443 would be closed to everyone"
+    while IFS= read -r line; do
+      # IPv4 only: the origin listens on IPv4 only (Cloudflare connects over IPv4), and ufw refuses IPv6 rules when IPv6 is off
+      case "$line" in "set_real_ip_from "*:*) ;; "set_real_ip_from "*) r="${line#set_real_ip_from }"; r="${r%;}"; want+=("ufw allow from $r to any port 80 proto tcp" "ufw allow from $r to any port 443 proto tcp") ;; esac
+    done <"$cf"
+    [ "${#want[@]}" -gt 3 ] || die "no Cloudflare ranges found in $cf"
+  else
+    want+=("ufw allow 80/tcp" "ufw allow 443/tcp")
+  fi
+  local have; have="$(ufw show added 2>/dev/null | grep '^ufw ' || true)"
+  # defaults: deny incoming, allow outgoing
+  if ! grep -q '^DEFAULT_INPUT_POLICY="DROP"' /etc/default/ufw 2>/dev/null; then chg "ufw default deny incoming"; [ "$CHECK" = 1 ] || ufw default deny incoming >/dev/null; fi
+  if ! grep -q '^DEFAULT_OUTPUT_POLICY="ACCEPT"' /etc/default/ufw 2>/dev/null; then chg "ufw default allow outgoing"; [ "$CHECK" = 1 ] || ufw default allow outgoing >/dev/null; fi
+  # SSH rule FIRST, then the web rules (a half-applied run must never leave SSH closed)
+  for r in "${want[@]}"; do
+    if ! grep -qxF "$r" <<<"$have"; then chg "$r"; [ "$CHECK" = 1 ] || ${r} >/dev/null; fi
+  done
+  # rules this script manages but no longer wants (for example after switching FIREWALL_CLOUDFLARE_ONLY)
+  local wanted; wanted="$(printf '%s\n' "${want[@]}")"   # here-string below: a pipe into grep -q would SIGPIPE under pipefail
+  while IFS= read -r line; do
+    [ -n "$line" ] || continue
+    case "$line" in
+      "ufw allow 80/tcp" | "ufw allow 443/tcp" | "ufw allow from "*" port 80 proto tcp" | "ufw allow from "*" port 443 proto tcp")
+        grep -qxF -- "$line" <<<"$wanted" || { chg "remove ${line#ufw allow }"; if [ "$CHECK" = 0 ]; then read -ra parts <<<"${line#ufw }"; ufw --force delete "${parts[@]}" >/dev/null; fi; } ;;
+    esac
+  done <<<"$have"
+  if ufw status 2>/dev/null | head -1 | grep -q 'Status: active'; then ok "firewall active"; return 0; fi
+  # about to enable: the SSH rule must exist and match the port of THIS session, or we could cut our own branch
+  if [ "$CHECK" = 1 ]; then chg "enable the firewall with a $DEADMAN_MINUTES-minute revert timer (cancel with --confirm-ssh after a second login works)"; return 0; fi
+  ufw show added | grep -qxF "ufw allow $SSH_PORT/tcp" || die "REFUSED to enable the firewall: no allow rule for SSH port $SSH_PORT"
+  local sp; sp="$(ssh_session_port)"
+  if [ -n "$sp" ] && [ "$sp" != "$SSH_PORT" ]; then die "REFUSED to enable the firewall: this session is on port $sp but SSH_PORT is $SSH_PORT"; fi
+  deadman schedule worj-firewall-revert "$DEADMAN_MINUTES" "/usr/sbin/ufw --force disable"
+  chg "enable the firewall (a $DEADMAN_MINUTES-minute timer will disable it again unless you run --confirm-ssh)"
+  ufw --force enable >/dev/null
+  say "  NOW: open a SECOND terminal, log in again (ssh), then run:  sudo $0 --env $ENV_FILE --os $OS_ANSWER --confirm-ssh"
+}
+
+stage_ssh() {
+  local home keys fp n
+  getent passwd "$OPERATOR_USER" >/dev/null || die "OPERATOR_USER '$OPERATOR_USER' does not exist"
+  home="$(getent passwd "$OPERATOR_USER" | cut -d: -f6)"; keys="$home/.ssh/authorized_keys"
+  if [ "$CHECK" = 1 ]; then
+    chg "REQUIRE: $OPERATOR_USER exists, has sudo, valid keys in $keys, and this session is that user's ssh login with a recent 'Accepted publickey'"
+    chg "write $SSH_DROPIN (no passwords, no root login, publickey only), run sshd -t, schedule a $DEADMAN_MINUTES-minute revert, reload ssh (not restart)"
+    return 0
+  fi
+  # --- every precondition, before any change ---
+  id -nG "$OPERATOR_USER" | tr ' ' '\n' | grep -qxE 'sudo|wheel' || die "REFUSED: $OPERATOR_USER is not in the sudo group (root login is about to be disabled)"
+  [ -s "$keys" ] || die "REFUSED: $keys does not exist or is empty: key-only login would lock everyone out"
+  if [ $((0$(stat -c '%a' "$home/.ssh") & 022)) -ne 0 ] || [ $((0$(stat -c '%a' "$keys") & 022)) -ne 0 ]; then die "REFUSED: $home/.ssh and $keys must not be group or world writable (sshd would ignore the keys)"; fi
+  n=0
+  while IFS= read -r line; do
+    case "$line" in '' | '#'*) continue ;; esac
+    fp="$(printf '%s\n' "$line" | ssh-keygen -l -f - 2>/dev/null || true)"
+    [ -z "$fp" ] || n=$((n + 1))
+  done <"$keys"
+  [ "$n" -ge 1 ] || die "REFUSED: no valid public key found in $keys (ssh-keygen could not read one)"
+  [ "${SUDO_USER:-}" = "$OPERATOR_USER" ] || die "REFUSED: run this as $OPERATOR_USER through sudo (SUDO_USER is '${SUDO_USER:-}')"
+  in_ssh_session || die "REFUSED: this is not an ssh login session; run it from the ssh session you will keep open"
+  recent_key_login "$OPERATOR_USER" || die "REFUSED: no recent 'Accepted publickey for $OPERATOR_USER' in the ssh log: log in once with your KEY first (a password login does not count)"
+  ok "$OPERATOR_USER: sudo, $n valid key(s), a key login in the log, this is an ssh session"
+  local want; want="$(printf '%s\n' "# World Open Research Journal: key-only SSH. The 00- prefix makes these values win over later files" \
+    "# (sshd takes the FIRST value it reads; cloud images often ship 50-cloud-init.conf with PasswordAuthentication yes)." \
+    "PasswordAuthentication no" "KbdInteractiveAuthentication no" "PermitRootLogin no" "PermitEmptyPasswords no" "PubkeyAuthentication yes" \
+    "AuthenticationMethods publickey" "MaxAuthTries 3" "LoginGraceTime 30" "X11Forwarding no")"
+  local cur=""; [ ! -f "$SSH_DROPIN" ] || cur="$(cat "$SSH_DROPIN")"
+  if [ "$cur" = "$want" ]; then
+    if deadman pending worj-ssh-revert; then say "  PENDING: the ssh change is waiting for --confirm-ssh (it will revert on its own otherwise)"; else ok "ssh already key-only and confirmed"; fi
+  else
+    chg "write $SSH_DROPIN"
+    mkdir -p "$(dirname "$SSH_DROPIN")"
+    [ ! -f "$SSH_DROPIN" ] || cp -p "$SSH_DROPIN" "$SSH_DROPIN.worj-bak"
+    printf '%s\n' "$want" >"$SSH_DROPIN"; chmod 644 "$SSH_DROPIN"
+    if ! sshd -t 2>"$ANSWERS_DIR.sshd.err"; then
+      rm -f "$SSH_DROPIN"; [ ! -f "$SSH_DROPIN.worj-bak" ] || mv "$SSH_DROPIN.worj-bak" "$SSH_DROPIN"
+      die "sshd -t rejected the new configuration; it was removed again: $(head -c 200 "$ANSWERS_DIR.sshd.err" | tr '\n' ' ')"
+    fi
+    rm -f "$ANSWERS_DIR.sshd.err"
+    local eff; eff="$(sshd -T 2>/dev/null | tr '[:upper:]' '[:lower:]')"
+    for kv in "passwordauthentication no" "kbdinteractiveauthentication no" "permitrootlogin no" "authenticationmethods publickey"; do
+      grep -qxF "$kv" <<<"$eff" || { rm -f "$SSH_DROPIN"; die "the effective sshd setting '$kv' is not in force (another file wins?): the change was removed again"; }
+    done
+    ok "sshd -t passed and the effective settings are key-only"
+    deadman schedule worj-ssh-revert "$DEADMAN_MINUTES" "rm -f $SSH_DROPIN; systemctl reload ssh"
+    if [ "${SKIP_SERVICES:-0}" = 1 ]; then say "  skipped (--skip-services): reload ssh"; else systemctl reload ssh || systemctl reload sshd; fi
+    say "  NOW: open a SECOND terminal and log in with your KEY. If it works run:  sudo $0 --env $ENV_FILE --os $OS_ANSWER --confirm-ssh"
+    say "  If it does not work, do nothing: in $DEADMAN_MINUTES minutes the change reverts by itself. (Out-of-band rescue: the provider's browser console.)"
+  fi
+}
+
+stage_confirm() {
+  deadman cancel worj-ssh-revert; deadman cancel worj-firewall-revert
+  say "  confirmed: the ssh and firewall safety timers are cancelled"
+}
 
 # --------------------------------------------------------------------------------------------------------------
 run_stage() { # name
@@ -308,6 +441,10 @@ run_stage() { # name
   say "   -> $([ "$STAGE_CHANGED" -eq 0 ] && echo unchanged || echo "changed: $STAGE_CHANGED")"
 }
 
+if [ "$CONFIRM_SSH" = 1 ]; then
+  stage_preflight >/dev/null
+  say "== confirm"; stage_confirm; say "changed: 0"; exit 0
+fi
 [ "${#STAGES[@]}" -gt 0 ] || STAGES=("${ALL_STAGES[@]}")
 case " ${STAGES[*]} " in *" preflight "*) ;; *) STAGES=(preflight "${STAGES[@]}") ;; esac
 [ "$CHECK" = 0 ] || say "CHECK MODE: nothing is changed; every action is printed as WOULD"
