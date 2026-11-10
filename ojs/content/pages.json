@@ -33,12 +33,12 @@
       "checked": "no built-in (same check)" },
     { "id": "awards", "file": "awards/awards.html", "mechanism": "custom-page", "path": "awards", "title": "Research Awards", "url": "/awards",
       "checked": "no built-in; custom pages verified in the sandbox at /x and /x/y (200, one h1 class page_title)" },
-    { "id": "awards-categories", "file": "awards/categories.html", "mechanism": "custom-page", "path": "awards/categories", "title": "Award Categories", "url": "/awards/categories",
-      "checked": "sub-path verified (200) with a probe page, since deleted" },
-    { "id": "awards-guidelines", "file": "awards/guidelines.html", "mechanism": "custom-page", "path": "awards/guidelines", "title": "Nomination Guidelines", "url": "/awards/guidelines",
-      "checked": "sub-path verified (same probe)" },
-    { "id": "awards-winners", "file": "awards/winners.html", "mechanism": "custom-page", "path": "awards/winners", "title": "Award Winners", "url": "/awards/winners",
-      "checked": "sub-path verified (same probe)" }
+    { "id": "awards-categories", "file": "awards/categories.html", "mechanism": "custom-page", "path": "awards-categories", "title": "Award Categories", "url": "/awards-categories",
+      "checked": "flat slug (a slash in a custom page path made OJS list an encoded-slash duplicate in its sitemap); verified in the sandbox" },
+    { "id": "awards-guidelines", "file": "awards/guidelines.html", "mechanism": "custom-page", "path": "awards-guidelines", "title": "Nomination Guidelines", "url": "/awards-guidelines",
+      "checked": "flat slug (same reason as awards-categories)" },
+    { "id": "awards-winners", "file": "awards/winners.html", "mechanism": "custom-page", "path": "awards-winners", "title": "Award Winners", "url": "/awards-winners",
+      "checked": "flat slug (same reason as awards-categories)" }
   ],
   "contact": {
     "url": "/about/contact",
