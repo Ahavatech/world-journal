@@ -23,7 +23,7 @@ Walkthroughs run in the sandbox against a **throwaway journal `probe`** (path `/
 | Decision table | written (`docs/ADMIN-SETUP-CHECKLIST.md`), defaults read from the settings store; every "Where" menu path still to be confirmed on screen in the later sections |
 | Masthead and contact (section 1) | written, `VERIFIED-SANDBOX 2026-11-10` |
 | Sections (section 2) | written, `VERIFIED-SANDBOX 2026-11-10` |
-| Submission checklist, roles, review forms and reminders | pending |
+| Submission settings, review settings and forms, users and roles (sections 3, 4, 5) | written; checked on screen except where marked UNVERIFIED |
 | Email templates and notifications | pending |
 | DOI, licence, search settings and description | pending |
 | Navigation menus, theme options, blocks, `showAwardsCard`, Highlights note | pending |
@@ -42,3 +42,5 @@ Walkthroughs run in the sandbox against a **throwaway journal `probe`** (path `/
 - The admin pages are a Vue app: buttons in tab panels are sometimes not `role=button`; `getByText(label, {exact:true})` worked for **Create Section**.
 - Saving a form with an empty required field showed no message in my selectors; do not claim the UI warns.
 - Journal Settings (Settings > Journal) tabs: Masthead, Contact, Sections, Categories. Required: title, initials, country; contact name and email; technical support name and email.
+- Decision table corrected after on-screen checks: review mode labels, deadline labels, reminders (four selectors, all "No reminder set"), licence (no option chosen; "Other license URL" selected and empty), copyright notice under Workflow > Submission > Author Guidance, DOIs **on** by default (D19), publishing mode has no radio selected.
+- Roles table (Settings > Users & Roles > Roles) is not a `<table>` I could drive with my selectors; the Author role dialog was not opened. D11 is therefore `UNVERIFIED` on screen (database values verified).
