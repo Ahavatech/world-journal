@@ -139,6 +139,16 @@ yes "the bundle has the layout scripts/restore.sh reads" bash -c "cd '$tmp/bkx' 
 yes "the dump holds the users table and the administrator" bash -c "gzip -dc '$tmp/bkx/db.sql.gz' | grep -q 'worjadmin'"
 yes "the archive holds the private file and the public image" bash -c "t=\$(tar -tzf '$tmp/bkx/data.tar.gz'); grep -q 'worj-files/submissions/note.txt' <<<\"\$t\" && grep -q 'public/site/x.jpg' <<<\"\$t\""
 yes "the config copy is the installed config" grep -q '^installed = On' "$tmp/bkx/config.inc.php"
+mariadb -e "GRANT ALL ON \`${dbn//_/\\_}\\_restore%\`.* TO '$dbu'@'localhost'"
+printf '[client]\nuser=%s\npassword=%s\n' "$dbu" "$dbp" >"$tmp/rootdefaults.cnf"; chmod 600 "$tmp/rootdefaults.cnf"
+"$root/scripts/restore.sh" --bundle "$bundle" --identity "$tmp/id.txt" --code-dir "$R/public_html" --live-config "$cfg" \
+  --scratch-db "${dbn}_restore_rehearsal" --db-defaults "$tmp/rootdefaults.cnf" --port 18199 >"$tmp/restore.txt" 2>&1; rc=$?
+# This install has no journal yet (creating one needs a browser, see seed-shared.sh), so restore.sh's last check, the journal's
+# login page, cannot pass here: that part is NOT covered. Everything before it is asserted.
+for want in "backup decrypted with the private key" "SHA-256 manifest matches" "scratch database loaded" "files_dir restored" "temporary config is mode 600"; do
+  yes "scripts/restore.sh on the PULLED bundle: $want" grep -q "PASS  $want" "$tmp/restore.txt"
+done
+yes "...and removed its scratch database afterwards" test "$(mariadb -N -e "show databases like '${dbn}_restore_rehearsal'" | wc -l)" = 0
 mariadb -e "CREATE DATABASE \`${dbn}_restore\`"
 gzip -dc "$tmp/bkx/db.sql.gz" | mariadb "${dbn}_restore"
 yes "the dump RESTORES into a scratch database (administrator row back)" test "$(mariadb -N "${dbn}_restore" -e "select count(*) from users where username='worjadmin'")" = 1

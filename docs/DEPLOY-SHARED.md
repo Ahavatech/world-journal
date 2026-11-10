@@ -1,6 +1,6 @@
 # Deploying to the shared hosting plan (Hostinger "Unlimited" web hosting)
 
-**Status: part 1 of 2. Nothing in this document has been run on the host.** The client bought a **shared web hosting plan** (managed hosting on LiteSpeed), not a root VPS, so `docs/DEPLOY.md` (the VPS path) does **not** apply to this client. This file is the shared-hosting path. Part 1 records what is known about the plan and gives the **Day-0 checks** a person runs on the host before anything else is built or deployed: their results decide several choices below.
+**Status: built and tested on a stand-in, never run on the host.** The client bought a **shared web hosting plan** (managed hosting on LiteSpeed), not a root VPS, so `docs/DEPLOY.md` (the VPS path) does **not** apply to this client. This file is the shared-hosting path: what is known about the plan, the **Day-0 checks** a person runs on the host, and the **runbook** from an empty account to a visible placeholder site. Every script named here was run in the sandbox with a stand-in for the host (a local directory and a stand-in `ssh`, an Apache in place of LiteSpeed, a scratch MariaDB database); **none of it has run on Hostinger** and each such claim is `UNVERIFIED (not run on the host)`.
 
 Decisions already made by the client: **there is no staging site** (2026-11-10): the main domain is the test bed until the day it goes public (see "No staging site" below); the canonical host is **`worldopenresearchjournal.com`** (no `www`; `www` redirects to it); **no Cloudflare at launch** (DNS stays at Hostinger so the mailbox's SPF and DKIM records stay as they are, and Hostinger's own CDN setting stays off while testing). The mailbox is **`editorial@`**, with aliases `support@`, `privacy@` and `doi@`.
 
@@ -87,11 +87,11 @@ The kit and the probe are tested in the sandbox against a **stand-in Apache, not
 | H ModSecurity blocks | NOT RUN | | whether exceptions are needed |
 | I MariaDB version, backups | NOT RUN | | the database lifecycle question and the backup plan |
 
-## Delivery: how the files reach the host (decision pending)
+## Delivery: how the files reach the host
 
-Two ways, both starting from a **release package** built from the pinned OJS core plus our theme and rules (part 2 builds it).
+Two ways, both starting from a **release package** built from the pinned OJS core plus our theme and rules (`scripts/build-release.sh`). **The runbook below uses the first.**
 
-1. **rsync or SFTP over SSH** (the plan in part 2): a dry run (`--check`) first, the config, `public/`, `cache/` and the files folder are never touched. Needs SSH switched on.
+1. **rsync over SSH** (`scripts/deploy-shared.sh`, tested against a local directory and a stand-in ssh): a dry run (`--check`) first, the config, `public/`, `cache/` and the files folder are never touched. Needs SSH switched on.
 2. **Hostinger's Git deployment** (`AGENT CLAIM`, not read in Hostinger's documentation: connect a GitHub repository and branch, set the deployment folder, optionally auto-deploy on every push).
 
 **Do not connect this repository's `main` to `public_html`.** This repository is where the project is *authored*, not an OJS site: it has no OJS core (that is fetched at a pinned version and never committed), and it contains `docs/`, `scripts/`, tests, `ojs/content` and `ojs/fixtures` (fake sample articles that must never ship), `autoresearch/` and `CLAUDE.md`. Deploying it would put all of that on the public web root and still leave OJS missing.
@@ -100,6 +100,91 @@ If Git deployment is chosen, it needs a **separate release repository or branch*
 
 Git deployment does not carry the database, uploaded files, the private files folder, `config.inc.php`, cron jobs or the PHP and email settings (the agent said the same); those stay manual in either method.
 
-## What part 2 will add
+## The runbook: from an empty account to a visible placeholder site
 
-After the Day-0 results: the `.htaccess` template and its test harness, the release package and deploy script, the installer and configuration steps, the scheduler wrapper, the backup and scratch-database restore procedure, and the runbook (test on the pre-launch site, then launch). Until then none of those exist, and nothing here is a claim that the host is tested.
+Every command runs on **your machine** (the operator's), not on the host, except where it says hPanel. The host needs **no** key, no Python and no extra tool (the scripts use `php` and `mysqldump` on the host, and the Day-0 checks B3 show whether they exist). Menu names in hPanel are `UNVERIFIED` (from the platform agent and Hostinger's help pages, not clicked through).
+
+**You need here:** `git`, `rsync`, `ssh`, `python3`, `age`, and for the seeding step `node` with `playwright` (the Claude sandbox has it; elsewhere `npm i playwright`). **Do not run any of this against the domain until the Day-0 results are in** (above), because they decide which steps work as written.
+
+### Before the first command (hPanel, by the client or with the client)
+
+1. **SSH:** switch it on and add your **public** key (B above). Write down the user, the host or IP, the **port**, and the real home path from `pwd`.
+2. **PHP:** choose **PHP 8.3** and enable the extensions OJS needs (`bcmath ctype curl dom fileinfo filter ftp gd hash intl json libxml mbstring mysqli openssl pcre phar session simplexml spl tokenizer xml xmlwriter zip zlib`; `install-shared.sh` checks them on the **command line** PHP, and Day-0 B4 says whether the web PHP is the same). Set the PHP options below.
+3. **Database:** create one database and one user for it (the host is `localhost`). Note the password in your password manager.
+4. **Mailbox SMTP:** read host, port and encryption from the `editorial@` mailbox's own page. Use the mailbox, never PHP's built-in mail (100 a day).
+5. **Hostinger CDN off** while testing, **no Cloudflare** (decision). Take a Hostinger backup now.
+6. **Cron** is set up in step 8 below.
+
+**PHP options** (the old `infra/php/99-worj.ini.template` values; `php.ini` is not editable here, so set them in the dashboard's PHP options if they exist there, or with `php_value` lines in `.htaccess` only if Day-0 F13 shows LiteSpeed honours them; otherwise leave the host default and write down which ones could not be set):
+
+| Option | Value | Why |
+|---|---|---|
+| `upload_max_filesize` | 64M | submission files |
+| `post_max_size` | 66M | slightly more than the upload limit |
+| `max_file_uploads` | 20 | |
+| `memory_limit` | 256M | |
+| `max_execution_time` / `max_input_time` | 120 | |
+| `display_errors` | Off | never show errors to visitors |
+
+`date.timezone`, `session.cookie_secure` and the other session flags are not needed here: OJS sets its own time zone from `config.inc.php` (`TIME_ZONE`), and `force_ssl = On` is checked by `check-live-config.py`.
+
+### The commands, in order
+
+Copy `infra/shared-hosting/install.env.example` to `.env.shared` (git-ignored, mode 600) and fill it in. It holds the database and mailbox passwords and the first administrator's password: **it never leaves your machine**, never goes in chat, and the scripts refuse it if other users can read it.
+
+| Step | Command | What it does |
+|---|---|---|
+| 1. Get OJS | `make setup` | fetches the pinned OJS 3.5.0-6 into `ojs-core/` |
+| 2. Build | `scripts/build-release.sh --host worldopenresearchjournal.com --robots-mode closed --out ../worj-release` | the package: OJS + theme + rendered `.htaccess`, closed `robots.txt`, static 404 page, a manifest. Refuses unfilled tokens, `config.inc.php`, content and fixtures |
+| 3. Dry run | `scripts/deploy-shared.sh --release ../worj-release --target USER@HOST:/home/uXXXX/domains/worldopenresearchjournal.com/public_html/ --ssh-arg -p --ssh-arg PORT --check` | prints `WOULD:` lines, changes nothing |
+| 4. Deploy | the same without `--check` | verifies the manifest, then rsync. **Never touches** `config.inc.php`, `public/`, `cache/`, `.well-known/`, `cgi-bin/`; removes files that left the package; sends the two `.htaccess` files last |
+| 5. Install | `scripts/install-shared.sh --check`, then without | checks PHP and extensions, makes the private files folder **above** the web root, renders `config.inc.php` here (secrets generated here), runs OJS's own CLI installer on the host (answers on stdin), repairs what the installer leaves weak, verifies with `check-live-config.py`, puts `worj-ops/run-scheduler.sh` on the host. Re-runnable |
+| 6. Seed | `scripts/seed-shared.sh --check`, then `scripts/seed-shared.sh --with-sample-issue` | **refuses unless the site is closed to crawlers.** Creates the journal `worj`, the theme, placeholder texts and pages, and (optionally) three clearly fake sample articles. Create-only: never overwrites text a person edited |
+| 7. Look | open `https://worldopenresearchjournal.com/worj/` | this is the placeholder site. If you password-protected the domain, the login is the Hostinger one |
+| 8. Scheduler | hPanel > Advanced > Cron Jobs: a **custom** job running `/bin/bash /home/uXXXX/domains/worldopenresearchjournal.com/worj-ops/run-scheduler.sh` at the shortest interval that divides 60 and includes minute 0 (Day-0 E) | queued emails and daily or monthly OJS tasks. One run at a time, log kept small. Check later: `tail worj-logs/scheduler.log` shows `end exit=0` |
+| 9. Check the host | `scripts/check-live-site.sh --robots-mode closed https://worldopenresearchjournal.com`; `scripts/check-discovery.sh --robots-mode staging https://worldopenresearchjournal.com`; `scripts/check-pdf.sh https://worldopenresearchjournal.com/worj/article/view/1`; `scripts/check-citation-meta.sh --placeholder-issn https://worldopenresearchjournal.com/worj/article/view/1` | the same matrix the stand-in passed, now on LiteSpeed. **A FAIL here is a finding about the host**, not about the test |
+| 10. Finish | `scripts/install-shared.sh --finish` | forces the administrator to change the initial password at the first login and removes `ADMIN_PASSWORD` from `.env.shared`. Run it **after** seeding (seeding logs in with that password) |
+| 11. Back up | `scripts/pull-backup.sh --check`, then without | see "Backups" below |
+
+### Seeing the pieces, and what is placeholder
+
+Everything in step 6 is the placeholder content from `ojs/content/` (a `[PLACEHOLDER: ...]` banner on each text) and `ojs/fixtures/` (fake articles). It lets you see the journal structured as it will launch; **none of it may stay at launch** (`make check-placeholders-url` must be empty, `docs/LAUNCH-GATES.md` gates 1.2 and 4.4). `ojs/content/` and `ojs/fixtures/` are never in the release package: the seed script copies only `import-pages.php` and `ojs/content/` to `worj-ops/`, **above** the web root.
+
+### Backups
+
+- **Hostinger's own daily backups** are the first line (7 days, held by Hostinger, `AGENT CLAIM`). They are **not** encrypted to the client's key, and a restore on the live site is not rehearsed here.
+- **`scripts/pull-backup.sh`** is ours: it streams the database dump (the host builds the dump's credentials from `config.inc.php` through a pipe: no password on a command line) and the files over ssh, runs the same sanity checks as the VPS backup (valid gzip, size, tables, users rows, mysqldump's completion line), and **encrypts here** with `age` to the client's **public** key. The host holds no key. The bundle has the layout `scripts/restore.sh` reads. Optional `rclone copy` (never `sync`) to the client's bucket, size verified.
+- **The recovery point is only as fresh as the last time someone runs it.** The VPS design ran every night at 02:17; this one runs when a person (or the client's machine, with a scheduled task) runs it. **Decide who, how often and where the key lives** (`docs/LAUNCH-BLOCKERS.md`). Weekly is the minimum I would accept for a journal that takes submissions.
+- **Restore** is done by the operator, with the **private** key kept off the host: `scripts/restore.sh` into a scratch database on the operator's machine (`docs/DEPLOY.md`, Backups). The sandbox runs `scripts/restore.sh` on a pulled bundle: decryption, manifest, scratch database, files and temporary config pass; its last check (the journal's login page) was not covered because that install had no journal. It does not prove a restore onto Hostinger.
+
+### Moving from closed to public (launch day)
+
+1. Replace every placeholder with approved content (`docs/LAUNCH-GATES.md` section 4); delete the sample articles and the test users.
+2. Rebuild with `--robots-mode production` and deploy: `robots.txt` carries the sitemap, the `X-Robots-Tag: noindex` header is gone.
+3. `scripts/install-shared.sh --launch-check` (the production config has no placeholder host), `scripts/check-live-site.sh --robots-mode production https://worldopenresearchjournal.com`, `scripts/check-discovery.sh --robots-mode production --launch https://worldopenresearchjournal.com`, `scripts/check-placeholders.sh --url https://worldopenresearchjournal.com/worj` (all must exit 0).
+4. Hostinger Git auto-deployment, if ever connected, is switched **off**.
+5. Search Console (`docs/SEARCH-CONSOLE.md`); HSTS raised in stages only after launch.
+
+## What was tested here, and what was not
+
+Sandbox runs of 2026-11-10 (`VERIFIED-SANDBOX`, exit codes read directly from `make`):
+
+| Suite | Command | Exit | Result |
+|---|---|---|---|
+| Day-0 kit and probe on a stand-in Apache | `make infra-test-day0` | 0 | 49 PASS, 0 FAIL |
+| `.htaccess` on a stand-in Apache in front of the sandbox OJS (redirects, denies, PHP only via `index.php`, headers, caching, both robots modes, the live-site check script, and a mutation proof per rule) | `make infra-test-htaccess` | 0 | 109 PASS, 0 FAIL |
+| Release build, deploy (verification, excludes, a stand-in ssh) | in `make lint` (`scripts/test-release.sh`) | 0 | 43 PASS, 0 FAIL |
+| Scheduler wrapper | in `make lint` (`scripts/test-run-scheduler.sh`) | 0 | 14 PASS, 0 FAIL |
+| Seeding guard | in `make lint` (`node scripts/test-target.js`) | 0 | 12 PASS, 0 FAIL |
+| Release, deploy, **real OJS CLI installer** into a scratch database, config repair, real scheduler run, launch check, seed `--check`, pull backup (decrypt, manifest, `restore.sh` up to the login page, truncated dumps), `--finish` | `make infra-test-install` | 0 | 77 PASS, 0 FAIL |
+| Everything else | `make lint`, `make infra-test` | 0, 0 | unchanged |
+
+**Not run, each `UNVERIFIED (not run on the host)`:** LiteSpeed's behaviour (the stand-in is Apache: a pass proves the rules are valid Apache rules and that the checks detect their absence, not that LiteSpeed honours them); SSH, rsync and the real paths on Hostinger; the CLI installer on the host's PHP and MariaDB 10.5; `mysqldump` and `tar` on the host; the cron job and its interval; ModSecurity against the admin interface and the API; SMTP delivery and limits; the seeding steps that drive a browser against a real https site (the guard and the sandbox path are tested, the remote login path is the same code with another address and credentials); Hostinger backups and restore; the first-year mailbox cost afterwards; MariaDB 10.5's support status.
+
+## Known differences from the VPS design
+
+- **The accessible static 404 page is mostly lost.** The static page answers errors the web server itself produces (denied paths) but OJS still prints its own bare `404 Not Found` for an unknown route, so the Phase 2 accessibility finding returns for those pages (`docs/A11Y-REPORT.md`, not-covered list).
+- **No firewall, no per-site server tuning, less isolation;** ModSecurity may block admin actions (Day-0 H).
+- **Backups are weaker** (above). **No Cloudflare**, so no rate limiting on `/login`: OJS's own protections only, to be decided after launch.
+- **The host patches the server:** the monthly reboot step of the VPS design is replaced by checking the plan renewal and PHP version notices (`docs/HANDOVER.md`).
+- **Email depends on the mailbox's SMTP limit and its price after the first year** (`docs/LAUNCH-BLOCKERS.md`).
