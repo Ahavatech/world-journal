@@ -7,7 +7,8 @@
 #   1. preflight over ssh: PHP >= 8.2 and the extensions OJS needs, on the SAME php the installer will use
 #   2. create the private files directory ABOVE the web root, and cache/ and public/ inside it
 #   3. render config.inc.php here (salt and API secret generated here, never printed) and upload it, mode 600
-#   4. run `php tools/install.php` on the host; every answer travels on ssh's standard input, never on a command line
+#   4. run `php -d disable_functions= tools/install.php` on the host (the installer calls stty through the backtick operator, which is
+#      a fatal error, silent when display_errors is off, on a host that disables shell_exec: found on Hostinger 2026-11-10); every answer travels on ssh's standard input, never on a command line
 #   5. fix what the installer leaves weak (salt, api_key_secret, allowed_hosts, time_zone) and verify with check-live-config.py
 # Then, after scripts/seed-shared.sh (which logs in with the initial password):
 #   scripts/install-shared.sh --finish     make the administrator change the initial password at the first login, and
@@ -100,7 +101,7 @@ if [ "$installed" = 0 ]; then
     } | python3 -I "$root/scripts/render-template.py" "$root/ojs/config/config.inc.php.template" "$tmp/config.inc.php" --mode 600 --allow-unused >/dev/null
     remote "umask 077 && cat > $(printf '%q' "$cfg") && chmod 600 $(printf '%q' "$cfg")" <"$tmp/config.inc.php"
     printf '%s\n' en "" "$files_dir" "$ADMIN_USERNAME" "$ADMIN_PASSWORD" "$ADMIN_PASSWORD" "$ADMIN_EMAIL" mysqli localhost "$DB_USER" "$DB_PASSWORD" "$DB_NAME" "$HOST" n y >"$tmp/answers"
-    if ! remote "cd $(printf '%q' "$webroot") && php tools/install.php" <"$tmp/answers" >"$tmp/install.log" 2>&1; then
+    if ! remote "cd $(printf '%q' "$webroot") && php -d disable_functions= tools/install.php" <"$tmp/answers" >"$tmp/install.log" 2>&1; then
       log="$(tail -n 20 "$tmp/install.log")"; for s in "$DB_PASSWORD" "$ADMIN_PASSWORD" "$SMTP_PASSWORD"; do log="${log//"$s"/***}"; done
       printf '%s\n' "$log" | sed 's/^/      /' >&2; die "the OJS installer failed (last lines above, secrets masked)"
     fi

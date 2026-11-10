@@ -30,6 +30,10 @@ if [ "$#" -eq 1 ]; then
 else exec "$@"; fi
 STUB
 chmod +x "$tmp/ssh"
+# the real host disables shell_exec and shows no errors: the OJS installer (stty in backticks) dies silently there
+mkdir -p "$tmp/bin"; realphp="$(command -v php)"
+printf '#!/usr/bin/env bash\nexec %s -d display_errors=0 -d disable_functions=shell_exec "$@"\n' "$realphp" >"$tmp/bin/php"; chmod +x "$tmp/bin/php"
+export PATH="$tmp/bin:$PATH"
 H=journal.example.org
 R="$tmp/home/domains/$H"; mkdir -p "$R/public_html"
 "$root/scripts/build-release.sh" --host "$H" --robots-mode closed --out "$tmp/rel" >/dev/null || { echo "build failed"; exit 2; }
@@ -179,6 +183,16 @@ yes "seed --check prints WOULD lines for the journal, the pages and the sample i
 yes "seed --check created nothing on the host" test ! -e "$R/worj-ops/scripts" -a ! -e "$R/worj-ops/ojs"
 yes "seed --check printed no secret" bash -c "! grep -qE '$dbp|$ADMINPW|smtp-secret' '$tmp/seed.txt'"
 no "seed refuses an env file readable by others" S --env "$tmp/env644" --check
+
+echo "=== mutation: without php -d disable_functions= the installer dies on a host that disables shell_exec"
+sed 's/php -d disable_functions= tools/php tools/' "$root/scripts/install-shared.sh" >"$tmp/install-mut.sh"; chmod +x "$tmp/install-mut.sh"
+mariadb -e "DROP DATABASE \`$dbn\`; CREATE DATABASE \`$dbn\` CHARACTER SET utf8mb4; GRANT ALL ON \`$dbn\`.* TO '$dbu'@'localhost'"
+cp "$cfg" "$tmp/cfg.keep"; sed -i 's/^installed = On/installed = Off/' "$cfg"
+mkenv "$tmp/envmut"; sed -i "s#^ADMIN_PASSWORD=.*#ADMIN_PASSWORD=$ADMINPW#" "$tmp/envmut"
+no "mutation: the installer without the flag fails (silently) when shell_exec is disabled" env WORJ_SSH="$tmp/ssh" "$tmp/install-mut.sh" --env "$tmp/envmut"
+I --env "$tmp/envmut" >/dev/null 2>&1; rc=$?
+yes "with the flag the installer succeeds on the same host settings (exit $rc)" test "$rc" = 0
+cp "$tmp/cfg.keep" "$cfg"
 
 echo "=== --finish"
 I --env "$tmp/env" --finish --check >"$tmp/fcheck.txt" 2>&1
