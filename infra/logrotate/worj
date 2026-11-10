@@ -1,0 +1,10 @@
+# /etc/logrotate.d/worj
+/var/log/worj-backup.log /var/log/worj-cloudflare-ips.log {
+    weekly
+    rotate 8
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 640 root adm
+}

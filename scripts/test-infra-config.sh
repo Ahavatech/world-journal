@@ -154,5 +154,13 @@ yes "404 page has exactly one h1" eq "$(grep -c '<h1>' "$page")" 1
 yes "404 page has no script, inline style or remote asset" bash -c "! grep -qiE '<script|<style|style=|https?://' '$page'"
 yes "404 stylesheet has no remote url" bash -c "! grep -qiE 'url\\(|@import|https?://' '$root/infra/nginx/errors/404.css'"
 
+# ---------- cron and logrotate templates
+printf 'INSTALL_DIR=/usr/local/sbin\nREALIP_CONF=/etc/nginx/worj-cloudflare-realip.conf\n' | python3 -I "$root/scripts/render-template.py" "$root/infra/cron.d/worj.template" "$tmp/worj.cron" --mode 644 >/dev/null
+yes "cron file has no unfilled token" bash -c "! grep -q '@@' '$tmp/worj.cron'"
+yes "cron lines have 5 time fields, a user and a command" bash -c "grep -vE '^(#|$|[A-Z]+=)' '$tmp/worj.cron' | awk 'NF < 7 { bad=1 } END { exit bad }'"
+yes "the backup runs nightly as root" grep -qE '^17 2 \* \* \* root /usr/local/sbin/worj-backup --env /etc/worj/backup.env' "$tmp/worj.cron"
+yes "no cron line carries a password or key" bash -c "! grep -qiE 'password|secret|AGE-SECRET' '$tmp/worj.cron'"
+yes "backup.env.example has no private key and no password" bash -c "! grep -qE 'AGE-SECRET-KEY|^WORJ_.*PASSWORD' '$root/infra/backup.env.example'"
+
 if [ "$fail" = 0 ]; then echo "ALL PASS"; else echo "$fail FAILED"; fi
 exit "$fail"
