@@ -6,6 +6,7 @@ guarantee that a file is free of invented claims, and human review of every
 content file is still required before it is committed.
 
 Rules, per file under ojs/content/**/*.html:
+  wrap        every inline [PLACEHOLDER marker must sit inside <span class="worj-ph">
   banner      the first line must be the placeholder banner, exactly
   banned      banned words and patterns anywhere in the visible text (headings,
               prompts and [PLACEHOLDER: ...] markers): indexer and metric names,
@@ -80,6 +81,9 @@ class Scan(HTMLParser):
             self.findings.append((line, "banned", f'"{m.group(0)}" in: {text}'))
         if CURRENCY_RE.search(data):
             self.findings.append((line, "banned", f"currency symbol in: {text}"))
+        in_badge = any(tag == "span" and "worj-ph" in cls.split() for tag, cls in self.stack)
+        if "[PLACEHOLDER" in data and not is_banner and not in_badge:
+            self.findings.append((line, "wrap", f'bare marker, wrap it in <span class="worj-ph"> (scripts/wrap-placeholders.py): {text}'))
         in_prose = any(tag in {"p", "li"} for tag, _ in self.stack)
         if in_prose and not is_banner:
             prose = MARKER_RE.sub("", data)

@@ -40,7 +40,7 @@ Scores are only comparable when the same components were measured. `baseline.jso
 
 ## Baseline
 
-`baseline.json` holds the theme byte count and the per-page placeholder counts. Rewrite it only after a deliberate review: `node checks/gates.js --update-baseline`. The checksum lock for this directory is a Phase 8 task and is not written yet.
+`baseline.json` holds the theme byte count and the per-page placeholder counts. Rewrite it only after a deliberate review: `node checks/gates.js --update-baseline`. The placeholder counts feed **only gate 7**, a pass/fail floor (a page showing fewer markers than the baseline fails). No score component reads them, so lowering or raising a count cannot raise `SCORE`; the Phase 9 loop gains nothing by touching them and can only fail by removing a marker. `simplicity` reads `themeBytes`, which is why a deliberate CSS addition needs a reviewed baseline update. The checksum lock for this directory is a Phase 8 task and is not written yet.
 
 ## Other checks (not part of `make eval`)
 

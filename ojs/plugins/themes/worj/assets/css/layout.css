@@ -279,6 +279,17 @@
   border-radius: var(--worj-radius);
 }
 
+/* Inline [PLACEHOLDER: ...] markers inside running text (wrapped by scripts/wrap-placeholders.py).
+   Inline, not inline-block, so a long marker still wraps; same colours as the banner. */
+.worj-ph {
+  padding: 0 var(--worj-space-2);
+  background: var(--worj-banner-bg);
+  color: var(--worj-banner-text);
+  border: 1px solid var(--worj-accent);
+  border-radius: var(--worj-radius);
+  box-decoration-break: clone;
+}
+
 /* ---------- page scaffold (replaces the parent's float layout) ---------- */
 
 /* keep the footer at the bottom of short pages */

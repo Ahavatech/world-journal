@@ -12,6 +12,8 @@ Build with OJS's built-in tools and theme only:
 
 Placeholder categories (clearly marked, client to replace): Best Research Article of the Year, Best Early-Career Researcher Paper, Outstanding Reviewer, Outstanding Contribution to Open Research.
 
+URLs (flat slugs, one address per page): `/awards` is the parent; the sub-pages are `/awards-categories`, `/awards-guidelines` and `/awards-winners`. Slashes in custom page paths are avoided because OJS 3.5.0-6 then lists an encoded-slash duplicate (`%2F`) in its sitemap.
+
 ## Option B (needs approval and quote): custom awards plugin
 Only build if the human states the change request was approved. Scope would be: nomination form with file upload, award cycle management, judge scoring, public winners list, email notifications, export. This is significant custom OJS plugin development. If approved, write a separate plan in `docs/awards-plugin-plan.md` before coding.
 

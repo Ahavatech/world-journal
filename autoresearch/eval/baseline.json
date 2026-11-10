@@ -7,17 +7,20 @@
     "resp",
     "simplicity"
   ],
-  "themeBytes": 29105,
+  "themeBytes": 29522,
   "placeholders": {
-    "home": 11,
-    "about": 4,
+    "home": 12,
+    "about": 10,
     "article": 4,
     "issue": 3,
     "archive": 3,
+    "awards": 18,
+    "editorial": 9,
+    "peer-review": 13,
     "login": 3,
     "register": 3,
     "search": 3,
-    "submissions": 3,
-    "contact": 3
+    "submissions": 17,
+    "contact": 5
   }
 }
