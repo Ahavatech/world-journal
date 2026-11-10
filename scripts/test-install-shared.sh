@@ -25,7 +25,14 @@ cat >"$tmp/ssh" <<'STUB'
 # stand-in for ssh: drop the options and the host, run the remote command locally (a single string goes through sh -c)
 while [ $# -gt 0 ] && [ "${1#-}" != "$1" ]; do case "$1" in -p|-i|-o) shift 2 ;; *) shift ;; esac; done
 shift
-if [ "$#" -eq 1 ]; then
+if [ "$#" -eq 1 ] && [ -n "${STUB_SOCKET_STDIN:-}" ]; then
+  # the input arrives over a socket, as it does over ssh (PHP then reports end-of-file as soon as the last line is read)
+  exec python3 -c 'import socket,subprocess,sys
+d=sys.stdin.buffer.read()
+a,b=socket.socketpair()
+a.sendall(d); a.shutdown(socket.SHUT_WR)
+sys.exit(subprocess.call(["sh","-c",sys.argv[1]],stdin=b))' "$1"
+elif [ "$#" -eq 1 ]; then
   if [ -n "${STUB_CUT:-}" ]; then sh -c "$1" | head -c "$STUB_CUT"; else exec sh -c "$1"; fi
 else exec "$@"; fi
 STUB
@@ -62,7 +69,7 @@ ENV
   chmod 600 "$1"
 }
 mkenv "$tmp/env"
-I() { WORJ_SSH="$tmp/ssh" "$root/scripts/install-shared.sh" "$@"; }
+I() { STUB_SOCKET_STDIN=1 WORJ_SSH="$tmp/ssh" "$root/scripts/install-shared.sh" "$@" </dev/null; }
 cfg="$R/public_html/config.inc.php"
 
 echo "=== refusals before anything is touched"
@@ -189,7 +196,10 @@ sed 's/php -d disable_functions= tools/php tools/' "$root/scripts/install-shared
 mariadb -e "DROP DATABASE \`$dbn\`; CREATE DATABASE \`$dbn\` CHARACTER SET utf8mb4; GRANT ALL ON \`$dbn\`.* TO '$dbu'@'localhost'"
 cp "$cfg" "$tmp/cfg.keep"; sed -i 's/^installed = On/installed = Off/' "$cfg"
 mkenv "$tmp/envmut"; sed -i "s#^ADMIN_PASSWORD=.*#ADMIN_PASSWORD=$ADMINPW#" "$tmp/envmut"
-no "mutation: the installer without the flag fails (silently) when shell_exec is disabled" env WORJ_SSH="$tmp/ssh" "$tmp/install-mut.sh" --env "$tmp/envmut"
+no "mutation: the installer without the flag fails (silently) when shell_exec is disabled" env STUB_SOCKET_STDIN=1 WORJ_SSH="$tmp/ssh" "$tmp/install-mut.sh" --env "$tmp/envmut" </dev/null
+grep -v 'for _ in 1 2 3 4 5 6 7 8' "$root/scripts/install-shared.sh" >"$tmp/install-mut2.sh"; chmod +x "$tmp/install-mut2.sh"
+cmp -s "$tmp/install-mut2.sh" "$root/scripts/install-shared.sh" && bad "mutation padding: the padding line was not found"
+no "mutation: without the blank-line padding the installer quits early over a socket, and the script notices" env STUB_SOCKET_STDIN=1 WORJ_SSH="$tmp/ssh" "$tmp/install-mut2.sh" --env "$tmp/envmut" </dev/null
 I --env "$tmp/envmut" >/dev/null 2>&1; rc=$?
 yes "with the flag the installer succeeds on the same host settings (exit $rc)" test "$rc" = 0
 cp "$tmp/cfg.keep" "$cfg"

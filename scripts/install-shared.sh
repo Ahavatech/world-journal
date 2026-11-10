@@ -101,12 +101,20 @@ if [ "$installed" = 0 ]; then
     } | python3 -I "$root/scripts/render-template.py" "$root/ojs/config/config.inc.php.template" "$tmp/config.inc.php" --mode 600 --allow-unused >/dev/null
     remote "umask 077 && cat > $(printf '%q' "$cfg") && chmod 600 $(printf '%q' "$cfg")" <"$tmp/config.inc.php"
     printf '%s\n' en "" "$files_dir" "$ADMIN_USERNAME" "$ADMIN_PASSWORD" "$ADMIN_PASSWORD" "$ADMIN_EMAIL" mysqli localhost "$DB_USER" "$DB_PASSWORD" "$DB_NAME" "$HOST" n y >"$tmp/answers"
+    # Padding: OJS's installer quits with exit 0 if feof(STDIN) is true after any answer, and PHP reports end-of-file at once
+    # for input that arrives over a socket (ssh) when the last line has been read. Blank lines after the real answers keep
+    # the installer from seeing the end (found on Hostinger 2026-11-10; it never reads them).
+    for _ in 1 2 3 4 5 6 7 8; do printf '\n' >>"$tmp/answers"; done
     if ! remote "cd $(printf '%q' "$webroot") && php -d disable_functions= tools/install.php" <"$tmp/answers" >"$tmp/install.log" 2>&1; then
       log="$(tail -n 20 "$tmp/install.log")"; for s in "$DB_PASSWORD" "$ADMIN_PASSWORD" "$SMTP_PASSWORD"; do log="${log//"$s"/***}"; done
       printf '%s\n' "$log" | sed 's/^/      /' >&2; die "the OJS installer failed (last lines above, secrets masked)"
     fi
     rm -f "$tmp/answers"
-    ok "the OJS installer finished"
+    if ! grep -q 'Successfully installed version' "$tmp/install.log"; then
+      log="$(tail -n 12 "$tmp/install.log")"; for sec in "$DB_PASSWORD" "$ADMIN_PASSWORD" "$SMTP_PASSWORD"; do log="${log//"$sec"/***}"; done
+      printf '%s\n' "$log" | sed 's/^/      /' >&2; die "the OJS installer ended without installing (no 'Successfully installed' line; last lines above, secrets masked)"
+    fi
+    ok "the OJS installer finished (Successfully installed)"
   fi
 else
   chg "nothing to install"
