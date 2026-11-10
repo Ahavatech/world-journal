@@ -3,7 +3,7 @@ SHELL := /bin/bash
 THEME := ojs/plugins/themes/worj
 
 # Needs php-fpm8.3, mariadbd and nginx in this sandbox; not part of `make lint` (CI has no FPM or MariaDB).
-.PHONY: infra-test infra-test-nginx infra-test-backup infra-test-reset infra-test-chroot infra-test-day0 infra-test-htaccess
+.PHONY: infra-test infra-test-nginx infra-test-backup infra-test-reset infra-test-chroot infra-test-day0 infra-test-htaccess infra-test-install
 infra-test:
 	scripts/test-infra-config.sh
 	scripts/test-provision-preflight.sh | tail -1
@@ -33,6 +33,11 @@ infra-test-day0:
 # Proves Apache semantics, not LiteSpeed's: see docs/DEPLOY-SHARED.md. Binds 127.0.0.1:80 and :443 for a minute.
 infra-test-htaccess:
 	scripts/test-htaccess-harness.sh
+
+# Release -> deploy -> install-shared.sh with a stand-in ssh, a scratch MariaDB database and the real OJS CLI installer.
+# Needs root (mariadb socket), rsync and ojs-core (make setup). Proves the script, not the host.
+infra-test-install:
+	scripts/test-install-shared.sh
 
 .PHONY: setup lint eval check-placeholders sandbox-up sandbox-down sandbox-seed check-citation check-pdf check-discovery check-placeholders-url
 
