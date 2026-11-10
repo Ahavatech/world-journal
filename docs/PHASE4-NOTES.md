@@ -1,0 +1,37 @@
+# Phase 4 notes (resume point)
+
+A cleared session resumes from this file, `docs/ADMIN-SETUP-CHECKLIST.md`, `docs/PHASE3-NOTES.md` and the git history. Two sessions: **session 1 = 4.1 only** (this one), **session 2 = 4.2 and 4.3**.
+
+## Rules that apply (from review)
+
+- Labels: `VERIFIED-SANDBOX <date>`, `UNVERIFIED (not yet run on VPS)`, `UNVERIFIED (<reason>)`. Never plain "VERIFIED".
+- Decision rows are `[CLIENT DECISION]` with the OJS default beside them; never pick a value; email templates carry no timeframes or policy claims.
+- Email credentials: provider-issued app password or API credential, never a personal mailbox password.
+- Admin hardening: unique strong password in the client's password manager, non-default admin username, two-factor only if 3.5.0-6 offers it (verify).
+- Try Mailpit in the sandbox for registration and reviewer-invitation emails; if it cannot be installed, SMTP is `UNVERIFIED` with the reason.
+- Importers (session 2): backup first, run once; refuse `sample=true` and `.invalid` into a non-localhost base URL; `ojs/import/` gitignored; never print email addresses.
+- `removeOption()` for the parent theme options is already done; do not redo it.
+
+## Method
+
+Walkthroughs run in the sandbox against a **throwaway journal `probe`** (path `/probe`, journal id 2), created through the REST API, so the real sandbox journal `worj` is not disturbed and the steps start from what a brand-new journal looks like. Delete `probe` when finished (see the end of this file).
+
+## Progress
+
+| Section | State |
+|---|---|
+| Decision table | written (`docs/ADMIN-SETUP-CHECKLIST.md`), defaults read from the settings store; every "Where" menu path still to be confirmed on screen in the later sections |
+| Masthead and contact | pending |
+| Sections | pending |
+| Submission checklist, roles, review forms and reminders | pending |
+| Email templates and notifications | pending |
+| DOI, licence, search settings and description | pending |
+| Navigation menus, theme options, blocks, `showAwardsCard`, Highlights note | pending |
+| Admin hardening, email credentials, importer note, launch notes | pending |
+
+## Findings so far
+
+- A fresh OJS 3.5.0-6 journal ships default text with policy claims in several settings (open access, privacy, author guidelines, reader and librarian information, LOCKSS/CLOCKSS licences, submission checklist, help texts). They are decision rows D10, D13, D14. The real journal must either keep them knowingly or replace them.
+- Self-registration is **on** by default for Author, Reviewer and Reader (row D11).
+- Review reminders are **off** by default; review mode default is double-anonymous (rows D1, D4).
+- The sandbox nginx start script can reload instead of start after a restart when `/run/worj-sandbox/nginx.pid` is stale (pid reused). Remove the file and run `scripts/sandbox-ojs.sh up` again.
