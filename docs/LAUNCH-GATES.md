@@ -1,0 +1,96 @@
+# Launch gates
+
+One list of everything that must be true before the journal goes live. **Every row has an owner, a command or check, and a pass condition.** Nothing in this table has been run for launch: the status column says what exists today. Rows that need the VPS, a real domain, a real mail provider or a real Cloudflare are `UNVERIFIED (not run on VPS)`.
+
+Owners: **developer** (the person who built and maintains the repository), **client** (the publisher and its editors), **operator** (whoever runs the server, normally the developer unless the client names another), **third party** (named in the row). `HOST` is the journal's main host, `JOURNAL` its path. The people who tick a row write the date and their name beside it; this file never does.
+
+Related: the human steps behind these gates are in `docs/LAUNCH-BLOCKERS.md`; the manual editorial test is `docs/QA-SCRIPT.md`; the server steps are `docs/DEPLOY.md`.
+
+## 1. Repository and CI (launch-day commit by the developer)
+
+| # | Gate | Command or check | Pass condition | Owner | Status today |
+|---|---|---|---|---|---|
+| 1.1 | **Repository placeholders are empty** | `make check-placeholders` | exit 0 and no output | developer (the client supplies the content) | **NOT RUN for launch.** Sandbox run 2026-11-10: exit 2, 147 lines in 28 files (`docs/PHASE8-NOTES.md`) |
+| 1.2 | **The live site has no placeholders** | `scripts/check-placeholders.sh --url https://HOST/JOURNAL` | exit 0 and no finding | developer | **NOT RUN for launch.** Sandbox: 400 findings on 42 pages (sample content); `UNVERIFIED (not run on VPS)` |
+| 1.3 | **The warn-only wrapper is removed from CI** | `grep -c continue-on-error .github/workflows/ci.yml` prints `0`, and `grep -c '::warning' .github/workflows/ci.yml` prints `0` | both print 0 **and CI is green on the head commit after the removal** (read the check run for that exact commit) | developer | NOT RUN. Today the step is warn-only on purpose: removing it now would make CI red until the client supplies content |
+| 1.4 | **`--placeholder-issn` has no caller left** | `grep -rn -- '--placeholder-issn' Makefile autoresearch/eval/run.sh .github` | no output (the option may stay defined inside `scripts/check-citation-meta.sh`) | developer | NOT RUN. Two callers remain today: `Makefile` (`check-citation`) and `autoresearch/eval/run.sh` (gate 1) |
+| 1.5 | **A real ISSN is entered and the citation check passes without the flag** | `scripts/check-citation-meta.sh https://HOST/JOURNAL/article/view/ID` | `RESULT: PASS`, with a real `citation_issn` | client supplies the ISSN, developer verifies | NOT RUN (the ISSN is a client input, `docs/05-PLACEHOLDERS.md`) |
+| 1.6 | **The article-pages decision** (`citation_firstpage` and `citation_lastpage`) | read `docs/QA-SCRIPT.md` finding QF2; decide whether this journal needs those tags | the decision is written down; the check and the Pages field agree with it | client decides, developer applies | **OPEN decision.** An article without a Pages value fails `check-citation-meta.sh` today |
+| 1.7 | **Every suite passes on the release commit** | `make lint`, `make infra-test`, `make infra-test-nginx`, `make infra-test-backup`, `make infra-test-reset`, `make infra-test-chroot`, `make eval`, each run as `make TARGET >file 2>&1; echo $?` | every exit code 0 (the two placeholder scans are gate 1.1 and 1.2) | developer | Sandbox run 2026-11-10 on `main` at `41b8b4d`: all 0 except the two placeholder scans (`docs/PHASE8-NOTES.md`). Must be repeated on the release commit |
+| 1.8 | **No secret in the git history before the repository is handed over** | the procedure in "Secret scan" below | the scanner and the direct checks show no real credential, and every candidate is triaged | developer, then the client's reviewer reads the triage | **Preview run 2026-11-10, see "Secret scan". Must be repeated at handover** |
+| 1.9 | **The repository is delivered to the client, with a licence and copyright notice decided** | transfer the repository, or hand over the source, and record it; check which licence terms the OJS code and the theme (derived from the OJS default theme) require | the client confirms receipt in writing; the notice and licence are chosen and present in the repository | developer delivers, client confirms and decides | NOT RUN. The licence terms are `UNVERIFIED (not read)`: OJS is distributed under the GNU GPL, and the theme derives from the OJS default theme, so read what that requires before choosing |
+| 1.10 | **Tokens and deploy keys used by the Claude Code sessions are revoked** | in the repository host's settings, list deploy keys, personal and app tokens, and installed apps that these sessions used | none of them remains valid | developer | NOT RUN |
+
+## 2. Server and configuration (`UNVERIFIED (not run on VPS)` throughout)
+
+| # | Gate | Command or check | Pass condition | Owner | Status today |
+|---|---|---|---|---|---|
+| 2.1 | **The production config has no installer default and no placeholder host** | `sudo python3 -I scripts/check-live-config.py /var/www/worj/config.inc.php --host HOST --web-root /var/www/worj --owner root:www-data --launch` | exit 0 (22 checks plus the four `--launch` checks) | operator | NOT RUN on a VPS. Chroot run 2026-11-10 passes the default mode |
+| 2.2 | **Robots, sitemap and OAI are right for production** | `scripts/check-discovery.sh --robots-mode production --launch https://HOST` | exit 0: not disallowed, no `noindex`, Sitemap line present, no placeholder marker in the sitemap or OAI, the OAI repository identifier is `HOST` | developer / operator | NOT RUN. Passes behind the sandbox Nginx without `--launch`; `--launch` is expected to fail on sample content |
+| 2.3 | **Each site is in the right robots mode** | `scripts/check-discovery.sh --robots-mode staging https://STAGING_HOST` on staging, the `production` form on the live site | both exit 0 | operator | NOT RUN |
+| 2.4 | **HTTPS, redirects and denied paths** | the smoke tests in `docs/DEPLOY.md` ("Smoke tests") | each command shows the stated result | operator | NOT RUN on a VPS. Rendered config verified by `make infra-test-nginx` (128 PASS) |
+| 2.5 | **No AAAA records exist** unless Nginx is configured for IPv6 | `dig AAAA HOST +short` and `dig AAAA www.HOST +short` | both print nothing | operator / client (DNS access) | NOT RUN |
+| 2.6 | **The scheduler runs, and its first-day check is done** | `sudo stat -c '%y' /var/log/worj-scheduler.log` (within the last 2 minutes), and after the first full day `sudo grep -a -c 'Running \[' /var/log/worj-scheduler.log` is in the hundreds | both as stated; the monthly reboot check is in the operator's calendar | operator | NOT RUN (`docs/DEPLOY.md`, "Scheduler check") |
+| 2.7 | **Cloudflare is set up and does not challenge crawlers** | SSL mode Full (strict); rate limits on `/login`, `/user/register` and the `/index/` forms; in Search Console, **URL Inspection > Test live URL** on an article returns HTTP 200 | each as stated | operator, with the client's Cloudflare access | NOT RUN (`docs/DEPLOY.md` stage 6, `docs/SEARCH-CONSOLE.md`) |
+| 2.8 | **HSTS is at its launch value** | `curl -sI https://HOST/ \| grep -i strict-transport-security` | `max-age=300`, no `preload`, no `includeSubDomains`; raising it is a staged step after launch | operator | NOT RUN |
+| 2.9 | **The initial administrator password is changed and the change was forced** | at the first login the site demands a new password; then `grep -c '^ADMIN_PASSWORD=' /etc/worj/provision.env` prints `0` | both as stated | operator, with the client's administrator | NOT RUN on a VPS. Chroot run: the line is removed and `must_change_password` is set |
+| 2.10 | **Search Console is verified and the sitemap is submitted** | follow `docs/SEARCH-CONSOLE.md`: a Domain property verified by a DNS TXT record, the sitemap index `https://HOST/index/sitemap` submitted | the property shows as verified and the sitemap report shows the sitemap read without errors. Can be done on launch day once DNS is live | client (DNS and the Google account), developer assists | NOT RUN. `UNVERIFIED (not run on VPS)` |
+| 2.11 | **The canonical tag is rechecked on staging with the real domain** | `scripts/check-discovery.sh --robots-mode staging https://STAGING_HOST` and read the canonical INFO line; in Search Console, **URL Inspection** of an article and a galley, comparing *User-declared canonical* and *Google-selected canonical* | the result is written down. **It is never a failure**: if staging still shows no canonical tag, the question goes back to the client as decision D25 (a small gated hook only if the client agrees) | developer runs it, client decides | NOT RUN. The sandbox reports `INFO: no canonical tag on article pages at 3.5.0-6, decision pending`, a weak test because OJS builds URLs from `base_url` |
+
+## 3. Backups and rehearsal (`UNVERIFIED (not run on VPS)`)
+
+| # | Gate | Command or check | Pass condition | Owner | Status today |
+|---|---|---|---|---|---|
+| 3.1 | **The client holds the age private key, and it is not on the server** | `sudo grep -rl 'AGE-SECRET-KEY' /etc/worj /var/backups /root 2>/dev/null` | no output, and the client confirms they hold the key | client holds the key, operator checks | NOT RUN |
+| 3.2 | **A real backup was decrypted and restored with that key** | the operator runs `scripts/restore.sh` from a real backup, with the client's private key off the server, and the login page of the restored copy answers | the restore completes, the check passes, and the operator and the client both sign the record | operator, with the client | NOT RUN. Sandbox: `make infra-test-backup` 75 PASS with a throwaway key |
+| 3.3 | **A nightly backup is fresh** | `sudo cat /var/backups/worj/last-success` and the age of the newest remote object | written by the most recent nightly run (the job runs once a night, at 02:17 server time, `infra/cron.d/worj.template`) | operator | NOT RUN |
+| 3.4 | **Remote backup versioning or object lock is decided and set** | the bucket's settings page, and the retention decision recorded | the choice is written down and the setting is on | client decides, operator sets | NOT RUN. `docs/DEPLOY.md` strongly recommends it |
+| 3.5 | **The full sequence was rehearsed, and the console rescue was rehearsed** | provision, firewall and SSH with the second-terminal confirmation, backup, restore, on the machine chosen in blocker **D-VPS** (`docs/LAUNCH-BLOCKERS.md`), **before** any real content or DNS cutover; the provider's console login was used once | the sequence completes; the console rescue works; a provider snapshot or rebuild is taken afterwards if the real VPS was used | operator | NOT RUN. Required whichever option the client chooses |
+
+## 4. Content and policy (the client)
+
+| # | Gate | Command or check | Pass condition | Owner | Status today |
+|---|---|---|---|---|---|
+| 4.1 | **OJS default wording is replaced or confirmed** | `scripts/check-placeholders.sh --url https://HOST/JOURNAL` (it reports shipped default wording), and the decision table `docs/ADMIN-SETUP-CHECKLIST.md` | the report is empty, or each hit is confirmed in the decision table with the client's name and date | client | NOT RUN. The open access policy text and the LOCKSS and CLOCKSS texts did not appear on any crawled page, so the client confirms or replaces each |
+| 4.2 | **A client reviewer has read every enabled email template in full** | open Settings > Workflow > Emails, read each enabled template; `docs/QA-SCRIPT.md` D4, D5 and F-section | a signed record naming the reviewer and the date; no timeframe or policy claim the client has not approved | client | NOT RUN |
+| 4.3 | **The privacy statement and policy text are client-approved** | Settings > Website > Setup > Privacy Statement and the policy pages | approved in writing by the client. **Whether a lawyer reviews them is the client's decision, not ours.** | client | NOT RUN |
+| 4.4 | **Sample records are deleted from OJS** | Issues and Submissions lists hold no fixture; `scripts/check-discovery.sh --launch` and 1.2 show no marker | no sample article, issue or user remains | developer, client confirms | NOT RUN |
+| 4.5 | **The journal's search description is set** | `curl -s https://HOST/JOURNAL \| grep -c 'name="description"'` | at least 1 (set under Settings > Distribution > Search Indexing > Description) | client | NOT RUN. `make eval` reports the missing meta description on all 13 pages (`docs/PHASE8-NOTES.md`) |
+| 4.6 | **Submissions are enabled at the right moment** | Settings > Workflow > Disable Submissions | the option is off at launch (it may be on before) | client | NOT RUN (`docs/QA-SCRIPT.md` B2 to B4) |
+
+## 5. Mail
+
+| # | Gate | Command or check | Pass condition | Owner | Status today |
+|---|---|---|---|---|---|
+| 5.1 | **A real validation email goes through the production provider and arrives** | register a test account on the live site with an address the tester controls | the email arrives in the inbox, not spam. (With `require_validation = On`, a broken mail setup blocks registration.) | operator, client's tester | NOT RUN. Mail never left the sandbox |
+| 5.2 | **SPF, DKIM and DMARC pass for the sending domain** | in the received message, `Authentication-Results` shows `spf=pass`, `dkim=pass`, `dmarc=pass`; and the records exist (`dig TXT HOST +short`, `dig TXT _dmarc.HOST +short`, and the provider's DKIM selector) | all three pass | client (DNS and provider), operator | NOT RUN |
+
+## 6. People and accounts
+
+| # | Gate | Command or check | Pass condition | Owner | Status today |
+|---|---|---|---|---|---|
+| 6.1 | **The developer's administrator account is removed or its ownership is transferred** | Settings > Users & Roles > Users | the developer's account is gone or belongs to a named person at the client | developer, client confirms | NOT RUN |
+| 6.2 | **A break-glass administrator exists** | the same list; the client's credential holder confirms they hold the credential | exactly the named person holds it | client | NOT RUN |
+| 6.3 | **The manual editorial QA was run by a person** | `docs/QA-SCRIPT.md` | every step ticked with a date and a name; findings QF1 to QF8 resolved or decided | client's tester, developer for fixes | NOT RUN. Every step reads NOT RUN |
+| 6.4 | **The written change request is signed** | the change request for the awards pages and the Crossref configuration, if the client expects them inside the agreed price | signed by the client before launch | developer sends, client signs | NOT RUN |
+
+## 7. Claims: what a person reads on the live site (gate 7.1)
+
+| # | Gate | Command or check | Pass condition | Owner | Status today |
+|---|---|---|---|---|---|
+| 7.1 | **No page makes an indexing, metric or accessibility claim** | (a) `python3 -I scripts/check-content-claims.py` on the repository; (b) a person reads the **exact list below** on the live site; (c) a search aid: `curl -s URL \| grep -iE 'impact factor\|indexed in\|scopus\|web of science\|doaj\|wcag\|accessib\|certif'` on each page, every hit read and confirmed | (a) exit 0; (b) and (c) find no claim the client cannot back with a real, current document. **The public site must not say or imply WCAG conformance, an accessibility certification, an impact factor, or indexing until one is real.** | developer runs (a) and (c), client reads (b) | NOT RUN |
+
+The list a person reads for 7.1(b): the **footer**; **About** and the other policy pages; the **sidebar** blocks; the **page titles and meta tags** (view source of the home, an article and an issue page); the **OAI Identify description** (`https://HOST/JOURNAL/oai?verb=Identify`, the repository name); the **sitemap** titles (`/index/sitemap` and `/JOURNAL/sitemap`); and the **PDF front pages** of every published article. Also confirm that **no Indexing block exists**: under Settings > Website > Appearance > Setup > Sidebar the available blocks are Web Feed, "Make a Submission", Language Toggle, Information and Subscription; none of them is an indexing block, and none that claims indexing is ticked. The rendered-site placeholder scan (gate 1.2) does **not** look for claims, so (b) and (c) are not optional.
+
+## Secret scan (gate 1.8)
+
+The repository must hold no credential in any commit before it leaves the developer's hands. Procedure, run at handover on the release commit:
+
+1. In a scratch directory outside the repository, create a Python virtual environment and `pip install detect-secrets`.
+2. Export every text file that ever existed in the history (all commits, all branches) and scan the export:
+   `git rev-list --objects --all` lists every object; write each text blob under 1 MB to a scratch folder named after its repository path; run `detect-secrets scan --all-files` on that folder.
+3. Triage every candidate by file, line and type **without printing the value**: a lockfile's integrity hashes, a documented example, a fake test value, a public pinned checksum are expected; anything else is a finding.
+4. Direct checks on the same export, by value: the sandbox administrator and database passwords (from the ignored `.env.sandbox`), private-key markers (`BEGIN ... PRIVATE KEY`, `AGE-SECRET-KEY-` followed by a long key), and key-shaped file names (`.env`, `*.pem`, `*.key`).
+5. If a real credential is ever found: treat it as exposed, **rotate it first**, then decide whether to rewrite history (a decision for the repository owner, never done silently).
+
+**Preview run 2026-11-10** (this branch, 124 commits, 428 text blobs; 6 binary or large blobs skipped; scanner `detect-secrets` 1.5.0): 342 candidates. 314 are integrity hashes in the two `package-lock.json` files. The other 28, in 10 files, were read with the values masked: they are fake values in test scripts (`test-check-live-config.sh`, `test-config-template.sh`, `test-config-tools.sh`, `test-backup-restore.sh`), documentation text (`PHASE4-NOTES.md`, `PHASE5-NOTES.md`), the shipped OJS config's own example proxy line (`ojs/config/config.inc.php.template`) and the public SHA-256 of the pinned OJS release (`scripts/ojs-version.env`). **No live credential was found.** Direct checks: the sandbox administrator and database passwords appear in **0** blobs; no key-shaped file name was ever committed; the 11 blobs that contain a private-key marker are our own refusal guards (`provision-ubuntu.sh`, `backup.sh`, their tests), each holds the marker text only, and **0** blobs contain a marker followed by key material. This preview is a developer's reading and is **not** the handover scan: the handover scan is repeated on the release commit and its triage is read by the client's reviewer.
