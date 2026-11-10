@@ -1,0 +1,16 @@
+{
+  "note": "Written by `node checks/gates.js --update-baseline` after a deliberate review. Gate 7 fails if a page shows fewer [PLACEHOLDER markers than here; simplicity is scored against themeBytes.",
+  "themeBytes": 29105,
+  "placeholders": {
+    "home": 11,
+    "about": 4,
+    "article": 4,
+    "issue": 3,
+    "archive": 3,
+    "login": 3,
+    "register": 3,
+    "search": 3,
+    "submissions": 3,
+    "contact": 3
+  }
+}

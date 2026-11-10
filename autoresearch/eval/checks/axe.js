@@ -1,13 +1,16 @@
 #!/usr/bin/env node
 'use strict';
 // axe-core through Playwright on every page at 320 and 1280 px.
-// Usage: node checks/axe.js [--json]   Exit 1 if any WCAG 2.x A/AA rule fails.
+// Usage: node checks/axe.js [--json] [--out result.json] [--wcag-only]
+// Exit 1 if any WCAG 2.x A/AA rule fails (stricter than the spec's critical/serious).
 // Tags: wcag2a wcag2aa wcag21a wcag21aa wcag22aa. Best-practice rules are
 // reported separately and do not fail the run.
 const { chromium } = require('playwright');
 const { AxeBuilder } = require('@axe-core/playwright');
 const { pages, viewports } = require('../lib/pages');
 
+const outFile = process.argv.includes('--out') ? process.argv[process.argv.indexOf('--out') + 1] : null;
+const wcagOnly = process.argv.includes('--wcag-only');
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
 async function run() {
@@ -19,7 +22,7 @@ async function run() {
       const page = await ctx.newPage();
       const res = await page.goto(pg.url, { waitUntil: 'networkidle' });
       const wcag = await new AxeBuilder({ page }).withTags(WCAG).analyze();
-      const best = await new AxeBuilder({ page }).withTags(['best-practice']).analyze();
+      const best = wcagOnly ? { violations: [] } : await new AxeBuilder({ page }).withTags(['best-practice']).analyze();
       out.runs += 1;
       out.passes += wcag.passes.length;
       const tag = (v) => ({ page: pg.name, width: vp, status: res.status(), id: v.id, impact: v.impact, help: v.help, nodes: v.nodes.length, sample: v.nodes[0].target.join(' ') });
@@ -34,6 +37,7 @@ async function run() {
 }
 
 run().then((out) => {
+  if (outFile) { require('fs').writeFileSync(outFile, JSON.stringify(out, null, 2)); }
   if (process.argv.includes('--json')) { console.log(JSON.stringify(out, null, 2)); }
   const line = (v) => `  ${v.page}@${v.width} [${v.impact}] ${v.id} x${v.nodes}: ${v.help}\n      e.g. ${v.sample}`;
   console.log(`axe ${out.runs} page runs (${pages.length} pages x ${viewports.length} widths), rules passed: ${out.passes}`);

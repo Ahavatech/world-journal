@@ -27,7 +27,7 @@ check-citation:
 	done
 
 lint:
-	shellcheck -x scripts/*.sh
+	shellcheck -x scripts/*.sh autoresearch/eval/run.sh
 	python3 -I scripts/check-contrast.py | tail -1
 	@if [ -n "$$(find ojs -name '*.php' -print -quit)" ]; then \
 	  find ojs -name '*.php' -print0 | xargs -0 -n1 php -l >/dev/null && echo "php -l ok"; \
@@ -36,8 +36,9 @@ lint:
 	@if [ -n "$$(find ojs -name '*.css' -print -quit)" ]; then npx --no-install stylelint "ojs/**/*.css"; \
 	else echo "no CSS files yet"; fi
 
+# Needs the sandbox (make sandbox-up sandbox-seed) and `cd autoresearch/eval && npm ci`.
 eval:
-	@echo "make eval: not implemented yet (locked scorer is added later)" >&2; exit 1
+	autoresearch/eval/run.sh
 
 check-placeholders:
 	@echo "make check-placeholders: not implemented yet (Phase 3.5)" >&2; exit 1
