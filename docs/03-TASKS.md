@@ -68,7 +68,7 @@ Work phase by phase. For every phase: plan first, wait for approval, then execut
 ## Phase 8: QA, launch gate, handover
 - 8.1 Full `make eval`; fix failures.
 - 8.2 Manual end-to-end test script `docs/QA-SCRIPT.md` (author submits, editor assigns, reviewer reviews, decision, revision, accept, copyedit, publish) with expected results.
-- 8.3 Launch gate checklist: placeholders empty; fixtures removed; real ISSN and policies in, and the `--placeholder-issn` flag removed from every `check-citation-meta.sh` call (Makefile `check-citation`, the eval gate) so a missing ISSN fails; SMTP verified; backup and restore tested; HTTPS and redirects; robots and sitemap; Search Console verified; admin account hardened (2FA if supported, unique strong password in client's password manager).
+- 8.3 Launch gate checklist: placeholders empty; fixtures removed; real ISSN and policies in, and the `--placeholder-issn` flag removed from every `check-citation-meta.sh` call (Makefile `check-citation`, the eval gate) so a missing ISSN fails; SMTP verified; backup and restore tested; HTTPS and redirects; robots and sitemap; Search Console verified; the placeholder step in `.github/workflows/ci.yml` hard-fails (remove `continue-on-error: true` and the `::warning::` wrapper, so the green tick means the check passed); admin account hardened (2FA if supported, unique strong password in client's password manager).
 - 8.4 `docs/HANDOVER.md` (admin guide, how to publish an issue, who to contact, 14-day support terms).
 
 ## Phase 9: Optional autoresearch polish

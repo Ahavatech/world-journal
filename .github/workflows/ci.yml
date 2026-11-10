@@ -26,6 +26,9 @@ jobs:
       # Warn only until Phase 8: the target is not implemented yet, and
       # placeholders are expected before launch.
       - name: Check placeholders (warn only)
-        run: make check-placeholders
+        run: |
+          if ! make check-placeholders; then
+            echo "::warning title=Placeholders remain::make check-placeholders failed (expected until launch). Phase 8.3 removes continue-on-error so this hard-fails."
+          fi
         continue-on-error: true
       # make eval is not run here: the locked scorer does not exist yet.
