@@ -51,6 +51,7 @@ Work phase by phase. For every phase: plan first, wait for approval, then execut
 ## Phase 5: Infra scripts (PLAN first; Claude cannot run these on the VPS)
 - 5.1 `provision-ubuntu.sh` (idempotent; packages, PHP-FPM tuning, MariaDB, Nginx, certbot, firewall, unattended-upgrades).
 - 5.2 Nginx server block and security headers; PHP ini; MariaDB tuning for 4 GB RAM. Also: a static, accessible 404 page served with `fastcgi_intercept_errors on; error_page 404 ...`, because OJS core prints a bare `<h1>404 Not Found</h1>` with no `lang`, title or landmarks that no theme can change (see `docs/A11Y-REPORT.md`). The public pages currently have no inline scripts or inline event handlers, so a Content-Security-Policy with `script-src 'self'` looks feasible; verify before enabling it.
+- 5.2b One URL form per page: nginx redirects `http` to `https`, strips the `index.php` forms (`/index.php/worj/...` to `/worj/...`) and sends other duplicate forms to one (article page vs its galley URLs are different pages, so check what OJS links to and do not redirect between them). Verify each redirect with `curl -I`.
 - 5.3 `backup.sh`, `restore.sh`, cron; off-box copy via rclone.
 - 5.4 `docs/DEPLOY.md`: exact human steps, rollback steps, DNS and Cloudflare steps (SSL mode "Full (strict)"), smoke tests.
 - **Done when** `shellcheck` clean and a dry-run mode (`--check`) prints actions without changing anything.
@@ -59,8 +60,8 @@ Work phase by phase. For every phase: plan first, wait for approval, then execut
 - 6.1 `scripts/check-citation-meta.sh <url|file>`: fetches or reads an article landing page and verifies every required `citation_*` tag is present, non-empty, one `citation_author` per author, date tag is `citation_publication_date` or `citation_date` (OJS 3.5.0-6 emits `citation_date`) in format `YYYY/MM/DD`, `citation_pdf_url` returns a PDF. A missing `citation_issn` is reported as `EXPECTED-MISSING` only with `--placeholder-issn` (see 8.3).
 - 6.2 `scripts/check-pdf.sh`: text extractable (`pdftotext`), size under 5 MB, title on page 1.
 - 6.3 `robots.txt`, sitemap check, OAI-PMH check (`verb=Identify`, `ListRecords`).
-- 6.5 Canonical check: article pages (the page type that matters for indexing) must emit `<link rel="canonical">` pointing at the page's own clean URL. OJS emits none on custom pages (see `docs/PHASE3-NOTES.md`); do not fix that unless the human asks. Sandbox finding (3.5.0-6): article pages emit none either, so expect this check to fail until the human decides on a head hook.
-- 6.4 `docs/SEARCH-CONSOLE.md`: human steps for DNS verification and sitemap submission.
+- 6.5 Canonical check, **INFO only, never a failure**: report `INFO: no canonical tag on article pages at 3.5.0-6, decision pending` while none is emitted. Google Scholar needs the `citation_*` tags, not a canonical. A localhost sandbox is a weak test because OJS builds canonicals from `base_url`, so re-check on a staging install with the real domain and HTTPS. If staging still shows none, bring it back to the human as a decision; the likely fix is a small, gated hook that adds only a `<link rel="canonical">`, with `make check-citation` run before and after to show the citation tags did not change. Do not add the hook without that decision.
+- 6.4 `docs/SEARCH-CONSOLE.md`: human steps for DNS verification and sitemap submission, plus a URL Inspection of one real article page (and one galley URL) to see which URL Google selects as canonical.
 
 ## Phase 7: DOI and Crossref readiness (mostly blocked on client)
 - 7.1 Read `docs/06-INDEXING-ROADMAP.md`. Produce `docs/DOI-SETUP.md`: what the client must obtain, what to enter in OJS, DOI suffix pattern proposal, test-deposit procedure.
