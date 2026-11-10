@@ -57,6 +57,7 @@ Work phase by phase. For every phase: plan first, wait for approval, then execut
 - 5.2c Hardening (OJS core has no two-factor authentication; see `docs/ADMIN-SETUP-CHECKLIST.md` 9.3, 9.3a): Cloudflare rate limiting on the login and registration paths (`/login`, `/user/register`, and the `/index/` forms); no site administrator role for editors, who get **Journal Manager**; a **documented administrator recovery path** (how access is regained if the only administrator is locked out), tested on staging; the bot-protection decision D21 (reCAPTCHA conflicts with the no-external-requests rule; ALTCHA needs JavaScript and a CSP that allows `blob:` workers).
 - 5.3 `backup.sh`, `restore.sh`, cron; off-box copy via rclone.
 - 5.4 `docs/DEPLOY.md`: exact human steps, rollback steps, DNS and Cloudflare steps (SSL mode "Full (strict)"), smoke tests.
+- **Phase 5 status:** 5.1 to 5.4 are written and tested as far as a sandbox allows; see `docs/PHASE5-NOTES.md` and the table in `docs/DEPLOY.md` for what was and was not tested (nothing has run on a VPS).
 - **Done when** `shellcheck` clean and a dry-run mode (`--check`) prints actions without changing anything.
 
 ## Phase 6: Discoverability
