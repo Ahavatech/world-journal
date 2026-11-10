@@ -76,16 +76,24 @@ The kit and the probe are tested in the sandbox against a **stand-in Apache, not
 
 | Check | Result (write it) | Date and name | Decides |
 |---|---|---|---|
-| B2 home path | NOT RUN | | `files_dir` and the cron paths |
-| B3 tools present (`php`, `mysqldump`, `rsync`, `git`, `composer`, `python3`, `age`, `rclone`) | NOT RUN | | whether config checks and encrypted backups can run on the host |
-| B4 CLI PHP equals web PHP | NOT RUN | | whether the CLI installer and the scheduler use the same PHP |
-| C extensions missing, PHP version and limits (kit) | NOT RUN | | whether the plan can run OJS at all |
-| D write above `public_html`; `open_basedir` (kit) | NOT RUN | | where `files_dir` goes |
+| B2 home path | `/home/uXXXXXXXXX`; domain folder `domains/worldopenresearchjournal.com`, with `public_html` inside (2026-11-10, operator's run) | | `files_dir` and the cron paths |
+| B3 tools present (`php`, `mysqldump`, `rsync`, `git`, `composer`, `python3`, `age`, `rclone`) | `php`, `mysqldump`, `mysql`, `tar`, `rsync`, `git`, `composer`, `python3` present; `age` and `rclone` absent (not needed on the host: the backup encrypts on the operator's machine) (2026-11-10, operator's run) | | whether config checks and encrypted backups can run on the host |
+| B4 CLI PHP equals web PHP | CLI 8.3.36 and web 8.3.36 (SAPI `litespeed`) (2026-11-10, operator's run) | | whether the CLI installer and the scheduler use the same PHP |
+| C extensions missing, PHP version and limits (kit) | **OK:** PHP 8.3.36, every extension on the OJS list loaded (63 in all), memory_limit 2048M, upload and post size 2048M, max_execution_time 360, `date.timezone` UTC. `disable_functions` includes `exec shell_exec system passthru popen proc_open symlink link dl`; whether any OJS feature or plugin needs them is `UNVERIFIED` (2026-11-10, operator's run) | | whether the plan can run OJS at all |
+| D write above `public_html`; `open_basedir` (kit) | **OK:** PHP can write one level above the web root, so `files_dir` can live there; `open_basedir` is not set (2026-11-10, operator's run) | | where `files_dir` goes |
 | E shortest cron interval; argument support; run time | NOT RUN | | the scheduler design |
-| F `.htaccess` directives that worked (kit, thirteen folders) | NOT RUN | | which rules the `.htaccess` template can rely on |
+| F `.htaccess` directives that worked (kit, thirteen folders) | **OK on LiteSpeed:** redirect, rewrite to `index.php`, `FilesMatch` deny, dotfile deny, `RewriteRule [F]` and `[R=404]`, `Header always set` on normal responses, `ErrorDocument` for server errors, `Expires`, GET and HEAD redirect with POST untouched, `.php` blocked in a protected folder, `Options -Indexes`, `php_value` honoured. **Two FAIL: see Findings below** (2026-11-10, operator's run) | | which rules the `.htaccess` template can rely on |
 | G SMTP: arrival, spam, From and Reply-To | NOT RUN | | the mailbox and sender design |
 | H ModSecurity blocks | NOT RUN | | whether exceptions are needed |
 | I MariaDB version, backups | NOT RUN | | the database lifecycle question and the backup plan |
+
+### Findings from the Day-0 run (2026-11-10, LiteSpeed, `RESULT: FAIL (2)` from `scripts/probe-day0-kit.sh`)
+
+1. **`Header always set` is not added to a 404 the server itself produces** (t06). Our denied paths (404 by rewrite) and unknown URLs answered by the server therefore carry no HSTS, `nosniff` or, on a closed site, `X-Robots-Tag`. Pages OJS answers carry them. Impact: small (a 404 body is the static page); `scripts/check-live-site.sh` does not require headers on a 404.
+2. **A header made conditional with `SetEnvIf ... env=!NO_CSP` is sent on every path** (t07), so the admin pages also get the report-only CSP. Impact: none on function, because the policy is **report-only** (it blocks nothing and nothing collects reports), but `check-live-site.sh` expects no CSP on the backend and API paths and **will fail on this host** until a decision is made: drop those two checks and keep the header everywhere, or drop the header. Not changed yet.
+3. **`trust_x_forwarded_for` is `Off` in our config template and the probe saw `X-Forwarded-For` on requests** (Hostinger sits in front of the web server). OJS then logs the proxy's address in place of the visitor's, which skews usage statistics and IP-based features. Whether `REMOTE_ADDR` already holds the visitor's address on this host is `UNVERIFIED`; check on the first real request before deciding.
+4. **`php_value` in `.htaccess` is honoured**, so the PHP options table can be applied there if the dashboard has no matching option.
+5. **Still to do on the host:** B (done), E cron interval, G SMTP, H ModSecurity, I backups; the Day-0 kit was deleted afterwards.
 
 ## Delivery: how the files reach the host
 
