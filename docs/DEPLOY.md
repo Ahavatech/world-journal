@@ -167,6 +167,10 @@ OJS sends mail **from the Technical Support Contact address** (checklist step 6.
 3. Send a real "Validate Your Account" email through production (register a test account) and read the headers: SPF, DKIM and DMARC should pass.
 4. **Search Console:** add the property and publish the **verification TXT record** Google gives you at the DNS provider; then submit `https://HOST/sitemap` and inspect a real article URL (Phase 6.4).
 
+## Staging versus production: robots and noindex
+
+`ROBOTS_MODE` in `provision.env` has **no default** and the script refuses a missing or unknown value. **`staging`** serves `robots.txt` with `Disallow: /` and sends `X-Robots-Tag: noindex, nofollow` on every response; **`production`** serves the normal `robots.txt` (the shipped `Disallow: /cache/` plus `Sitemap: https://HOST/index/sitemap`) and no `X-Robots-Tag`. The classic launch failure goes both ways: a staging site that gets indexed, or a live site left on `noindex` and never found. `scripts/check-discovery.sh --robots-mode MODE https://HOST` fails if the site does not match its mode, and it is a **Phase 8.3 launch-gate item** (run with `--launch`). Switching a site from staging to production is: set `ROBOTS_MODE=production`, re-run the `nginx` stage, then run the check. Tested in the sandbox with the rendered Nginx (`make infra-test-nginx`); `UNVERIFIED (not run on VPS)`.
+
 ## Smoke tests (after stage 5 and again after Cloudflare)
 
 ```bash

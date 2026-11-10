@@ -10,6 +10,7 @@ It is the production gate behind Phase 5.1b and Phase 8.3. It fails on:
   - `api_key_secret` empty, a leftover token, or under 32 chars
   - `allowed_hosts` empty or `[""]` (the installer's value, which rejects every request), or missing --host
   - `time_zone` blank
+  - `[oai] repository_id` empty, the shipped `ojs.pkp.sfu.ca`, a leftover token, or (with --host) not the production host
   - `task_runner` On or `process_jobs_at_task_scheduler` Off (scheduled tasks run from cron, see infra/cron.d/worj.template)
   - `base_url` not https, or still the shipped PKP URL or a token
   - `force_ssl` / `force_login_ssl` not On, `restful_urls` not On
@@ -86,6 +87,9 @@ def main():
     if a.host:
         check("general.allowed_hosts includes the host", a.host in hosts, "the production host is not listed")
     check("general.time_zone", bool(bare(cfg.get("general.time_zone", ""))), "blank (the installer blanks it)")
+    rid = bare(cfg.get("oai.repository_id", ""))
+    check("oai.repository_id", bool(rid) and "pkp.sfu.ca" not in rid and not TOKEN.search(rid) and (not a.host or rid == a.host),
+          "must be the production host (OAI identifiers must never change after harvesting); the shipped value names PKP's server")
     base = bare(cfg.get("general.base_url", ""))
     check("general.base_url", base.startswith("https://") and "pkp.sfu.ca" not in base and not TOKEN.search(base),
           "must be the real https URL")

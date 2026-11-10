@@ -25,7 +25,7 @@ infra-test-chroot:
 infra-test-nginx:
 	scripts/test-nginx-harness.sh
 
-.PHONY: setup lint eval check-placeholders sandbox-up sandbox-down sandbox-seed check-citation check-pdf check-placeholders-url
+.PHONY: setup lint eval check-placeholders sandbox-up sandbox-down sandbox-seed check-citation check-pdf check-discovery check-placeholders-url
 
 setup:
 	scripts/fetch-ojs.sh
@@ -57,6 +57,11 @@ check-pdf:
 	  scripts/check-pdf.sh "$${SANDBOX_URL:-http://127.0.0.1:8082}/worj/article/view/$$n" | tail -1 || exit 1; \
 	done
 
+# robots.txt, sitemap, OAI-PMH, noindex and the canonical INFO line (needs the sandbox running). The sandbox serves
+# OJS's own robots.txt (no Sitemap line), so this FAILS there on purpose; the Nginx harness checks the rendered file.
+check-discovery:
+	scripts/check-discovery.sh --robots-mode production --curl-arg --noproxy --curl-arg '*' "$${SANDBOX_URL:-http://127.0.0.1:8082}"
+
 lint:
 	shellcheck -x scripts/*.sh autoresearch/eval/run.sh
 	python3 -I scripts/check-contrast.py | tail -1
@@ -71,6 +76,8 @@ lint:
 	scripts/test-check-live-config.sh | tail -1
 	scripts/test-cloudflare-ips.sh | tail -1
 	scripts/test-check-pdf.sh | tail -1
+	scripts/test-check-discovery.sh | tail -1
+	scripts/test-check-citation-meta.sh | tail -1
 	@if [ -n "$$(find ojs scripts -name '*.php' -print -quit)" ]; then \
 	  find ojs scripts -name '*.php' -print0 | xargs -0 -n1 php -l >/dev/null && echo "php -l ok"; \
 	else echo "no PHP files yet"; fi

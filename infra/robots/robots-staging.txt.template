@@ -1,0 +1,4 @@
+# robots.txt for a staging or rehearsal site (ROBOTS_MODE=staging): the whole site is closed to crawlers.
+# The server also sends X-Robots-Tag: noindex. Switch to production ONLY at launch (Phase 8.3 gate).
+User-agent: *
+Disallow: /

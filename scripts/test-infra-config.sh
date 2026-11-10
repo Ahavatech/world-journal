@@ -103,7 +103,8 @@ ACME_ROOT=$ng/acme
 REALIP_CONF=$ng/realip.conf
 HTTP_PORT=18080
 HTTPS_PORT=18443
-HSTS_MAX_AGE=300"
+HSTS_MAX_AGE=300
+ROBOTS_TAG=noindex, nofollow"
   printf '%s\n' "$vals" | "$root/scripts/render-nginx.sh" "$ng/out" >/dev/null
   cat >"$ng/nginx.conf" <<CFG
 pid $ng/nginx.pid;

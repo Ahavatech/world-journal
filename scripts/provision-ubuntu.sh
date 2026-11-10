@@ -62,7 +62,7 @@ stage_preflight() {
   [ "$perm" = "600 root" ] || die "$ENV_FILE must be mode 600 and owned by root (is $perm): it holds secrets"
   load_env "$ENV_FILE"
   local v
-  for v in HOST ALT_HOST TIME_ZONE OPERATOR_USER ADMIN_USERNAME ADMIN_EMAIL SMTP_SERVER SMTP_PORT SMTP_AUTH SMTP_USERNAME SMTP_PASSWORD AGE_RECIPIENT RCLONE_REMOTE CERT_METHOD; do
+  for v in HOST ALT_HOST TIME_ZONE ROBOTS_MODE OPERATOR_USER ADMIN_USERNAME ADMIN_EMAIL SMTP_SERVER SMTP_PORT SMTP_AUTH SMTP_USERNAME SMTP_PASSWORD AGE_RECIPIENT RCLONE_REMOTE CERT_METHOD; do
     [ -n "${!v:-}" ] || die "$v is required in $ENV_FILE"
     case "${!v}" in *REPLACE*) die "$v still holds a REPLACE placeholder in $ENV_FILE" ;; esac
   done
@@ -80,6 +80,7 @@ stage_preflight() {
   case "$ADMIN_EMAIL$SMTP_USERNAME" in *.invalid*) die "REFUSED: an .invalid address is fake data and must not reach a server" ;; esac
   case "$AGE_RECIPIENT" in AGE-SECRET-KEY-*) die "REFUSED: AGE_RECIPIENT is a PRIVATE key; the server must hold only the public key" ;; age1*) ;; *) die "AGE_RECIPIENT must be an age public key (age1...)" ;; esac
   case "$CERT_METHOD" in origin | certbot) ;; *) die "CERT_METHOD must be origin or certbot" ;; esac
+  case "$ROBOTS_MODE" in staging) ROBOTS_TAG="noindex, nofollow" ;; production) ROBOTS_TAG="" ;; *) die "ROBOTS_MODE must be staging or production (no default: a forgotten staging site gets indexed, a forgotten noindex hides the live one)" ;; esac
   if [ "$CERT_METHOD" = certbot ]; then
     [ -n "${CERTBOT_EMAIL:-}" ] || die "CERTBOT_EMAIL is required with CERT_METHOD=certbot"
     CERT_FULLCHAIN="/etc/letsencrypt/live/$HOST/fullchain.pem"; CERT_KEY="/etc/letsencrypt/live/$HOST/privkey.pem"
@@ -92,7 +93,7 @@ stage_preflight() {
   VALUES=""
   add_value HOST "$HOST"; add_value ALT_HOST "$ALT_HOST"; add_value WEBROOT "$WEBROOT"; add_value CERT_FULLCHAIN "$CERT_FULLCHAIN"; add_value CERT_KEY "$CERT_KEY"
   add_value PHP_SOCK /run/php/worj-fpm.sock; add_value SNIPPETS /etc/nginx/snippets/worj; add_value ERRORS_ROOT /usr/share/worj-errors; add_value ACME_ROOT /var/www/acme
-  add_value REALIP_CONF /etc/nginx/worj-cloudflare-realip.conf; add_value HTTP_PORT 80; add_value HTTPS_PORT 443; add_value HSTS_MAX_AGE "$HSTS_MAX_AGE"
+  add_value REALIP_CONF /etc/nginx/worj-cloudflare-realip.conf; add_value HTTP_PORT 80; add_value HTTPS_PORT 443; add_value HSTS_MAX_AGE "$HSTS_MAX_AGE"; add_value ROBOTS_TAG "$ROBOTS_TAG"
   add_value TIME_ZONE "$TIME_ZONE"; add_value INSTALL_DIR /usr/local/sbin
   ok "settings valid; no secret printed"
 }
@@ -242,6 +243,7 @@ stage_nginx() {
   ensure_dir /var/www/acme 755 root:root
   ensure_copy "$ROOT/infra/nginx/errors/404.html" /usr/share/worj-errors/404.html 644 root:root
   ensure_copy "$ROOT/infra/nginx/errors/404.css" /usr/share/worj-errors/404.css 644 root:root
+  ensure_rendered "$ROOT/infra/robots/robots-$ROBOTS_MODE.txt.template" /usr/share/worj-errors/robots.txt 644 root:root
   local t
   if [ -f "$CERT_FULLCHAIN" ] && [ -f "$CERT_KEY" ]; then
     for t in "$ROOT"/infra/nginx/snippets/*.conf.template; do ensure_rendered "$t" "/etc/nginx/snippets/worj/$(basename "${t%.template}")" 644 root:root; done

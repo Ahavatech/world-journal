@@ -17,6 +17,7 @@ probes=("$core/public/worj-harness-upload.php" "$core/public/worj-harness.sql.ba
 cleanup() {
   [ ! -f "$tmp/nginxA.pid" ] || kill "$(cat "$tmp/nginxA.pid")" 2>/dev/null
   [ ! -f "$tmp/nginxB.pid" ] || kill "$(cat "$tmp/nginxB.pid")" 2>/dev/null
+  [ ! -f "$tmp/nginxC.pid" ] || kill "$(cat "$tmp/nginxC.pid")" 2>/dev/null
   cp "$tmp/config.orig" "$cfg"
   for f in "${probes[@]}"; do rm -f -- "$f"; done
   rm -rf -- "${tmp:?}"
@@ -32,6 +33,7 @@ yes() { local name="$1"; shift; if "$@"; then ok "$name"; else bad "$name"; fi; 
 eq() { [ "$1" = "$2" ]; }
 has() { grep -qiF -- "$2" <<<"$1"; }
 lacks() { ! grep -qiF -- "$2" <<<"$1"; }
+lacksline() { ! grep -qxF -- "$2" <<<"$1"; }
 
 # ---- sandbox config for the run: the harness host name and port, restored by trap
 sed -i -E "s#^base_url = .*#base_url = \"https://journal.example.org:18443\"#; s#^allowed_hosts = .*#allowed_hosts = '[\"journal.example.org\",\"127.0.0.1\"]'#" "$cfg"
@@ -40,12 +42,16 @@ sed -i -E "s#^base_url = .*#base_url = \"https://journal.example.org:18443\"#; s
 mkdir -p "$tmp/errors" "$tmp/acme" "$tmp/tmp"
 chmod 755 "$tmp" "$tmp/errors" "$tmp/acme"   # the nginx worker (www-data) must read the error pages
 cp "$root/infra/nginx/errors/404.html" "$root/infra/nginx/errors/404.css" "$tmp/errors/"
+render_robots() { # mode errors_dir
+  printf 'HOST=journal.example.org\n' | python3 -I "$root/scripts/render-template.py" "$root/infra/robots/robots-$1.txt.template" "$2/robots.txt" --mode 644 --allow-unused >/dev/null
+}
+render_robots production "$tmp/errors"
 printf 'set_real_ip_from 127.0.0.1;\nreal_ip_header CF-Connecting-IP;\nreal_ip_recursive on;\n' >"$tmp/realip.conf"
 openssl req -x509 -newkey rsa:2048 -nodes -keyout "$tmp/key.pem" -out "$tmp/cert.pem" -days 1 \
   -subj "/CN=journal.example.org" -addext "subjectAltName=DNS:journal.example.org,DNS:www.journal.example.org" >/dev/null 2>&1
-render() { # outdir http_port https_port
-  printf 'HOST=journal.example.org\nALT_HOST=www.journal.example.org\nWEBROOT=%s\nCERT_FULLCHAIN=%s\nCERT_KEY=%s\nPHP_SOCK=%s\nSNIPPETS=%s\nERRORS_ROOT=%s\nACME_ROOT=%s\nREALIP_CONF=%s\nHTTP_PORT=%s\nHTTPS_PORT=%s\nHSTS_MAX_AGE=300\n' \
-    "$core" "$tmp/cert.pem" "$tmp/key.pem" "${PHP_SOCK:-/run/php/php8.3-fpm.sock}" "$1/snippets" "$tmp/errors" "$tmp/acme" "$tmp/realip.conf" "$2" "$3" |
+render() { # outdir http_port https_port [robots_tag [errors_dir]]
+  printf 'HOST=journal.example.org\nALT_HOST=www.journal.example.org\nWEBROOT=%s\nCERT_FULLCHAIN=%s\nCERT_KEY=%s\nPHP_SOCK=%s\nSNIPPETS=%s\nERRORS_ROOT=%s\nACME_ROOT=%s\nREALIP_CONF=%s\nHTTP_PORT=%s\nHTTPS_PORT=%s\nHSTS_MAX_AGE=300\nROBOTS_TAG=%s\n' \
+    "$core" "$tmp/cert.pem" "$tmp/key.pem" "${PHP_SOCK:-/run/php/php8.3-fpm.sock}" "$1/snippets" "${5:-$tmp/errors}" "$tmp/acme" "$tmp/realip.conf" "$2" "$3" "${4:-}" |
     "$root/scripts/render-nginx.sh" "$1" >/dev/null
 }
 wrapper() { # outdir name
@@ -162,6 +168,56 @@ yes "API 404 is still JSON (content-type)" has "$api_h" "application/json"
 yes "API 404 body is not the HTML page" lacks "$api_body" "<html"
 yes "/_errors/404.html is internal (direct request 404)" eq "$(status "$S/_errors/404.html")" 404
 yes "/_errors/404.css is served" eq "$(status "$S/_errors/404.css")" 200
+
+echo "=== discovery: robots.txt, sitemap and OAI-PMH through the production render (ROBOTS_MODE=production)"
+rb_h="$(hdr "$S/robots.txt")"; rb_body="$(cu "$S/robots.txt")"
+yes "robots.txt is served by Nginx (200)" has "$rb_h" " 200"
+yes "robots.txt is text/plain" has "$rb_h" "content-type: text/plain"
+yes "production robots.txt names the sitemap index" has "$rb_body" "Sitemap: https://$H/index/sitemap"
+yes "production robots.txt does not close the site (no 'Disallow: /' line)" lacksline "$rb_body" "Disallow: /"
+yes "production sends no X-Robots-Tag" lacks "$rb_h" "x-robots-tag"
+yes "production: home page sends no X-Robots-Tag either" lacks "$home_h" "x-robots-tag"
+for u in "/robots.txt" "/index/sitemap" "/worj/sitemap" "/worj/oai?verb=Identify"; do
+  yes "http://$u -> 301 to https://$H$u" eq "$(loc "http://$H:18080$u")" "https://$H$u"
+  yes "https://www...$u -> 301 to the main host" eq "$(loc "https://www.$H:18443$u")" "https://$H$u"
+done
+yes "/index/sitemap is served as XML (200)" has "$(hdr "$S/index/sitemap")" "application/xml"
+yes "/worj/sitemap is served as XML and lists an article" has "$(cu "$S/worj/sitemap")" "/article/view/1"
+yes "GET /index.php/index/sitemap -> /index/sitemap" eq "$(loc "$S/index.php/index/sitemap")" "https://$H/index/sitemap"
+yes "GET /index.php/worj/oai?verb=Identify -> clean URL, query kept" eq "$(loc "$S/index.php/worj/oai?verb=Identify")" "https://$H/worj/oai?verb=Identify"
+yes "OAI Identify answers 200 XML through Nginx" has "$(hdr "$S/worj/oai?verb=Identify")" "xml"
+oai_post="$(status -X POST -d 'verb=Identify' "$S/index.php/worj/oai")"
+yes "a POST to the OAI endpoint (index.php form) is NOT redirected (got $oai_post)" test "$oai_post" != 301
+oai_post2="$(status -X POST -d 'verb=Identify' "$S/worj/oai")"
+yes "a POST to the clean OAI URL answers 200 (got $oai_post2)" eq "$oai_post2" 200
+echo "--- scripts/check-discovery.sh --robots-mode production against the production render (placeholder content is expected to be found only with --launch)"
+CD=("$root/scripts/check-discovery.sh" --curl-arg -k --curl-arg --noproxy --curl-arg '*' --curl-arg --resolve --curl-arg "$H:18443:127.0.0.1")
+"${CD[@]}" --robots-mode production "$S" >"$tmp/cd-prod.txt" 2>&1; cd_rc=$?
+yes "check-discovery in production mode passes behind Nginx (exit $cd_rc)" eq "$cd_rc" 0
+[ "$cd_rc" = 0 ] || sed 's/^/      /' "$tmp/cd-prod.txt"
+"${CD[@]}" --robots-mode staging "$S" >"$tmp/cd-stg.txt" 2>&1; cd_rc=$?
+yes "check-discovery in STAGING mode FAILS on the production render (the site is crawlable; exit $cd_rc)" eq "$cd_rc" 1
+"${CD[@]}" --robots-mode production --launch "$S" >"$tmp/cd-launch.txt" 2>&1; cd_rc=$?
+yes "check-discovery --launch FAILS on the seeded sample content (exit $cd_rc)" eq "$cd_rc" 1
+yes "...because of the placeholder markers in the sitemap and OAI" grep -q 'FAIL  launch: placeholder content is discoverable' "$tmp/cd-launch.txt"
+
+echo "=== staging render (ROBOTS_MODE=staging): robots.txt closes the site and noindex is sent"
+mkdir -p "$tmp/errorsC"; chmod 755 "$tmp/errorsC"; cp "$tmp/errors/404.html" "$tmp/errors/404.css" "$tmp/errorsC/"
+render_robots staging "$tmp/errorsC"
+render "$tmp/outC" 18082 18445 "noindex, nofollow" "$tmp/errorsC"
+wrapper "$tmp/outC" C
+if nginx -c "$tmp/nginxC.conf"; then
+  sleep 1
+  cuC() { curl -sk --noproxy "*" --resolve "$H:18445:127.0.0.1" -m 30 "$@"; }
+  yes "staging robots.txt is 'Disallow: /'" has "$(cuC "https://$H:18445/robots.txt")" "Disallow: /"
+  yes "staging robots.txt has no Sitemap line" lacks "$(cuC "https://$H:18445/robots.txt")" "Sitemap:"
+  yes "staging sends X-Robots-Tag: noindex on robots.txt" has "$(cuC -o /dev/null -D - "https://$H:18445/robots.txt")" "X-Robots-Tag: noindex, nofollow"
+  yes "staging sends X-Robots-Tag: noindex on a 404 page too" has "$(cuC -o /dev/null -D - "https://$H:18445/worj/no-such-page")" "X-Robots-Tag: noindex, nofollow"
+  python3 -I "$root/scripts/lib/discovery.py" robots-closed <(cuC "https://$H:18445/robots.txt")
+  yes "robotparser agrees: * and Googlebot may fetch nothing" eq "$?" 0
+else
+  bad "nginx C (staging render) did not start"
+fi
 
 echo "=== real client address"
 cu -o /dev/null -H 'CF-Connecting-IP: 203.0.113.9' "$S/worj/about" >/dev/null

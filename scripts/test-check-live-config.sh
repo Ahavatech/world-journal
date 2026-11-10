@@ -26,6 +26,8 @@ password = Zk4vQm9TnR2xLp7WcB5sYd8e
 name = worj
 [files]
 files_dir = /var/lib/worj/files
+[oai]
+repository_id = journal.example.org
 [security]
 force_ssl = On
 force_login_ssl = On
@@ -59,6 +61,9 @@ mutate "the shipped default salt (installer state)" 's/^salt = .*/salt = "YouMus
 mutate "a short salt" 's/^salt = .*/salt = "short"/' "security.salt"
 mutate "an empty api_key_secret (installer state)" 's/^api_key_secret = .*/api_key_secret = ""/' "security.api_key_secret"
 mutate "allowed_hosts rewritten to [\"\"] (installer state)" "s/^allowed_hosts = .*/allowed_hosts = '[\"\"]'/" "general.allowed_hosts"
+mutate "OAI repository_id still the shipped PKP value" 's/^repository_id = .*/repository_id = ojs.pkp.sfu.ca/' "oai.repository_id"
+mutate "OAI repository_id is another host" 's/^repository_id = .*/repository_id = other.example/' "oai.repository_id"
+mutate "OAI repository_id empty" 's/^repository_id = .*/repository_id =/' "oai.repository_id"
 mutate "allowed_hosts empty" "s/^allowed_hosts = .*/allowed_hosts = ''/" "general.allowed_hosts"
 mutate "allowed_hosts without the production host" "s/^allowed_hosts = .*/allowed_hosts = '[\"other.example\"]'/" "general.allowed_hosts includes the host"
 mutate "blank time_zone (installer state)" 's/^time_zone = .*/time_zone =/' "general.time_zone"

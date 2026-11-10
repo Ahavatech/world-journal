@@ -8,5 +8,7 @@ add_header X-Content-Type-Options "nosniff" always;
 add_header X-Frame-Options "SAMEORIGIN" always;
 add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 add_header Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=()" always;
+# Staging only (ROBOTS_MODE=staging): ask crawlers not to index anything. In production the value is empty, which sends no header.
+add_header X-Robots-Tag "@@ROBOTS_TAG@@" always;
 # Report-only: observation, not protection. An empty value (backend paths) sends no header.
 add_header Content-Security-Policy-Report-Only $worj_csp_report_only always;
