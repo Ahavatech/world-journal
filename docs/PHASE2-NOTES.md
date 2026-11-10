@@ -26,10 +26,17 @@ A cleared session resumes from this file and the git history, not from the chat.
 | 2.5 about page and sidebar (zero blocks, blocks, configured-but-empty) | done |
 | 2.6 article, issue, archive (overflow fixed; stress-tested with a long title, DOI-like string and URL at 320, 768, 1280, then reverted) | done |
 | 2.7 accessibility pass (results in `docs/A11Y-REPORT.md`) | done |
-| 2.8 evaluator (reuse `autoresearch/eval/checks/*` and `lib/pages.js`; add overflow, external-request, CSS+JS size and JS-off gates and the `COMPONENT`/`GATES`/`SCORE` output; no checksum lock) | next |
-| PR | one PR at the end of Phase 2 |
+| 2.8 evaluator (`make eval`, about 110 s; gates 1 to 7, score re-scaled, `perf` SKIPPED; see `autoresearch/eval/README.md`) | done |
+| PR | one PR at the end of Phase 2: open it next (see the list below) |
 
 Per phase: `make lint`, `scripts/test-nav.js` (15 of 15 must pass) and `make check-citation` after every theme commit. Report the viewport checks at 320, 768 and 1280, the CSS+JS and font sizes, the axe results and the citation output in the PR.
+
+## Open decisions for the human
+
+- **Meta description on non-home pages.** OJS core emits `<meta name="description">` only on the journal homepage and only when the journal's search description is set. Article, issue and other pages have none (Lighthouse SEO 92 there). A small hook in the theme could add one from the abstract; not done, because it touches the metadata area.
+- **404 page:** needs a static page served by nginx in Phase 5 (core prints a bare `<h1>`).
+- **Parent theme dependency:** the article and issue templates still come from the parent theme; only the CSS is replaced.
+- **Lighthouse performance** is not measured; decide later whether to run it manually before launch.
 
 ## Resume commands
 
