@@ -74,3 +74,13 @@ Walkthroughs run in the sandbox against a **throwaway journal `probe`** (path `/
 - No two-factor feature found in OJS core 3.5.0-6 (Plugin Gallery not checked). The admin username cannot be renamed in the profile form (source reading): choose it at install.
 - Session 2: **4.2** (verify `php tools/importExport.php list`, the `native` and `users` usage, record the real invocations, then wrapper scripts with the safeguards above) and **4.3** (`ojs/config/config.inc.php.template`, lint against `ojs-core/config.TEMPLATE.inc.php`, record how the sandbox install was done; `require_validation` is a config decision, see section 6.6).
 - Not walked: Distribution > Access, Archiving, Registration, PKP Preservation Network, LOCKSS/CLOCKSS tabs; Website > Setup > Information texts; Workflow > Submission > Metadata defaults; the Author role dialog; reviewer-invitation email.
+
+## Session 2, start (review points from session 1)
+
+- Done: launch-gate items in `docs/03-TASKS.md` 8.3 (default text replaced or confirmed; real validation email; SPF/DKIM/DMARC; client reads every enabled email template); Phase 5 task 5.2c (Cloudflare rate limiting on login and registration, editors get Journal Manager not site administrator, documented admin recovery path); DEPLOY.md DNS section.
+- D21 (bot protection) added. CAPTCHA findings: reCAPTCHA loads `https://www.recaptcha.net/recaptcha/api.js` (remote script); ALTCHA is self-hosted but needs JavaScript (registration fails with JS off) and four same-origin `blob:` worker requests. Neither is on by default.
+- 2FA: Plugin Gallery (101 plugins, 2026-11-10) has no two-factor plugin; no third-party plugin recommended.
+- `scripts/ojs-default-wording.txt` (31 fragments, generated from `ojs-core/locale/en/default.po`, checked by `make lint`) is used by `check-placeholders.sh --url`; the sandbox journal still shows the default submission checklist (6 hits).
+- Script guard: `scripts/lib/sandbox-guard.js` + `scripts/test-sandbox-guard.js` (12 cases in `make lint`); wired into `sandbox-api.js`, `sandbox-seed.js`, `sandbox-content.js`.
+- Walked now: Website > Information (defaults present in the editors and on public pages); Distribution > Access (publishing mode and OAI were on the **Access** tab, not "Setup": corrected), Archiving (PN, LOCKSS and CLOCKSS), DOIs > Registration.
+- Mailpit: v1.33.1, sandbox only.
