@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Render a template that holds @@TOKEN@@ placeholders into a file, without leaking values.
 
-  python3 -I scripts/render-template.py TEMPLATE OUTPUT [--mode 640] [--owner USER] [--group GROUP] [--allow-unused] < values
+  python3 -I scripts/render-template.py TEMPLATE OUTPUT [--mode 640] [--owner USER] [--group GROUP] [--allow-unused] [--dry-run] < values
 
 Values arrive on STANDARD INPUT as `NAME=VALUE` lines (the value is everything after the first `=`),
 never on the command line: anything on argv is visible to every user in /proc/*/cmdline and ps. The
@@ -14,6 +14,7 @@ script prints only `changed` or `unchanged` and token NAMES (never values).
   - Writes atomically: a temporary file created with mode 600 in the destination directory, fsynced,
     chmod/chown, then os.replace. The output is never readable by others, even briefly.
   - If the output already has the same content and mode, it is left alone (`unchanged`).
+  - --dry-run writes nothing and prints `unchanged` or `would change`.
 Exit 2 for a usage error.
 """
 import argparse
@@ -36,6 +37,7 @@ def main():
     ap.add_argument("--owner")
     ap.add_argument("--group")
     ap.add_argument("--allow-unused", action="store_true")
+    ap.add_argument("--dry-run", action="store_true")
     try:
         a = ap.parse_args()
     except SystemExit:
@@ -76,6 +78,9 @@ def main():
             same = f.read() == out and stat.S_IMODE(st.st_mode) == mode
     if same and not (a.owner or a.group):
         print("unchanged")
+        return 0
+    if a.dry_run:
+        print("would change")
         return 0
     directory = os.path.dirname(os.path.abspath(a.output))
     fd, tmp = tempfile.mkstemp(dir=directory, prefix=".render-")  # created with mode 600
