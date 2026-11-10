@@ -8,6 +8,7 @@
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');
+const { assertPath } = require('./lib/sandbox-guard');
 
 const env = Object.fromEntries(
   fs.readFileSync(path.resolve(__dirname, '..', '.env.sandbox'), 'utf8').trim().split('\n')
@@ -18,6 +19,7 @@ if (!method || !apiPath) {
   console.error('usage: sandbox-api.js METHOD PATH [JSON_BODY]');
   process.exit(2);
 }
+try { assertPath(apiPath); } catch (e) { console.error(e.message); process.exit(2); }
 
 (async () => {
   const browser = await chromium.launch();
@@ -29,6 +31,11 @@ if (!method || !apiPath) {
   await Promise.all([page.waitForEvent('load'), page.click('button[type=submit]')]);
   await page.goto(`${base}/index/admin/contexts`);
   const csrf = await page.evaluate(() => document.querySelector('meta[name=csrf-token]')?.content);
+  if (['PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase())) {
+    // a write must target something that exists: GET it first
+    const probe = await ctx.request.fetch(base + apiPath, { method: 'GET', headers: { 'X-Csrf-Token': csrf } });
+    if (!probe.ok()) { console.error(`guard: ${method} ${apiPath} refused, the target does not exist (GET returned ${probe.status()})`); await browser.close(); process.exit(2); }
+  }
   const r = await ctx.request.fetch(base + apiPath, {
     method,
     headers: { 'X-Csrf-Token': csrf, 'Content-Type': 'application/json' },

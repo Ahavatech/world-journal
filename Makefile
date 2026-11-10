@@ -31,6 +31,7 @@ lint:
 	python3 -I scripts/check-contrast.py | tail -1
 	python3 -I scripts/check-content-claims.py | tail -1
 	python3 -I scripts/extract-ojs-default-wording.py --check
+	node scripts/test-sandbox-guard.js | tail -1
 	@if [ -n "$$(find ojs scripts -name '*.php' -print -quit)" ]; then \
 	  find ojs scripts -name '*.php' -print0 | xargs -0 -n1 php -l >/dev/null && echo "php -l ok"; \
 	else echo "no PHP files yet"; fi

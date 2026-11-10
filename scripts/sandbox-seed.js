@@ -8,6 +8,7 @@ const fs = require('fs');
 const { execFileSync } = require('child_process');
 const path = require('path');
 const { chromium } = require('playwright');
+const { guarded, assertId } = require('./lib/sandbox-guard');
 
 const root = path.resolve(__dirname, '..');
 const env = Object.fromEntries(
@@ -25,7 +26,7 @@ async function main() {
   await Promise.all([page.waitForEvent('load'), page.click('button[type=submit]')]);
   await page.goto(`${base}/index/admin/contexts`);
   const csrf = await page.evaluate(() => document.querySelector('meta[name=csrf-token]')?.content);
-  const call = async (method, url, data) => {
+  const rawCall = async (method, url, data) => {
     const r = await ctx.request.fetch(base + url, {
       method, data,
       headers: { 'X-Csrf-Token': csrf, 'Content-Type': 'application/json' },
@@ -33,6 +34,7 @@ async function main() {
     if (!r.ok()) throw new Error(`${method} ${url} -> ${r.status()} ${(await r.text()).slice(0, 300)}`);
     return r.json();
   };
+  const call = guarded(rawCall); // refuses empty ids and writes to items that do not exist
 
   const list = await call('GET', '/index/api/v1/contexts');
   let created = false;
@@ -47,7 +49,7 @@ async function main() {
     console.log('created journal worj');
   }
   const ctxs = (await call('GET', '/index/api/v1/contexts')).items;
-  const id = ctxs.find((c) => c.urlPath === 'worj').id;
+  const id = assertId(ctxs.find((c) => c.urlPath === 'worj')?.id, 'worj context id');
   await call('PUT', `/worj/api/v1/contexts/${id}`, { themePluginPath: 'worj', description: { en: '[PLACEHOLDER: short description of the journal, aims and scope]' } });
   console.log(`journal worj (id ${id}) uses theme worj`);
 
