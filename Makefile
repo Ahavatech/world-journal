@@ -3,13 +3,17 @@ SHELL := /bin/bash
 THEME := ojs/plugins/themes/worj
 
 # Needs php-fpm8.3, mariadbd and nginx in this sandbox; not part of `make lint` (CI has no FPM or MariaDB).
-.PHONY: infra-test infra-test-nginx infra-test-backup
+.PHONY: infra-test infra-test-nginx infra-test-backup infra-test-reset
 infra-test:
 	scripts/test-infra-config.sh
 
 # Needs root, the sandbox up, and age + rclone (apt-get install -y age rclone).
 infra-test-backup:
 	scripts/test-backup-restore.sh
+
+# Needs root and the sandbox up; restores the sandbox admin row afterwards.
+infra-test-reset:
+	scripts/test-reset-admin-password.sh
 
 # Needs the sandbox (make sandbox-up sandbox-seed), root, and `cd autoresearch/eval && npm ci`. Takes a few minutes.
 infra-test-nginx:
