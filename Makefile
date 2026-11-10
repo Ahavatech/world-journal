@@ -25,7 +25,7 @@ infra-test-chroot:
 infra-test-nginx:
 	scripts/test-nginx-harness.sh
 
-.PHONY: setup lint eval check-placeholders sandbox-up sandbox-down sandbox-seed check-citation check-placeholders-url
+.PHONY: setup lint eval check-placeholders sandbox-up sandbox-down sandbox-seed check-citation check-pdf check-placeholders-url
 
 setup:
 	scripts/fetch-ojs.sh
@@ -51,6 +51,12 @@ check-citation:
 	  scripts/check-citation-meta.sh --placeholder-issn "$${SANDBOX_URL:-http://127.0.0.1:8082}/worj/article/view/$$n" | tail -1; \
 	done
 
+# Crawler access to the PDF each sample article names in citation_pdf_url (needs the sandbox running).
+check-pdf:
+	@for n in 1 2 3; do \
+	  scripts/check-pdf.sh "$${SANDBOX_URL:-http://127.0.0.1:8082}/worj/article/view/$$n" | tail -1 || exit 1; \
+	done
+
 lint:
 	shellcheck -x scripts/*.sh autoresearch/eval/run.sh
 	python3 -I scripts/check-contrast.py | tail -1
@@ -64,6 +70,7 @@ lint:
 	scripts/test-config-tools.sh | tail -1
 	scripts/test-check-live-config.sh | tail -1
 	scripts/test-cloudflare-ips.sh | tail -1
+	scripts/test-check-pdf.sh | tail -1
 	@if [ -n "$$(find ojs scripts -name '*.php' -print -quit)" ]; then \
 	  find ojs scripts -name '*.php' -print0 | xargs -0 -n1 php -l >/dev/null && echo "php -l ok"; \
 	else echo "no PHP files yet"; fi
