@@ -21,8 +21,8 @@ Walkthroughs run in the sandbox against a **throwaway journal `probe`** (path `/
 | Section | State |
 |---|---|
 | Decision table | written (`docs/ADMIN-SETUP-CHECKLIST.md`), defaults read from the settings store; every "Where" menu path still to be confirmed on screen in the later sections |
-| Masthead and contact | pending |
-| Sections | pending |
+| Masthead and contact (section 1) | written, `VERIFIED-SANDBOX 2026-11-10` |
+| Sections (section 2) | written, `VERIFIED-SANDBOX 2026-11-10` |
 | Submission checklist, roles, review forms and reminders | pending |
 | Email templates and notifications | pending |
 | DOI, licence, search settings and description | pending |
@@ -35,3 +35,10 @@ Walkthroughs run in the sandbox against a **throwaway journal `probe`** (path `/
 - Self-registration is **on** by default for Author, Reviewer and Reader (row D11).
 - Review reminders are **off** by default; review mode default is double-anonymous (rows D1, D4).
 - The sandbox nginx start script can reload instead of start after a restart when `/run/worj-sandbox/nginx.pid` is stale (pid reused). Remove the file and run `scripts/sandbox-ojs.sh up` again.
+
+## Tooling notes (session 1)
+
+- Walkthrough helpers are throwaway Playwright scripts kept in the session scratchpad, not in the repo. Pattern: log in at `/index/login` with the generated admin, open the page, click tabs with `getByRole('tab', {name})`, read labels and the **✓ Saved** status. Playwright resolves from `NODE_PATH=/opt/node22/lib/node_modules`.
+- The admin pages are a Vue app: buttons in tab panels are sometimes not `role=button`; `getByText(label, {exact:true})` worked for **Create Section**.
+- Saving a form with an empty required field showed no message in my selectors; do not claim the UI warns.
+- Journal Settings (Settings > Journal) tabs: Masthead, Contact, Sections, Categories. Required: title, initials, country; contact name and email; technical support name and email.
