@@ -100,7 +100,10 @@ scn "launch: 'Sample Article' in OAI: FAIL" 1 "placeholder content is discoverab
 scn "launch: 'Placeholder Author' in OAI: FAIL" 1 "Placeholder Author" '{"title":"Placeholder Author wrote this"}' "${P[@]}" --launch
 scn "without --launch the same content only passes" 0 "RESULT: PASS" '{"title":"Sample Article 1"}' "${P[@]}"
 scn "launch: repository identifier is not the host: FAIL" 1 "repository identifier" '{"rid":"ojs.pkp.sfu.ca"}' "${P[@]}" --launch
+scn "launch: robots.txt without a Sitemap line FAILS (never a warning)" 1 "no Sitemap: line" '{"robots":"User-agent: *\nDisallow: /cache/\n","title":"Effects of Light on Plant Growth"}' "${P[@]}" --launch
 echo "--- usage"
+out="$("$root/scripts/check-discovery.sh" --robots-mode staging --launch http://127.0.0.1:1 2>&1)"; rc=$?
+if [ "$rc" = 2 ]; then ok "--launch with --robots-mode staging is a usage error (exit 2)"; else bad "--launch with staging: exit $rc"; fi
 out="$("$root/scripts/check-discovery.sh" http://127.0.0.1:1 2>&1)"; rc=$?
 if [ "$rc" = 2 ]; then ok "--robots-mode is required (exit 2)"; else bad "missing --robots-mode: exit $rc"; fi
 

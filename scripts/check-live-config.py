@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Check a LIVE OJS config.inc.php for the settings the installer leaves unsafe or unset.
 
-  python3 -I scripts/check-live-config.py CONFIG [--host journal.example.com] [--web-root DIR] [--owner root:www-data]
+  python3 -I scripts/check-live-config.py CONFIG [--host journal.example.com] [--web-root DIR] [--owner root:www-data] [--launch]
 
 Prints one line per check, `ok   key` or `FAIL key (reason)`, and NEVER a value. Exit 1 if anything fails.
 It is the production gate behind Phase 5.1b and Phase 8.3. It fails on:
@@ -18,6 +18,7 @@ It is the production gate behind Phase 5.1b and Phase 8.3. It fails on:
   - `files_dir` not an absolute path, or inside the web root (private submission files must not be web-reachable)
   - the shipped database credentials (`ojs`/`ojs`), an empty or token database password
   - any @@TOKEN@@ left in an active line
+  - with --launch (the Phase 8.3 gate): a placeholder host (example, localhost, 127.0.0.1, .invalid, sandbox, sample, placeholder) in `repository_id`, `--host`, `base_url` or `allowed_hosts`
   - the file readable by others (mode & 007), and, with --owner, a different owner or group
 """
 import argparse
@@ -56,6 +57,7 @@ def main():
     ap.add_argument("--host")
     ap.add_argument("--web-root")
     ap.add_argument("--owner")
+    ap.add_argument("--launch", action="store_true")
     try:
         a = ap.parse_args()
     except SystemExit:
@@ -93,6 +95,17 @@ def main():
     base = bare(cfg.get("general.base_url", ""))
     check("general.base_url", base.startswith("https://") and "pkp.sfu.ca" not in base and not TOKEN.search(base),
           "must be the real https URL")
+    if a.launch:
+        # the Phase 8.3 production gate: a placeholder host must not go live (provisioning rehearsals use example hosts on purpose)
+        placeholder = re.compile(r"example|localhost|127\.0\.0\.1|\.invalid|\.test$|sandbox|sample|placeholder", re.I)
+        check("launch: oai.repository_id is not a placeholder host", bool(rid) and not placeholder.search(rid),
+              "contains example, localhost, .invalid, sandbox or placeholder")
+        check("launch: --host is not a placeholder host", bool(a.host) and not placeholder.search(a.host),
+              "missing, or contains example, localhost, .invalid, sandbox or placeholder")
+        check("launch: general.base_url is not a placeholder host", not placeholder.search(base),
+              "contains example, localhost, .invalid, sandbox or placeholder")
+        check("launch: general.allowed_hosts has no placeholder host", not any(placeholder.search(h) for h in hosts),
+              "lists example, localhost, .invalid, sandbox or placeholder")
     check("security.force_ssl", on("security.force_ssl"), "must be On")
     check("security.force_login_ssl", on("security.force_login_ssl"), "must be On")
     check("general.restful_urls", on("general.restful_urls"), "must be On (clean URLs)")

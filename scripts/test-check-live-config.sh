@@ -64,6 +64,19 @@ mutate "allowed_hosts rewritten to [\"\"] (installer state)" "s/^allowed_hosts =
 mutate "OAI repository_id still the shipped PKP value" 's/^repository_id = .*/repository_id = ojs.pkp.sfu.ca/' "oai.repository_id"
 mutate "OAI repository_id is another host" 's/^repository_id = .*/repository_id = other.example/' "oai.repository_id"
 mutate "OAI repository_id empty" 's/^repository_id = .*/repository_id =/' "oai.repository_id"
+# --launch: the production gate also refuses a placeholder host (without --launch an example host is accepted: rehearsals use one)
+LAUNCH=(--launch)
+mutate "LAUNCH: the good test config uses example.org, so the gate fails on the placeholder host" 's/^name = worj/name = worj/' "launch: oai.repository_id is not a placeholder host" "${LAUNCH[@]}"
+mutate "LAUNCH: repository_id empty" 's/^repository_id = .*/repository_id =/' "oai.repository_id" "${LAUNCH[@]}"
+mutate "LAUNCH: repository_id the shipped PKP value" 's/^repository_id = .*/repository_id = ojs.pkp.sfu.ca/' "oai.repository_id" "${LAUNCH[@]}"
+mutate "LAUNCH: repository_id contains localhost" 's/^repository_id = .*/repository_id = localhost/' "launch: oai.repository_id is not a placeholder host" "${LAUNCH[@]}"
+mutate "LAUNCH: repository_id is a .invalid host" 's/^repository_id = .*/repository_id = sandbox.invalid/' "launch: oai.repository_id is not a placeholder host" "${LAUNCH[@]}"
+mutate "LAUNCH: base_url contains localhost" 's#^base_url = .*#base_url = "https://localhost"#' "launch: general.base_url is not a placeholder host" "${LAUNCH[@]}"
+sed 's/journal\.example\.org/journals.acme-research.net/g' "$tmp/good.inc.php" >"$tmp/real.inc.php"; chmod 640 "$tmp/real.inc.php"
+out="$("${C[@]}" "$tmp/real.inc.php" --host journals.acme-research.net --web-root /var/www/worj --launch 2>&1)"; rc=$?
+if [ "$rc" = 0 ]; then ok "LAUNCH: a config with a real production host passes (exit 0)"; else bad "LAUNCH: a real host should pass (exit $rc)"; echo "$out" | sed -n '1,6p'; fi
+out="$("${C[@]}" "$tmp/real.inc.php" --web-root /var/www/worj --launch 2>&1)"; rc=$?
+if [ "$rc" = 1 ] && grep -q 'FAIL  launch: --host' <<<"$out"; then ok "LAUNCH: without --host the gate fails (it cannot compare the host)"; else bad "LAUNCH without --host (exit $rc)"; fi
 mutate "allowed_hosts empty" "s/^allowed_hosts = .*/allowed_hosts = ''/" "general.allowed_hosts"
 mutate "allowed_hosts without the production host" "s/^allowed_hosts = .*/allowed_hosts = '[\"other.example\"]'/" "general.allowed_hosts includes the host"
 mutate "blank time_zone (installer state)" 's/^time_zone = .*/time_zone =/' "general.time_zone"

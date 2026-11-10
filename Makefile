@@ -57,10 +57,12 @@ check-pdf:
 	  scripts/check-pdf.sh "$${SANDBOX_URL:-http://127.0.0.1:8082}/worj/article/view/$$n" | tail -1 || exit 1; \
 	done
 
-# robots.txt, sitemap, OAI-PMH, noindex and the canonical INFO line (needs the sandbox running). The sandbox serves
-# OJS's own robots.txt (no Sitemap line), so this FAILS there on purpose; the Nginx harness checks the rendered file.
+# robots.txt, sitemap, OAI-PMH, noindex and the canonical INFO line, run against the sandbox BEHIND the production Nginx
+# render of the Phase 5 harness (it serves our repo robots.txt, with the Sitemap line), so a pass means the real thing.
+# Needs root and the sandbox running (make sandbox-up sandbox-seed). Pointing check-discovery.sh straight at the sandbox
+# would fail on OJS's own robots.txt (no Sitemap line): that case is a fixture test (scripts/test-check-discovery.sh).
 check-discovery:
-	scripts/check-discovery.sh --robots-mode production --curl-arg --noproxy --curl-arg '*' "$${SANDBOX_URL:-http://127.0.0.1:8082}"
+	HARNESS_DISCOVERY_ONLY=1 scripts/test-nginx-harness.sh
 
 lint:
 	shellcheck -x scripts/*.sh autoresearch/eval/run.sh

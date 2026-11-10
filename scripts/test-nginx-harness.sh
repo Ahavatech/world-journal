@@ -86,6 +86,12 @@ status() { cu -o /dev/null -w '%{http_code}' "$@"; }
 loc() { cu -o /dev/null -D - "$@" | tr -d '\r' | sed -n 's/^[Ll]ocation: //p'; }
 hdr() { cu -o /dev/null -D - "$@" | tr -d '\r'; }
 
+CD=("$root/scripts/check-discovery.sh" --curl-arg -k --curl-arg --noproxy --curl-arg '*' --curl-arg --resolve --curl-arg "$H:18443:127.0.0.1")
+if [ -n "${HARNESS_DISCOVERY_ONLY:-}" ]; then
+  # `make check-discovery`: only the discovery check, through the production Nginx render (our robots.txt, with the Sitemap line)
+  "${CD[@]}" --robots-mode production "$S"; exit $?
+fi
+
 echo "=== redirects (one canonical form per URL)"
 yes "http -> 301" eq "$(status "http://$H:18080/worj/about?x=1")" 301
 yes "http://journal... /worj/about?x=1 -> https://journal.example.org/worj/about?x=1" eq "$(loc "http://$H:18080/worj/about?x=1")" "https://$H/worj/about?x=1"
@@ -191,7 +197,6 @@ yes "a POST to the OAI endpoint (index.php form) is NOT redirected (got $oai_pos
 oai_post2="$(status -X POST -d 'verb=Identify' "$S/worj/oai")"
 yes "a POST to the clean OAI URL answers 200 (got $oai_post2)" eq "$oai_post2" 200
 echo "--- scripts/check-discovery.sh --robots-mode production against the production render (placeholder content is expected to be found only with --launch)"
-CD=("$root/scripts/check-discovery.sh" --curl-arg -k --curl-arg --noproxy --curl-arg '*' --curl-arg --resolve --curl-arg "$H:18443:127.0.0.1")
 "${CD[@]}" --robots-mode production "$S" >"$tmp/cd-prod.txt" 2>&1; cd_rc=$?
 yes "check-discovery in production mode passes behind Nginx (exit $cd_rc)" eq "$cd_rc" 0
 [ "$cd_rc" = 0 ] || sed 's/^/      /' "$tmp/cd-prod.txt"

@@ -4,6 +4,7 @@
 #   BASE_URL     the site root, for example https://journal.example.org (no journal path: it is found from /index/sitemap)
 #   --robots-mode  REQUIRED, no default. production: the site must be crawlable (FAIL if the whole site is disallowed or
 #                  noindex is sent). staging: the site must be closed (FAIL if it is crawlable).
+#                A missing Sitemap line in robots.txt is ALWAYS a FAIL in production mode and with --launch (there is no way to turn it into a warning).
 #   --launch     also FAIL if the sitemap or OAI-PMH ListRecords carry a placeholder marker (the same pattern as
 #                scripts/check-placeholders-url.py: "Sample Article", "Placeholder Author", ...) or if the OAI repository
 #                identifier is not the site's own host. Fake records in OAI get harvested by third parties and cannot be recalled.
@@ -23,6 +24,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 case "$mode" in production | staging) ;; *) echo "ERROR: --robots-mode production|staging is required (no default)" >&2; exit 2 ;; esac
+if [ "$launch" = 1 ] && [ "$mode" != production ]; then echo "ERROR: --launch is the production gate: use it with --robots-mode production" >&2; exit 2; fi
 case "$base" in http://* | https://*) ;; *) echo "ERROR: BASE_URL must be an http(s) URL" >&2; exit 2 ;; esac
 tmp="$(mktemp -d)"
 trap 'rm -rf -- "${tmp:?}"' EXIT
