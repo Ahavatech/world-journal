@@ -25,7 +25,9 @@ cat >"$tmp/ssh" <<'STUB'
 # stand-in for ssh: drop the options and the host, run the remote command locally (a single string goes through sh -c)
 while [ $# -gt 0 ] && [ "${1#-}" != "$1" ]; do case "$1" in -p|-i|-o) shift 2 ;; *) shift ;; esac; done
 shift
-if [ "$#" -eq 1 ]; then exec sh -c "$1"; else exec "$@"; fi
+if [ "$#" -eq 1 ]; then
+  if [ -n "${STUB_CUT:-}" ]; then sh -c "$1" | head -c "$STUB_CUT"; else exec sh -c "$1"; fi
+else exec "$@"; fi
 STUB
 chmod +x "$tmp/ssh"
 H=journal.example.org
@@ -106,6 +108,58 @@ yes "allowed_hosts names the host" grep -q "^allowed_hosts = '\[\"$H\"\]'" "$cfg
 yes "time_zone is set" grep -q '^time_zone = "Africa/Lagos"' "$cfg"
 yes "check-live-config.py passes on the result" python3 -I "$root/scripts/check-live-config.py" "$cfg" --host "$H" --web-root "$R/public_html"
 yes "...and ADMIN_PASSWORD is still in the env file until --finish" grep -q '^ADMIN_PASSWORD=' "$tmp/env"
+
+echo "=== pull-backup.sh: encrypted bundle pulled over ssh"
+for t in age age-keygen rclone mysqldump; do command -v "$t" >/dev/null || { echo "missing tool: $t (apt-get install -y age rclone)"; exit 2; }; done
+age-keygen -o "$tmp/id.txt" >/dev/null 2>&1; recip="$(age-keygen -y "$tmp/id.txt")"
+mkdir -p "$R/worj-files/submissions" "$R/public_html/public/site"; printf 'a private submission' >"$R/worj-files/submissions/note.txt"; printf 'a public image' >"$R/public_html/public/site/x.jpg"
+{ cat "$tmp/env"; printf 'BACKUP_AGE_RECIPIENT=%s\nBACKUP_DIR=%s\nBACKUP_RCLONE_REMOTE=%s\nBACKUP_KEEP=2\n' "$recip" "$tmp/bk" "$tmp/rcl"; } >"$tmp/envbk"; chmod 600 "$tmp/envbk"
+BK() { WORJ_SSH="$tmp/ssh" "$root/scripts/pull-backup.sh" "$@"; }
+BK --env "$tmp/envbk" --check >"$tmp/bkc.txt" 2>&1; rc=$?
+yes "pull-backup --check exits 0 and writes nothing (exit $rc)" test "$rc" = 0 -a ! -e "$tmp/bk"
+yes "--check prints WOULD lines" grep -q '^WOULD: ' "$tmp/bkc.txt"
+sed "s#^BACKUP_AGE_RECIPIENT=.*#BACKUP_AGE_RECIPIENT=$(grep -m1 AGE-SECRET-KEY "$tmp/id.txt")#" "$tmp/envbk" >"$tmp/envpriv"; chmod 600 "$tmp/envpriv"
+BK --env "$tmp/envpriv" >"$tmp/bkpriv.txt" 2>&1
+yes "a PRIVATE age key in the env file is refused, for that reason" grep -q 'REFUSED: a PRIVATE age key' "$tmp/bkpriv.txt"
+yes "...and its value is not printed" bash -c "! grep -q 'AGE-SECRET-KEY-[A-Z0-9]' '$tmp/bkpriv.txt'"
+grep -v '^BACKUP_AGE_RECIPIENT=' "$tmp/envbk" >"$tmp/envnokey"; chmod 600 "$tmp/envnokey"
+no "a missing public key is refused" BK --env "$tmp/envnokey"
+cp "$tmp/envbk" "$tmp/envbk644"; chmod 644 "$tmp/envbk644"
+no "an env file readable by others is refused" BK --env "$tmp/envbk644"
+BK --env "$tmp/envbk" >"$tmp/bk1.txt" 2>&1; rc=$?
+yes "a backup succeeds (exit $rc)" test "$rc" = 0
+[ "$rc" = 0 ] || sed 's/^/      /' "$tmp/bk1.txt" | tail -8
+bundle="$(find "$tmp/bk" -maxdepth 1 -name 'worj-*.tar.age' | sort | tail -1)"
+yes "the bundle exists, mode 600, with a sha256 file" bash -c "[ -f '$bundle' ] && [ \"\$(stat -c %a '$bundle')\" = 600 ] && [ -f '$bundle.sha256' ]"
+yes "the output holds none of the secrets" bash -c "! grep -qE '$dbp|$ADMINPW|smtp-secret' '$tmp/bk1.txt'"
+yes "the bundle is encrypted (no table name, user name or path in clear)" bash -c "! grep -qaE 'CREATE TABLE|worjadmin|worj-files' '$bundle'"
+mkdir "$tmp/bkx"; age -d -i "$tmp/id.txt" -o "$tmp/bkx/bundle.tar" "$bundle" && tar -xf "$tmp/bkx/bundle.tar" -C "$tmp/bkx"
+yes "the private key decrypts it, and the manifest matches" bash -c "cd '$tmp/bkx' && sha256sum --quiet -c MANIFEST.sha256"
+yes "the bundle has the layout scripts/restore.sh reads" bash -c "cd '$tmp/bkx' && ls db.sql.gz data.tar.gz config.inc.php INFO MANIFEST.sha256 >/dev/null"
+yes "the dump holds the users table and the administrator" bash -c "gzip -dc '$tmp/bkx/db.sql.gz' | grep -q 'worjadmin'"
+yes "the archive holds the private file and the public image" bash -c "t=\$(tar -tzf '$tmp/bkx/data.tar.gz'); grep -q 'worj-files/submissions/note.txt' <<<\"\$t\" && grep -q 'public/site/x.jpg' <<<\"\$t\""
+yes "the config copy is the installed config" grep -q '^installed = On' "$tmp/bkx/config.inc.php"
+mariadb -e "CREATE DATABASE \`${dbn}_restore\`"
+gzip -dc "$tmp/bkx/db.sql.gz" | mariadb "${dbn}_restore"
+yes "the dump RESTORES into a scratch database (administrator row back)" test "$(mariadb -N "${dbn}_restore" -e "select count(*) from users where username='worjadmin'")" = 1
+mariadb -e "DROP DATABASE \`${dbn}_restore\`"
+yes "rclone copied the bundle with the same size" test "$(stat -c %s "$tmp/rcl/$(basename "$bundle")")" = "$(stat -c %s "$bundle")"
+yes "last-success is written and no FAILED marker" test -f "$tmp/bk/last-success" -a ! -e "$tmp/bk/FAILED"
+sleep 1; BK --env "$tmp/envbk" --no-upload >/dev/null 2>&1; sleep 1; BK --env "$tmp/envbk" --no-upload >/dev/null 2>&1
+yes "retention keeps only BACKUP_KEEP=2 bundles" test "$(find "$tmp/bk" -maxdepth 1 -name 'worj-*.tar.age' | wc -l)" = 2
+dump_n="$(grep -o 'dump ok: [0-9]*' "$tmp/bk1.txt" | grep -o '[0-9]*$')"
+STUB_CUT=3000 BK --env "$tmp/envbk" --no-upload >"$tmp/bkf.txt" 2>&1; rc=$?
+yes "a cut-off dump fails (exit $rc)" test "$rc" != 0
+yes "...writes the FAILED marker" test -f "$tmp/bk/FAILED"
+rm -f "$tmp/bk/FAILED"
+STUB_CUT=$((dump_n - 200)) BK --env "$tmp/envbk" --no-upload >"$tmp/bkf2.txt" 2>&1; rc=$?
+yes "a dump cut just before its end (valid gzip, enough tables) fails (exit $rc)" test "$rc" != 0
+yes "...because mysqldump's completion line is missing" grep -q "completion line" "$tmp/bkf2.txt"
+rm -f "$tmp/bk/FAILED"
+sed '/completion line/d' "$root/scripts/pull-backup.sh" >"$tmp/pull-mut.sh"; chmod +x "$tmp/pull-mut.sh"
+STUB_CUT=$((dump_n - 200)) WORJ_SSH="$tmp/ssh" "$tmp/pull-mut.sh" --env "$tmp/envbk" --no-upload >/dev/null 2>&1; rc=$?
+yes "mutation: without the completion-line check the truncated dump is accepted (exit $rc)" test "$rc" = 0
+rm -f "$tmp/bk/FAILED"
 
 echo "=== seed-shared.sh --check (the REST part needs Playwright and a real https site: NOT run here)"
 S() { WORJ_SSH="$tmp/ssh" "$root/scripts/seed-shared.sh" "$@"; }
