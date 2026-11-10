@@ -3,3 +3,6 @@ ojs-core.old.*/
 .env
 .env.sandbox
 node_modules/
+
+# real user and article data for the importers (personal data; never committed)
+ojs/import/

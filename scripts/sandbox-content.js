@@ -30,6 +30,7 @@ if (!['localhost', '127.0.0.1', '::1'].includes(host)) {
 }
 
 const { chromium } = require('playwright');
+const { guarded, assertId } = require('./lib/sandbox-guard');
 const manifest = JSON.parse(fs.readFileSync(path.join(root, 'ojs/content/pages.json'), 'utf8'));
 const BANNER = '[PLACEHOLDER: replace with client-approved text]';
 const env = Object.fromEntries(
@@ -47,14 +48,15 @@ async function main() {
   await Promise.all([page.waitForEvent('load'), page.click('button[type=submit]')]);
   await page.goto(`${base}/index/admin/contexts`);
   const csrf = await page.evaluate(() => document.querySelector('meta[name=csrf-token]')?.content);
-  const call = async (method, url, data) => {
+  const rawCall = async (method, url, data) => {
     const r = await ctx.request.fetch(base + url, { method, data, headers: { 'X-Csrf-Token': csrf, 'Content-Type': 'application/json' } });
     const text = await r.text();
     if (!r.ok()) throw new Error(`${method} ${url} -> ${r.status()} ${text.slice(0, 300)}`);
     return JSON.parse(text);
   };
+  const call = guarded(rawCall); // refuses empty ids and writes to items that do not exist
 
-  const id = (await call('GET', '/index/api/v1/contexts')).items.find((c) => c.urlPath === 'worj').id;
+  const id = assertId((await call('GET', '/index/api/v1/contexts')).items.find((c) => c.urlPath === 'worj')?.id, 'worj context id');
   const current = await call('GET', `/worj/api/v1/contexts/${id}`);
   const locale = current.primaryLocale || 'en';
   const counts = { written: 0, kept: 0, edited: 0, rejected: 0 };
