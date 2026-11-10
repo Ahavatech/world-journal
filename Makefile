@@ -2,6 +2,11 @@ SHELL := /bin/bash
 .SHELLFLAGS := -o pipefail -ec
 THEME := ojs/plugins/themes/worj
 
+# Needs php-fpm8.3, mariadbd and nginx in this sandbox; not part of `make lint` (CI has no FPM or MariaDB).
+.PHONY: infra-test
+infra-test:
+	scripts/test-infra-config.sh
+
 .PHONY: setup lint eval check-placeholders sandbox-up sandbox-down sandbox-seed check-citation check-placeholders-url
 
 setup:
