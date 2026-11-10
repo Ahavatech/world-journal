@@ -5,6 +5,7 @@
 // Requires: `playwright` resolvable (preinstalled in the Claude sandbox).
 'use strict';
 const fs = require('fs');
+const { execFileSync } = require('child_process');
 const path = require('path');
 const { chromium } = require('playwright');
 
@@ -34,7 +35,9 @@ async function main() {
   };
 
   const list = await call('GET', '/index/api/v1/contexts');
+  let created = false;
   if (!list.items.some((c) => c.urlPath === 'worj')) {
+    created = true;
     await call('POST', '/index/api/v1/contexts', {
       urlPath: 'worj', name: { en: 'World Open Research Journal' }, acronym: { en: 'WORJ' },
       primaryLocale: 'en', supportedLocales: ['en'], supportedFormLocales: ['en'],
@@ -61,20 +64,38 @@ async function main() {
     console.log(`created placeholder announcement ${n}`);
   }
 
+  // Placeholder content (Phase 3). OJS ships default text in some of these settings and an older seed
+  // wrote other text; neither is a placeholder, so the content script would (correctly) treat it as
+  // human-edited and leave it. In a fresh sandbox, or with SANDBOX_RESET_CONTENT=1, empty them first.
+  if (created || process.env.SANDBOX_RESET_CONTENT === '1') {
+    const empty = { en: '' };
+    await call('PUT', `/worj/api/v1/contexts/${id}`, { about: empty, privacyStatement: empty, authorGuidelines: empty, readerInformation: empty, authorInformation: empty, librarianInformation: empty, editorialHistory: empty });
+    console.log('emptied the content settings (fresh sandbox or SANDBOX_RESET_CONTENT=1)');
+  }
+  const here = __dirname;
+  execFileSync('node', [path.join(here, 'sandbox-content.js'), '--force-sandbox'], { stdio: 'inherit' });
+  execFileSync('php', [path.join(here, 'import-pages.php'), '--journal=worj'], { stdio: ['ignore', 'inherit', 'ignore'] });
+
   // Sidebar state for layout testing: SANDBOX_SIDEBAR=blocks (default) | none | empty
-  //   blocks: Make a Submission + Information (with placeholder text)
+  //   blocks: Make a Submission + Information (the information texts come from the content step)
   //   none:   no sidebar configured
   //   empty:  a block is configured but renders nothing
   const state = process.env.SANDBOX_SIDEBAR || 'blocks';
-  const info = (t) => ({ en: t ? `<p>[PLACEHOLDER: information for ${t}]</p>` : '' });
+  const info = () => ({ en: '' });
   const sidebars = {
-    blocks: { sidebar: ['makesubmissionblockplugin', 'informationblockplugin'], readerInformation: info('readers'), authorInformation: info('authors'), librarianInformation: info('librarians') },
+    blocks: { sidebar: ['makesubmissionblockplugin', 'informationblockplugin'] },
     none: { sidebar: [] },
-    empty: { sidebar: ['informationblockplugin'], readerInformation: info(''), authorInformation: info(''), librarianInformation: info('') },
+    empty: { sidebar: ['informationblockplugin'], readerInformation: info(), authorInformation: info(), librarianInformation: info() },
   };
   if (!sidebars[state]) throw new Error(`SANDBOX_SIDEBAR must be blocks, none or empty (got ${state})`);
   await call('PUT', `/worj/api/v1/contexts/${id}`, sidebars[state]);
   console.log(`sidebar state: ${state}`);
+
+  // The homepage Awards card links to /awards: turn it on only if that page really returns 200.
+  const awards = await ctx.request.get(`${base}/worj/awards`);
+  const cardOn = awards.status() === 200;
+  await call('PUT', `/worj/api/v1/contexts/${id}/theme`, { themePluginPath: 'worj', showAwardsCard: cardOn });
+  console.log(`/awards returned ${awards.status()}: showAwardsCard ${cardOn ? 'ON' : 'OFF'}`);
   await browser.close();
 }
 main().catch((e) => { console.error(e.message); process.exit(1); });

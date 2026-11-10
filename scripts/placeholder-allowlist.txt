@@ -1,0 +1,11 @@
+# Exact entries only: file<TAB>exact fixed string. See scripts/check-placeholders.sh.
+# Theme fallback markers: they render only while the matching journal setting is empty.
+ojs/plugins/themes/worj/templates/frontend/pages/indexJournal.tpl	shows a visible [PLACEHOLDER: ...] marker.
+ojs/plugins/themes/worj/templates/frontend/pages/indexJournal.tpl	[PLACEHOLDER: short description of the journal, aims and scope]
+ojs/plugins/themes/worj/templates/frontend/pages/indexJournal.tpl	[PLACEHOLDER: awards call-out text]
+ojs/plugins/themes/worj/templates/frontend/pages/indexJournal.tpl	[PLACEHOLDER: issue cover]
+ojs/plugins/themes/worj/templates/frontend/components/footer.tpl	visible [PLACEHOLDER: ...] marker, so check-placeholders
+ojs/plugins/themes/worj/templates/frontend/components/footer.tpl	[PLACEHOLDER: publisher name]
+ojs/plugins/themes/worj/templates/frontend/components/footer.tpl	[PLACEHOLDER: ISSN, pending]
+ojs/plugins/themes/worj/templates/frontend/components/footer.tpl	[PLACEHOLDER: licence, e.g. CC BY 4.0, client to confirm]
+ojs/plugins/themes/worj/templates/frontend/pages/about.tpl	[PLACEHOLDER: About the Journal text, client to supply]

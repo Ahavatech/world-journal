@@ -2,7 +2,7 @@ SHELL := /bin/bash
 .SHELLFLAGS := -o pipefail -ec
 THEME := ojs/plugins/themes/worj
 
-.PHONY: setup lint eval check-placeholders sandbox-up sandbox-down sandbox-seed check-citation
+.PHONY: setup lint eval check-placeholders sandbox-up sandbox-down sandbox-seed check-citation check-placeholders-url
 
 setup:
 	scripts/fetch-ojs.sh
@@ -29,8 +29,9 @@ check-citation:
 lint:
 	shellcheck -x scripts/*.sh autoresearch/eval/run.sh
 	python3 -I scripts/check-contrast.py | tail -1
-	@if [ -n "$$(find ojs -name '*.php' -print -quit)" ]; then \
-	  find ojs -name '*.php' -print0 | xargs -0 -n1 php -l >/dev/null && echo "php -l ok"; \
+	python3 -I scripts/check-content-claims.py | tail -1
+	@if [ -n "$$(find ojs scripts -name '*.php' -print -quit)" ]; then \
+	  find ojs scripts -name '*.php' -print0 | xargs -0 -n1 php -l >/dev/null && echo "php -l ok"; \
 	else echo "no PHP files yet"; fi
 	npx --no-install markdownlint-cli2 "*.md" "docs/**/*.md" "autoresearch/*.md"
 	@if [ -n "$$(find ojs -name '*.css' -print -quit)" ]; then npx --no-install stylelint "ojs/**/*.css"; \
@@ -40,5 +41,10 @@ lint:
 eval:
 	autoresearch/eval/run.sh
 
+# Repository scan: every remaining placeholder with file:line (exit 1 while any remain; CI keeps it warn-only until Phase 8).
 check-placeholders:
-	@echo "make check-placeholders: not implemented yet (Phase 3.5)" >&2; exit 1
+	scripts/check-placeholders.sh
+
+# Rendered-site scan (the launch gate): needs the sandbox, or pass the journal URL.
+check-placeholders-url:
+	scripts/check-placeholders.sh --url "$${SANDBOX_URL:-http://127.0.0.1:8082}/worj"
