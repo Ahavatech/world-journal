@@ -30,8 +30,8 @@ lint:
 	shellcheck -x scripts/*.sh autoresearch/eval/run.sh
 	python3 -I scripts/check-contrast.py | tail -1
 	python3 -I scripts/check-content-claims.py | tail -1
-	@if [ -n "$$(find ojs -name '*.php' -print -quit)" ]; then \
-	  find ojs -name '*.php' -print0 | xargs -0 -n1 php -l >/dev/null && echo "php -l ok"; \
+	@if [ -n "$$(find ojs scripts -name '*.php' -print -quit)" ]; then \
+	  find ojs scripts -name '*.php' -print0 | xargs -0 -n1 php -l >/dev/null && echo "php -l ok"; \
 	else echo "no PHP files yet"; fi
 	npx --no-install markdownlint-cli2 "*.md" "docs/**/*.md" "autoresearch/*.md"
 	@if [ -n "$$(find ojs -name '*.css' -print -quit)" ]; then npx --no-install stylelint "ojs/**/*.css"; \
