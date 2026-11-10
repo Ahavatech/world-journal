@@ -23,6 +23,7 @@ if (axe.violations.length) failed.push(`4 axe violations (${[...new Set(axe.viol
 if (!gates.gates.size.ok) failed.push('5 theme CSS+JS over budget');
 if (!gates.gates['js-off'].ok) failed.push('6 a page breaks with JavaScript off');
 if (!gates.gates.placeholders.ok) failed.push('7 [PLACEHOLDER marker removed');
+if (!gates.gates['js-errors'].ok) failed.push('8 uncaught JavaScript or console errors');
 
 // ---- components, each 0..100 (simplicity 0..5 scaled)
 const comp = { a11y: null, seo: null, perf: null, bp: null, resp: null, simplicity: null };
@@ -45,6 +46,8 @@ const totalW = measured.reduce((n, k) => n + weight[k], 0);
 const score = measured.reduce((n, k) => n + weight[k] * comp[k], 0) / totalW;
 
 const f = (v) => (v === null ? 'SKIPPED' : v.toFixed(1));
+const base = gates.info.baselineComponents;
+const sameSet = Array.isArray(base) && base.length === measured.length && base.every((k) => measured.includes(k));
 console.log('');
 Object.entries(skipped).forEach(([k, why]) => console.log(`note: ${k} SKIPPED: ${why}`));
 console.log(`note: score re-weighted over measured components (${measured.join(', ')}; weights ${measured.map((k) => weight[k]).join('+')}=${totalW})`);
@@ -53,6 +56,10 @@ if (!lh.skipped) {
   lh.per.forEach((p) => p.failing.forEach((a) => { (byAudit[a] = byAudit[a] || []).push(p.page); }));
   Object.entries(byAudit).forEach(([a, ps]) => console.log(`note: lighthouse audit "${a}" fails on ${ps.length} page(s): ${ps.join(', ')}`));
 }
+console.log(`COMPONENTS: ran=${measured.join(',')} skipped=${Object.keys(comp).filter((k) => comp[k] === null).join(',') || 'none'}`);
+console.log(sameSet
+  ? `COMPONENT-SET: MATCHES baseline (${base.join(',')})`
+  : `COMPONENT-SET: DIFFERS from baseline (${base ? base.join(',') : 'none recorded'}): scores are NOT comparable across component sets`);
 console.log(`COMPONENT a11y=${f(comp.a11y)}, seo=${f(comp.seo)}, perf=${f(comp.perf)}, bp=${f(comp.bp)}, resp=${f(comp.resp)}, simplicity=${f(comp.simplicity)}`);
 console.log(failed.length ? `GATES: FAIL ${failed.join('; ')}` : 'GATES: PASS');
 console.log(`SCORE: ${failed.length ? '0.0' : score.toFixed(1)}`);

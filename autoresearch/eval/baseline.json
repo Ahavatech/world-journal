@@ -1,5 +1,12 @@
 {
-  "note": "Written by `node checks/gates.js --update-baseline` after a deliberate review. Gate 7 fails if a page shows fewer [PLACEHOLDER markers than here; simplicity is scored against themeBytes.",
+  "note": "Written by `node checks/gates.js --update-baseline` after a deliberate review. Gate 7 fails if a page shows fewer [PLACEHOLDER markers than here; simplicity is scored against themeBytes. `components` is the set of score components that were measured when the baseline was recorded; it changes only by hand.",
+  "components": [
+    "a11y",
+    "seo",
+    "bp",
+    "resp",
+    "simplicity"
+  ],
   "themeBytes": 29105,
   "placeholders": {
     "home": 11,

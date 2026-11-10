@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 'use strict';
-// Hard gates 2, 3, 5, 6 and 7 from autoresearch/EVAL-SPEC.md, plus the
+// Hard gates 2, 3, 5, 6, 7 and 8 from autoresearch/EVAL-SPEC.md, plus the
 // responsiveness component. Gates 1 (citation tags) and 4 (axe) are run by run.sh
 // with scripts/check-citation-meta.sh and checks/axe.js.
 //
@@ -32,9 +32,12 @@ async function openPage(browser, pg, width, opts = {}) {
   const ctx = await browser.newContext({ viewport: { width, height: 900 }, ...opts });
   const page = await ctx.newPage();
   const reqs = [];
+  const errors = []; // uncaught exceptions and console errors, collected before the page loads
   page.on('request', (r) => reqs.push(r.url()));
+  page.on('pageerror', (e) => errors.push('uncaught: ' + e.message.split('\n')[0]));
+  page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text().split('\n')[0].slice(0, 120)); });
   const res = await page.goto(pg.url, { waitUntil: 'networkidle' });
-  return { ctx, page, reqs, status: res.status() };
+  return { ctx, page, reqs, errors, status: res.status() };
 }
 
 (async () => {
@@ -55,6 +58,18 @@ async function openPage(browser, pg, width, opts = {}) {
       const { ctx, reqs } = await openPage(browser, pg, w);
       const ext = reqs.filter((u) => !u.startsWith(base) && !u.startsWith('data:') && !u.startsWith('blob:'));
       gate('external-requests', ext.length === 0, `${pg.name}@${w}: ${ext.length ? ext.join(', ') : '0 external of ' + reqs.length}`);
+      await ctx.close();
+    }
+  }
+
+  // ---- gate 8: no uncaught JavaScript errors or console errors on any page
+  //      (a parent script once threw a Swiper ReferenceError on every page and got past the other gates)
+  for (const pg of pages) {
+    for (const w of [320, 1280]) {
+      const { ctx, errors, status } = await openPage(browser, pg, w);
+      // a core 404 document logs its own status as a console error: that is the expected response, not a script error
+      const real = pg.core && status === 404 ? errors.filter((e) => !/status of 404/.test(e)) : errors;
+      gate('js-errors', real.length === 0, `${pg.name}@${w}: ${real.length ? real.join(' | ') : 'no errors'}`);
       await ctx.close();
     }
   }
@@ -129,7 +144,8 @@ async function openPage(browser, pg, width, opts = {}) {
   await browser.close();
 
   if (updateBaseline) {
-    fs.writeFileSync(BASELINE, JSON.stringify({ note: 'Written by `node checks/gates.js --update-baseline` after a deliberate review. Gate 7 fails if a page shows fewer [PLACEHOLDER markers than here; simplicity is scored against themeBytes.', themeBytes: tb, placeholders }, null, 2) + '\n');
+    const previous = fs.existsSync(BASELINE) ? JSON.parse(fs.readFileSync(BASELINE, 'utf8')) : {};
+    fs.writeFileSync(BASELINE, JSON.stringify({ note: 'Written by `node checks/gates.js --update-baseline` after a deliberate review. Gate 7 fails if a page shows fewer [PLACEHOLDER markers than here; simplicity is scored against themeBytes.', components: previous.components, themeBytes: tb, placeholders }, null, 2) + '\n');
     console.log(`baseline written: themeBytes ${tb}, placeholders ${JSON.stringify(placeholders)}`);
     return;
   }
@@ -139,6 +155,7 @@ async function openPage(browser, pg, width, opts = {}) {
     gate('placeholders', (placeholders[name] || 0) >= min, `${name}: ${placeholders[name]} markers (baseline ${min})`);
   }
   result.info.baselineThemeBytes = baseline.themeBytes;
+  result.info.baselineComponents = baseline.components || null;
   result.info.placeholders = placeholders;
 
   for (const [name, g] of Object.entries(result.gates)) {
