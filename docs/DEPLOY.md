@@ -183,6 +183,7 @@ curl -s https://HOST/index/login | grep -c 'name="username"'           # 1
 curl -sI https://HOST/ | grep -i -E 'strict-transport|x-content-type|content-security'
 curl -s https://HOST/JOURNAL/no-such-page | grep -c 'Page not found'   # 1 (static 404; JOURNAL is the journal path, so create the journal first)
 sudo python3 -I scripts/check-live-config.py /var/www/worj/config.inc.php --host HOST --web-root /var/www/worj --owner root:www-data
+sudo python3 -I scripts/check-live-config.py /var/www/worj/config.inc.php --host HOST --web-root /var/www/worj --owner root:www-data --launch   # Phase 8.3 gate only: also fails on any placeholder host (example, localhost, .invalid, sandbox)
 scripts/check-placeholders.sh --url https://HOST/JOURNAL        # must be empty at launch (Phase 8.3)
 sudo stat -c '%y' /var/log/worj-scheduler.log                   # modified within the last 2 minutes (the scheduler ran)
 sudo tail -n 3 /var/log/worj-scheduler.log                      # "Running [...]" lines with a time, no PHP errors
