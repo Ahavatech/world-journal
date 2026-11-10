@@ -49,6 +49,7 @@ lint:
 	scripts/test-config-template.sh | tail -1
 	scripts/test-config-tools.sh | tail -1
 	scripts/test-check-live-config.sh | tail -1
+	scripts/test-cloudflare-ips.sh | tail -1
 	@if [ -n "$$(find ojs scripts -name '*.php' -print -quit)" ]; then \
 	  find ojs scripts -name '*.php' -print0 | xargs -0 -n1 php -l >/dev/null && echo "php -l ok"; \
 	else echo "no PHP files yet"; fi
