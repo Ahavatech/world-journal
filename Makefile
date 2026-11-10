@@ -84,6 +84,7 @@ lint:
 	python3 -I scripts/check-content-claims.py | tail -1
 	python3 -I scripts/extract-ojs-default-wording.py --check
 	node scripts/test-sandbox-guard.js | tail -1
+	node scripts/test-target.js | tail -1
 	scripts/test-import-wrapper.sh | tail -1
 	python3 -I scripts/check-config-template.py | tail -1
 	python3 -I scripts/make-config-template.py --check

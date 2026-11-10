@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Install OJS on the shared host from YOUR machine, after scripts/deploy-shared.sh has sent the release.
 #
-#   scripts/install-shared.sh [--env FILE] [--check]       default env file: .env.shared (see infra/shared-hosting/install.env.example)
+#   scripts/install-shared.sh [--env FILE] [--check] [--finish]       default env file: .env.shared (see infra/shared-hosting/install.env.example)
 #
 # What it does, in order (each step is skipped when already done, so it can be re-run):
 #   1. preflight over ssh: PHP >= 8.2 and the extensions OJS needs, on the SAME php the installer will use
@@ -9,17 +9,20 @@
 #   3. render config.inc.php here (salt and API secret generated here, never printed) and upload it, mode 600
 #   4. run `php tools/install.php` on the host; every answer travels on ssh's standard input, never on a command line
 #   5. fix what the installer leaves weak (salt, api_key_secret, allowed_hosts, time_zone) and verify with check-live-config.py
-#   6. make the administrator change the initial password at the first login; remove ADMIN_PASSWORD from the env file
+# Then, after scripts/seed-shared.sh (which logs in with the initial password):
+#   scripts/install-shared.sh --finish     make the administrator change the initial password at the first login, and
+#                                          remove ADMIN_PASSWORD from the env file
 # --check prints WOULD: lines and changes nothing (it does read the host: php version, whether OJS is installed).
 # Nothing secret is printed or put on a command line. UNVERIFIED (not run on the host): see docs/DEPLOY-SHARED.md.
 set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-envfile="$root/.env.shared"; check=0
+envfile="$root/.env.shared"; check=0; finish=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --env) envfile="${2:-}"; shift 2 ;;
     --check) check=1; shift ;;
-    *) echo "usage: $0 [--env FILE] [--check]" >&2; exit 2 ;;
+    --finish) finish=1; shift ;;
+    *) echo "usage: $0 [--env FILE] [--check] [--finish]" >&2; exit 2 ;;
   esac
 done
 die() { echo "FAIL  $*" >&2; exit 1; }
@@ -88,9 +91,6 @@ if [ "$installed" = 0 ]; then
     fi
     rm -f "$tmp/answers"
     ok "the OJS installer finished"
-    # the first login must change the initial password: the installer's own tables hold the user, set the flag from PHP
-    remote "cd $(printf '%q' "$webroot") && php -r '\$c=parse_ini_file(\"config.inc.php\",true,INI_SCANNER_RAW); \$d=\$c[\"database\"]; \$m=new mysqli(trim(\$d[\"host\"],\"\\\"\"),trim(\$d[\"username\"],\"\\\"\"),trim(\$d[\"password\"],\"\\\"\"),trim(\$d[\"name\"],\"\\\"\")); \$s=\$m->prepare(\"UPDATE users SET must_change_password=1 WHERE username=?\"); \$u=\$argv[1]; \$s->bind_param(\"s\",\$u); \$s->execute(); echo \$s->affected_rows;' $(printf '%q' "$ADMIN_USERNAME")" >"$tmp/mcp.txt" || die "could not set must_change_password"
-    [ "$(cat "$tmp/mcp.txt")" -ge 0 ] 2>/dev/null && ok "the administrator must change the initial password at the first login"
   fi
 else
   chg "nothing to install"
@@ -106,12 +106,21 @@ if [ "$check" = 0 ]; then
     remote "umask 077 && cat > $(printf '%q' "$cfg") && chmod 600 $(printf '%q' "$cfg")" <"$tmp/live.inc.php"
   else ok "allowed_hosts, time_zone, salt and API secret are already right"; fi
   python3 -I "$root/scripts/check-live-config.py" "$tmp/live.inc.php" --host "$HOST" --web-root "$webroot" || die "the live config check failed (above): fix before continuing"
-  # the initial password is now only a hash in the database: take it out of the env file
-  if grep -q '^ADMIN_PASSWORD=' "$envfile" && ! grep -q '^ADMIN_PASSWORD=REPLACE' "$envfile"; then
-    chg "remove the initial ADMIN_PASSWORD line from $envfile"
-    keep="$(mktemp "$envfile.XXXXXX")"; grep -v '^ADMIN_PASSWORD=' "$envfile" >"$keep" || true; chmod 600 "$keep"; mv -f "$keep" "$envfile"
-  fi
 else
   chg "pull config.inc.php, re-apply allowed_hosts / time_zone / salt / API secret if weak, run check-live-config.py"
+fi
+# 6. finish: from now on the initial password is only a hash in the database, and the administrator must replace it
+if [ "$finish" = 1 ]; then
+  [ "$installed" = 1 ] || die "--finish needs an installed OJS (run the install first)"
+  chg "set must_change_password for $ADMIN_USERNAME"
+  if [ "$check" = 0 ]; then
+    # the first login must change the initial password: the installer's own tables hold the user, set the flag from PHP
+    remote "cd $(printf '%q' "$webroot") && php -r '\$c=parse_ini_file(\"config.inc.php\",true,INI_SCANNER_RAW); \$d=\$c[\"database\"]; \$m=new mysqli(trim(\$d[\"host\"],\"\\\"\"),trim(\$d[\"username\"],\"\\\"\"),trim(\$d[\"password\"],\"\\\"\"),trim(\$d[\"name\"],\"\\\"\")); \$s=\$m->prepare(\"UPDATE users SET must_change_password=1 WHERE username=?\"); \$u=\$argv[1]; \$s->bind_param(\"s\",\$u); \$s->execute(); echo \$s->affected_rows;' $(printf '%q' "$ADMIN_USERNAME")" >"$tmp/mcp.txt" || die "could not set must_change_password"
+    [ "$(cat "$tmp/mcp.txt")" -ge 0 ] 2>/dev/null && ok "the administrator must change the initial password at the first login"
+    if grep -q '^ADMIN_PASSWORD=' "$envfile"; then
+      chg "remove the initial ADMIN_PASSWORD line from $envfile"
+      keep="$(mktemp "$envfile.XXXXXX")"; grep -v '^ADMIN_PASSWORD=' "$envfile" >"$keep" || true; chmod 600 "$keep"; mv -f "$keep" "$envfile"
+    fi
+  fi
 fi
 echo "done."

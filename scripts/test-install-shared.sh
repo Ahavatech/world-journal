@@ -96,13 +96,31 @@ yes "config.inc.php exists with mode 600" test "$(stat -c %a "$cfg")" = 600
 yes "installed = On" grep -q '^installed = On' "$cfg"
 yes "the files directory is above the web root, mode 700" test -d "$R/worj-files" -a "$(stat -c %a "$R/worj-files")" = 700
 yes "the installer created the database tables" test "$(mariadb -N "$dbn" -e "select count(*) from users where username='worjadmin'")" = 1
-yes "the administrator must change the initial password" test "$(mariadb -N "$dbn" -e "select must_change_password from users where username='worjadmin'")" = 1
+yes "before --finish the initial password is still usable (seeding logs in with it)" test "$(mariadb -N "$dbn" -e "select coalesce(must_change_password,0) from users where username='worjadmin'")" = 0
 yes "the salt is not the public default and is long" bash -c "s=\$(sed -n 's/^salt *= *\"\\(.*\\)\"/\\1/p' '$cfg'); [ \${#s} -ge 32 ] && [ \"\$s\" != 'YouMustSetASecretKeyHere!!' ]"
 yes "allowed_hosts names the host" grep -q "^allowed_hosts = '\[\"$H\"\]'" "$cfg"
 yes "time_zone is set" grep -q '^time_zone = "Africa/Lagos"' "$cfg"
 yes "check-live-config.py passes on the result" python3 -I "$root/scripts/check-live-config.py" "$cfg" --host "$H" --web-root "$R/public_html"
+yes "...and ADMIN_PASSWORD is still in the env file until --finish" grep -q '^ADMIN_PASSWORD=' "$tmp/env"
+
+echo "=== seed-shared.sh --check (the REST part needs Playwright and a real https site: NOT run here)"
+S() { WORJ_SSH="$tmp/ssh" "$root/scripts/seed-shared.sh" "$@"; }
+S --env "$tmp/env" --check --with-sample-issue >"$tmp/seed.txt" 2>&1; rc=$?
+yes "seed --check exits 0 (exit $rc)" test "$rc" = 0
+yes "seed --check prints WOULD lines for the journal, the pages and the sample issue" bash -c "grep -c '^WOULD: ' '$tmp/seed.txt' | grep -qx 3"
+yes "seed --check created nothing on the host" test ! -e "$R/worj-ops"
+yes "seed --check printed no secret" bash -c "! grep -qE '$dbp|$ADMINPW|smtp-secret' '$tmp/seed.txt'"
+no "seed refuses an env file readable by others" S --env "$tmp/env644" --check
+
+echo "=== --finish"
+I --env "$tmp/env" --finish --check >"$tmp/fcheck.txt" 2>&1
+yes "--finish --check changes nothing" bash -c "grep -q '^ADMIN_PASSWORD=' '$tmp/env' && [ \"\$(mariadb -N '$dbn' -e \"select coalesce(must_change_password,0) from users where username='worjadmin'\")\" = 0 ]"
+I --env "$tmp/env" --finish >"$tmp/finish.txt" 2>&1; rc=$?
+yes "--finish succeeds (exit $rc)" test "$rc" = 0
+yes "the administrator must change the initial password" test "$(mariadb -N "$dbn" -e "select must_change_password from users where username='worjadmin'")" = 1
 yes "ADMIN_PASSWORD was removed from the env file" bash -c "! grep -q '^ADMIN_PASSWORD=' '$tmp/env'"
 yes "the env file is still mode 600" test "$(stat -c %a "$tmp/env")" = 600
+yes "--finish printed no secret" bash -c "! grep -qE '$dbp|$ADMINPW|smtp-secret' '$tmp/finish.txt'"
 
 echo "=== re-run is idempotent"
 sum1="$(sha256sum "$cfg" | cut -d' ' -f1)"
@@ -110,12 +128,14 @@ I --env "$tmp/env" >"$tmp/again.txt" 2>&1; rc=$?
 yes "the second run succeeds (exit $rc)" test "$rc" = 0
 yes "it says OJS is already installed" grep -q 'already installed' "$tmp/again.txt"
 yes "config.inc.php is byte for byte unchanged" test "$sum1" = "$(sha256sum "$cfg" | cut -d' ' -f1)"
-yes "the second run needs no ADMIN_PASSWORD" bash -c "! grep -q '^ADMIN_PASSWORD=' '$tmp/env'"
 
 echo "=== the installer's weak defaults are repaired"
 sed -i 's/^salt = .*/salt = "YouMustSetASecretKeyHere!!"/; s/^allowed_hosts = .*/allowed_hosts = '"'"'[""]'"'"'/' "$cfg"
 I --env "$tmp/env" >/dev/null 2>&1
 yes "a default salt and an empty allowed_hosts are repaired on the next run" python3 -I "$root/scripts/check-live-config.py" "$cfg" --host "$H" --web-root "$R/public_html"
+
+echo "=== after --finish the seed is refused (the initial password is gone)"
+no "seed-shared.sh refuses without ADMIN_PASSWORD" S --env "$tmp/env" --check
 
 echo "$pass PASS, $fail FAIL"
 exit "$fail"
