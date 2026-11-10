@@ -30,6 +30,10 @@ Sandbox: `make sandbox-up sandbox-seed` now also imports all of this. A fresh jo
 - Negative tests: claims lint (fake indexing claim, digit in prose, licence name, review-model hint, absolute link all caught; a heading numeral not; stale allowlist entry fails); importer (second run 11 skipped; edited page untouched even with `--force-sandbox`; non-localhost refused with exit 3); `check-placeholders` (stray marker flagged; stale and wildcard allowlist entries fail; synthetic sites for 404 nav link, clean site, placeholder in title and meta).
 - Rendered scan of the sandbox: 39 pages and 3 PDFs scanned, 394 findings (expected until real content), 0 failures. `make check-placeholders`: 144 lines in 26 files, 9 theme fallback lines excused.
 
+## Finding: sub-page URLs exist twice
+
+OJS's own sitemap lists the custom sub-pages with an **encoded slash**: `/worj/awards%2Fcategories` (also `%2Fguidelines`, `%2Fwinners`). Both `/worj/awards/categories` and `/worj/awards%2Fcategories` return 200 with the same page and no canonical tag, so each of the three sub-pages has two live URLs, and what the real server does with `%2F` also depends on the nginx config (Phase 5). The eight top-level custom pages are not affected. Options for the human: keep the slash paths from `04-AWARDS.md` and have the Phase 6.3 sitemap check and the nginx block deal with `%2F`, or switch the three paths to flat slugs (`awards-categories`, ...) in `pages.json`, which removes the duplication at the cost of a different URL shape. Not changed, because it alters URLs the spec names.
+
 ## For the human (not done, on purpose)
 
 - **`autoresearch/eval/baseline.json` is not updated.** The new pages change the placeholder counts: home 11 to 12, about 4 to 10, submissions 3 to 17, contact 3 to 5, and new entries awards 18, editorial 9, peer-review 13. Approve the diff, then run `node autoresearch/eval/checks/gates.js --update-baseline` and commit it.
