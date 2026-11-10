@@ -47,6 +47,7 @@ Crossref's fees change. **This document contains no amounts.** Read the current 
 | B8 | **Budget** for membership or sponsor fees plus per-record fees. DOI registration is separate from the development fee. | Client | The client confirms a budget after reading the fees page. |
 | B9 | **Landing pages meet Crossref's requirements** (above). | Developer, then client | A real article page shows full bibliographic data, the DOI as a link and the full text link. `UNVERIFIED (needs a real DOI, so cannot be seen before B3)`. |
 | B10 | **A test-system account**, if Crossref gives one to this journal. | Client asks Crossref or the sponsor | `UNVERIFIED (see "Test system" above)`. |
+| B11 | **A credential dedicated to this journal** (not personal, not shared with other systems), because the plugin stores it unencrypted in the OJS database. Whether Crossref or a sponsor can issue one, and how, is not stated on a page read. | Client asks Crossref or the sponsor | `UNVERIFIED (ask Crossref or the sponsor)`. The answer is written down before any credential is entered in OJS. |
 
 **Sample articles are never deposited, live or test.** The sandbox's three articles are fixtures. Deposit only real, published, final content.
 
@@ -54,7 +55,7 @@ Crossref's fees change. **This document contains no amounts.** Read the current 
 
 | # | Decision | Where in OJS | OJS default (new journal) | Chosen value |
 |---|---|---|---|---|
-| DD1 | **DOIs on or off until B1 to B9 are done.** | Settings > Distribution > DOIs > Setup > *Allow Digital Object Identifiers (DOIs) to be assigned to work published in this journal* | **On**, but inert without a prefix (checklist row 7.1 turns it off until the credentials exist) | |
+| DD1 | **DOIs on or off until B1 to B9 and B11 are done.** | Settings > Distribution > DOIs > Setup > *Allow Digital Object Identifiers (DOIs) to be assigned to work published in this journal* | **On**, but inert without a prefix (checklist row 7.1 turns it off until the credentials exist) | |
 | DD2 | **Which items get a DOI.** | Same tab, *Items with DOIs*: *Articles*, *Issues*, *Article galleys, such as a published PDF* | *Articles* only. Crossref's OJS page also recommends articles only. | |
 | DD3 | **Suffix format.** See "The suffix decision" below. | Same tab, *DOI Format*: *Default*, *None*, *Custom pattern (not recommended)* | *Default* | |
 | DD4 | **When a DOI is assigned.** | Same tab, *Automatic DOI Assignment*: *Upon reaching the copyediting stage*, *Upon publication*, *Never* | *Upon reaching the copyediting stage* (allows the DOI to be printed in the PDF; Crossref's OJS page notes this) | |
@@ -76,7 +77,7 @@ Crossref's fees change. **This document contains no amounts.** Read the current 
 
 **Never change the suffix format after DOIs have been created.** A registered DOI string cannot change, so a changed format only means two styles of DOI in one journal. The choice stays with the client (DD3).
 
-## Ordered steps once B1 to B9 are done
+## Ordered steps once B1 to B9 and B11 are done
 
 All paths below were seen in the sandbox (`VERIFIED-SANDBOX 2026-11-10`) unless a step says otherwise. Do them on the **real, final domain**, never in the sandbox or on a staging site.
 
@@ -108,11 +109,12 @@ Crossref's OJS page tells you to leave *Testing* unchecked in production. The pl
 - **Where the Crossref password lives:** the settings form says on screen that the password is saved **as plain text, not encrypted** (`VERIFIED-SANDBOX 2026-11-10`; the plugin stores `username` and `password` as settings, `SOURCE 3.5.0-6`). So it is in the OJS database, **and therefore in every backup** (the off-server backups are encrypted with the client's key, `docs/DEPLOY.md`) and visible to every administrator who opens the form.
 - **Change the password whenever anyone with administrator access leaves**, and whenever it may have been exposed. Use Crossref's own account tools for the change (`UNVERIFIED (not read)`), then update the form.
 - **Never** put the username or password in git, `provision.env`, `.env`, an issue, a pull request, a chat message, or an email. If a credential is ever pasted anywhere by mistake, treat it as exposed and change it.
-- **Who holds it** is decision DD8. Prefer an organisational (shared role) account over a personal one, as the Crossref OJS page describes; a personal account leaves with the person.
+- **The credential must be dedicated to this journal.** Because it sits unencrypted in the database, it must **not** be a person's own login and must **not** be shared with any other system, account or service (including the client's other Crossref work, if any), so that exposing it, or changing it after someone leaves, affects nothing else. Crossref's OJS page describes two kinds of account, a shared organisational one and a personal one, but **whether Crossref (or the sponsor) can issue a separate, role-based credential used only for this journal, and how, is `UNVERIFIED (not stated on a page read)`**: it is blocker B11 below, to be asked of Crossref or the sponsor, not guessed. Until B11 is answered, do not reuse an existing personal or shared credential.
+- **Who holds it** is decision DD8. A personal account leaves with the person, which is another reason to prefer a dedicated role credential if B11 allows it.
 
 ## What not to do
 
-- **Do not enable a registration agency or deposit anything until B1 to B9 are done.**
+- **Do not enable a registration agency or deposit anything until B1 to B9 and B11 are done.**
 - **Do not invent or guess a DOI prefix**, and do not use one from a document, a screenshot or another journal.
 - **Do not deposit from a non-final domain** (sandbox, staging, a temporary hostname, or an HTTP address). A live deposit records the article's address; the DOI cannot be deleted. Staging deposits belong on Crossref's test system only, and only if B10 exists.
 - **Never deposit the sample articles, live or test.**
