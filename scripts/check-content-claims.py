@@ -19,7 +19,7 @@ Rules, per file under ojs/content/**/*.html:
               under any journal path
 
 Anything else needs an EXACT entry in scripts/content-claims-allow.txt
-(tab-separated: file, rule, the exact text). An entry that matches no finding is
+(tab-separated: file, rule, the exact message as printed after the rule, for example: "Year" in: <the line text>). An entry that matches no finding is
 stale and fails the lint, so the rule is never loosened by accident.
 
 Exit 0 when clean, 1 on any finding or stale allowlist entry.
@@ -119,7 +119,7 @@ def main():
         sc.feed(text)
         found += sc.findings
         for line, rule, msg in found:
-            exact = msg.split(": ", 1)[1] if ": " in msg and rule in {"banned", "digits"} else msg
+            exact = msg  # the whole message: for a banned word that includes the word itself
             key = (rel, rule, exact)
             if key in allow:
                 allow[key] = True

@@ -1,3 +1,4 @@
 # Exact exceptions to scripts/check-content-claims.py. One per line, tab-separated:
 #   file<TAB>rule<TAB>exact text (as printed by the lint)
 # An entry that matches no finding is stale and fails the lint. Never add a pattern or a directory.
+ojs/content/awards/categories.html	banned	"Year" in: Best Research Article of the Year [PLACEHOLDER: category, client to confirm]
