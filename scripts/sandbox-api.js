@@ -26,7 +26,7 @@ if (!method || !apiPath) {
   await page.goto(`${base}/index/login`);
   await page.fill('input[name=username]', env.SANDBOX_ADMIN_USER);
   await page.fill('input[name=password]', env.SANDBOX_ADMIN_PASSWORD);
-  await Promise.all([page.waitForLoadState('load'), page.click('button[type=submit]')]);
+  await Promise.all([page.waitForEvent('load'), page.click('button[type=submit]')]);
   await page.goto(`${base}/index/admin/contexts`);
   const csrf = await page.evaluate(() => document.querySelector('meta[name=csrf-token]')?.content);
   const r = await ctx.request.fetch(base + apiPath, {

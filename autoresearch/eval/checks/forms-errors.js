@@ -8,6 +8,15 @@ const { chromium } = require('playwright');
 const { AxeBuilder } = require('@axe-core/playwright');
 const { base } = require('../lib/pages');
 
+// EVAL_CPU_THROTTLE=8 slows the page 8x to expose timing races in the test or the page.
+const throttle = Number(process.env.EVAL_CPU_THROTTLE || 1);
+async function newPage(browser) {
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const page = await ctx.newPage();
+  if (throttle > 1) { await (await ctx.newCDPSession(page)).send('Emulation.setCPUThrottlingRate', { rate: throttle }); }
+  return { ctx, page };
+}
+
 let fails = 0;
 const check = (ok, msg) => { if (!ok) fails += 1; console.log((ok ? 'PASS  ' : 'FAIL  ') + msg); };
 
@@ -36,18 +45,18 @@ async function inspect(page, label, fieldNames) {
 
 (async () => {
   const browser = await chromium.launch();
-  let ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
-  let page = await ctx.newPage();
+  let { ctx, page } = await newPage(browser);
   await page.goto(base + '/worj/login', { waitUntil: 'networkidle' });
   await page.fill('input[name=username]', 'nobody');
   await page.fill('input[name=password]', 'wrong-password-123');
-  await Promise.all([page.waitForLoadState('load'), page.click('button.submit')]);
-  await page.waitForLoadState('networkidle');
+  // wait for the NEW page's load event (registered before the click). waitForLoadState('load')
+  // resolves at once because the old page is already loaded, so the check ran mid-parse
+  // and forms.js had not executed yet (a race that only showed under load).
+  await Promise.all([page.waitForEvent('load'), page.click('button.submit')]);
   await inspect(page, 'failed login', ['username', 'password']);
   await ctx.close();
 
-  ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
-  page = await ctx.newPage();
+  ({ ctx, page } = await newPage(browser));
   await page.goto(base + '/worj/user/register', { waitUntil: 'networkidle' });
   const fill = async (sel, v) => { const e = page.locator(sel).first(); if (await e.count()) await e.fill(v); };
   await fill('input[name=givenName]', 'Test');
@@ -61,8 +70,7 @@ async function inspect(page, label, fieldNames) {
   if (await country.count()) await country.selectOption({ index: 1 });
   const privacy = page.locator('input[name=privacyConsent\\[\\]], input[name=privacyConsent]');
   for (let i = 0; i < await privacy.count(); i++) await privacy.nth(i).check();
-  await Promise.all([page.waitForLoadState('load'), page.click('button.submit')]);
-  await page.waitForLoadState('networkidle');
+  await Promise.all([page.waitForEvent('load'), page.click('button.submit')]);
   await inspect(page, 'failed registration');
   await ctx.close();
   await browser.close();
