@@ -89,6 +89,7 @@ lint:
 	scripts/test-check-pdf.sh | tail -1
 	scripts/test-check-discovery.sh | tail -1
 	scripts/test-check-citation-meta.sh | tail -1
+	scripts/test-release.sh | tail -1
 	@if [ -n "$$(find ojs scripts -name '*.php' -print -quit)" ]; then \
 	  find ojs scripts -name '*.php' -print0 | xargs -0 -n1 php -l >/dev/null && echo "php -l ok"; \
 	else echo "no PHP files yet"; fi
