@@ -1,0 +1,52 @@
+{
+  "note": "One entry per page. mechanism: 'setting' = text of a journal setting (built into OJS 3.5.0-6), 'custom-page' = a custom navigation-menu page served at /<path>. 'checked' records what was verified against the pinned OJS source and the running sandbox (2026-11-10) before choosing the mechanism: built-ins are used wherever they exist. The static-pages plugin is not used: its template prints the title as an h2 with no h1 and is not themeable.",
+  "banner": "<p class=\"worj-placeholder\">[PLACEHOLDER: replace with client-approved text]</p>",
+  "pages": [
+    { "id": "about", "file": "pages/about.html", "mechanism": "setting", "setting": "about", "url": "/about",
+      "checked": "built-in: lib/pkp/templates/frontend/pages/about.tpl prints context setting 'about'; live /worj/about 200, 1 h1" },
+    { "id": "privacy", "file": "pages/privacy.html", "mechanism": "setting", "setting": "privacyStatement", "url": "/about/privacy",
+      "checked": "built-in: setting 'privacyStatement'; live /worj/about/privacy 200, 1 h1" },
+    { "id": "author-guidelines", "file": "pages/author-guidelines.html", "mechanism": "setting", "setting": "authorGuidelines", "url": "/about/submissions",
+      "checked": "built-in: AboutContextHandler::submissions shows 'authorGuidelines'; live /worj/about/submissions 200, 1 h1" },
+    { "id": "info-readers", "file": "pages/info-readers.html", "mechanism": "setting", "setting": "readerInformation", "url": "/information/readers",
+      "checked": "built-in: Information block and /information/readers use setting 'readerInformation'; live 200, 1 h1" },
+    { "id": "info-authors", "file": "pages/info-authors.html", "mechanism": "setting", "setting": "authorInformation", "url": "/information/authors",
+      "checked": "built-in: setting 'authorInformation'; live /worj/information/authors 200, 1 h1" },
+    { "id": "info-librarians", "file": "pages/info-librarians.html", "mechanism": "setting", "setting": "librarianInformation", "url": "/information/librarians",
+      "checked": "built-in: setting 'librarianInformation'; live /worj/information/librarians 200, 1 h1" },
+    { "id": "editorial-team", "file": "editorial-team.html", "mechanism": "setting", "setting": "editorialHistory", "url": "/about/editorialMasthead",
+      "flags": { "enableEnrollmentMasthead": false },
+      "checked": "built-in exists. /about/editorialTeam is gone in 3.5 (live 404; migration I9937_EditorialTeamToEditorialHistory). /about/editorialMasthead renders setting 'editorialHistory' through lib/pkp/templates/frontend/pages/editorialMastheadDisabled.tpl with an h1 when enableEnrollmentMasthead is off (schema default is ON, which lists real masthead users instead). Live with the flag off: 200, 1 h1, text shown. Task 4.1 retitles the menu item 'Editorial Masthead' to 'Editorial Team'." },
+    { "id": "aims-and-scope", "file": "pages/aims-and-scope.html", "mechanism": "custom-page", "path": "aims-and-scope", "title": "Aims and Scope", "url": "/aims-and-scope",
+      "checked": "no built-in in 3.5.0-6: no 'focusScope' or aims setting in lib/pkp/schemas/context.json and no template uses one; live /worj/aims-and-scope and /worj/about/aims-and-scope were 404 before import" },
+    { "id": "peer-review", "file": "pages/peer-review.html", "mechanism": "custom-page", "path": "peer-review", "title": "Peer Review Process", "url": "/peer-review",
+      "checked": "no built-in page for review policy in 3.5.0-6 (About handler ops: index, editorialMasthead, editorialHistory, submissions, contact)" },
+    { "id": "publication-ethics", "file": "pages/publication-ethics.html", "mechanism": "custom-page", "path": "publication-ethics", "title": "Publication Ethics and Misconduct", "url": "/publication-ethics",
+      "checked": "no built-in (same check)" },
+    { "id": "open-access", "file": "pages/open-access.html", "mechanism": "custom-page", "path": "open-access", "title": "Open Access Policy", "url": "/open-access",
+      "checked": "no built-in (same check)" },
+    { "id": "copyright-licensing", "file": "pages/copyright-licensing.html", "mechanism": "custom-page", "path": "copyright-licensing", "title": "Copyright and Licensing", "url": "/copyright-licensing",
+      "checked": "no built-in page; the licence itself is a journal setting handled in Task 4.1 (licenseUrl), not page text" },
+    { "id": "archiving", "file": "pages/archiving.html", "mechanism": "custom-page", "path": "archiving", "title": "Archiving Policy", "url": "/archiving",
+      "checked": "no built-in (same check)" },
+    { "id": "plagiarism-similarity", "file": "pages/plagiarism-similarity.html", "mechanism": "custom-page", "path": "plagiarism-similarity", "title": "Plagiarism and Similarity Policy", "url": "/plagiarism-similarity",
+      "checked": "no built-in (same check)" },
+    { "id": "awards", "file": "awards/awards.html", "mechanism": "custom-page", "path": "awards", "title": "Research Awards", "url": "/awards",
+      "checked": "no built-in; custom pages verified in the sandbox at /x and /x/y (200, one h1 class page_title)" },
+    { "id": "awards-categories", "file": "awards/categories.html", "mechanism": "custom-page", "path": "awards/categories", "title": "Award Categories", "url": "/awards/categories",
+      "checked": "sub-path verified (200) with a probe page, since deleted" },
+    { "id": "awards-guidelines", "file": "awards/guidelines.html", "mechanism": "custom-page", "path": "awards/guidelines", "title": "Nomination Guidelines", "url": "/awards/guidelines",
+      "checked": "sub-path verified (same probe)" },
+    { "id": "awards-winners", "file": "awards/winners.html", "mechanism": "custom-page", "path": "awards/winners", "title": "Award Winners", "url": "/awards/winners",
+      "checked": "sub-path verified (same probe)" }
+  ],
+  "contact": {
+    "url": "/about/contact",
+    "checked": "built-in: AboutContextHandler::contact shows contact settings; live /worj/about/contact 200, 1 h1",
+    "settings": {
+      "contactName": "[PLACEHOLDER: contact name]",
+      "contactEmail": "contact@example.invalid",
+      "mailingAddress": "[PLACEHOLDER: mailing address]"
+    }
+  }
+}
