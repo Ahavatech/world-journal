@@ -82,7 +82,7 @@ A cleared session resumes from this file, `docs/PHASE4-NOTES.md`, `docs/03-TASKS
 - **Theme caching:** OJS appends `?v=<OJS version>` (not the theme version) to theme CSS and JS and does not version theme images, so `/plugins/themes/` is cached for one hour and other static files for seven days.
 - **Admin password:** the script removes the `ADMIN_PASSWORD` line from `provision.env` after a successful install and sets `must_change_password` for the administrator (chroot-tested).
 - DEPLOY.md: no AAAA records unless Nginx is configured for IPv6; only Origin CA and HTTP-01 are offered; a monthly `reboot-required` step; a handover item removing or transferring the developer's administrator account; `open_basedir` listed as an optional measure we do not claim; a throwaway-VPS rehearsal (also a Phase 8.3 gate item).
-- **Regression tests, each proven to fail without its fix (mutation check):** no `python3` (preflight), the dev theme symlink in the OJS tree (ojs-code), `nginx -t` before our site includes the ranges file (Cloudflare stage), duplicate `allowed_hosts` lines (config tools), plus chroot checks for www-data ownership of `cache/`, `public/` and `files_dir` with a root-owned code tree, the removed answers directory, the single `allowed_hosts` line, the removed admin password and the forced change.
+- **Regression tests (mutation status below; the first four were mutated in Phase 5, the last three in Phase 6, see "Mutation results"):** no `python3` (preflight), the dev theme symlink in the OJS tree (ojs-code), `nginx -t` before our site includes the ranges file (Cloudflare stage), duplicate `allowed_hosts` lines (config tools), plus chroot checks for www-data ownership of `cache/`, `public/` and `files_dir` with a root-owned code tree, the removed answers directory, the single `allowed_hosts` line, the removed admin password and the forced change.
 
 ## Hand-offs to Phase 6 (owner requirements, 2026-11-10; start in plan mode, branch off `main`)
 
@@ -91,3 +91,19 @@ A cleared session resumes from this file, `docs/PHASE4-NOTES.md`, `docs/03-TASKS
 - **6.4 `docs/SEARCH-CONSOLE.md`:** DNS verification through Cloudflare, sitemap submission, URL inspection of a real article, what "indexed" looks like; say plainly that nothing in the repo can make Google Scholar index a paper.
 - **6.5 canonical:** an INFO finding (no canonical tag on article pages at 3.5.0-6, decision pending) with the staging recheck on the real domain; add the URL inspection step and the duplicate-URL checks (article versus galley, `http` versus `https`, `index.php` forms) to the checklist.
 - **Also:** `citation_doi` appears only when a DOI is assigned: the check must NOT require it and must FAIL if a DOI tag is present with an empty value. `scripts/check-citation-meta.sh` (6.1) already exists.
+
+## Mutation results for the remaining regression tests (Phase 6, commit 0, 2026-11-10, `VERIFIED-SANDBOX`)
+
+Each fix was removed, the test run, then the source restored byte-identical (`git diff` empty). Because a missing fix also breaks later stages, the failing list contains knock-on failures; the test named here is the one that must be in it.
+
+| Regression test | Fix removed | Result without the fix |
+|---|---|---|
+| installer ran as root: `cache/`, `public/`, `files_dir` belong to www-data | the `chown -R www-data:www-data` line in the ojs-config stage | `FAIL  REGRESSION the installer ran as root, yet cache/, public/ and files_dir belong to www-data` (also: the scheduler as www-data cannot run, exit 255) |
+| leftover answers directory | `cleanup_answers` made a no-op and the failure-path `rm` removed | `FAIL  the installer answers file is gone`, `FAIL  no installer log or temp output is left in /root`, and the secret sampler found the admin and database passwords in `/root/.worj-provision/answers` |
+| single `allowed_hosts` line | both `del lines[d]` sites in `scripts/set-ojs-config.py` (there are two) | fast unit test `only ONE allowed_hosts line is left` fails; chroot `FAIL  REGRESSION no second allowed_hosts line` fails (18 failures in all, most knock-on) |
+
+**An honest miss on the way:** my first attempt at the third mutation changed only one of the two `del lines[d]` sites, and the tests still passed. That did not show a weak test; it showed a half-removed fix. Both sites are mutated in the recorded run.
+
+## Scheduler visibility (Phase 6 follow-up)
+
+`/var/log/worj-scheduler.log` is rotated (weekly, 8 kept) and cron mail is off (`MAILTO=""`). `docs/DEPLOY.md` now has a smoke test (log modification time) and an operator check after the first day. **A stopped scheduler means no review reminders, no statistics emails and no queued emails, silently.** Not run on a VPS.
