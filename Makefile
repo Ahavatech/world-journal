@@ -2,7 +2,7 @@ SHELL := /bin/bash
 .SHELLFLAGS := -o pipefail -ec
 THEME := ojs/plugins/themes/worj
 
-.PHONY: setup lint eval check-placeholders sandbox-up sandbox-down sandbox-seed check-citation
+.PHONY: setup lint eval check-placeholders sandbox-up sandbox-down sandbox-seed check-citation check-placeholders-url
 
 setup:
 	scripts/fetch-ojs.sh
@@ -41,5 +41,10 @@ lint:
 eval:
 	autoresearch/eval/run.sh
 
+# Repository scan: every remaining placeholder with file:line (exit 1 while any remain; CI keeps it warn-only until Phase 8).
 check-placeholders:
-	@echo "make check-placeholders: not implemented yet (Phase 3.5)" >&2; exit 1
+	scripts/check-placeholders.sh
+
+# Rendered-site scan (the launch gate): needs the sandbox, or pass the journal URL.
+check-placeholders-url:
+	scripts/check-placeholders.sh --url "$${SANDBOX_URL:-http://127.0.0.1:8082}/worj"
