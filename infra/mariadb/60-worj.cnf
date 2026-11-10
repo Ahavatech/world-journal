@@ -1,0 +1,24 @@
+# World Open Research Journal: MariaDB 10.11 tuning for a 4 GB VPS shared with PHP-FPM and Nginx
+# (installed as /etc/mysql/mariadb.conf.d/60-worj.cnf)
+[mysqld]
+# local access only: the web application and the backup job run on this machine
+bind-address            = 127.0.0.1
+skip-name-resolve
+local_infile            = 0
+
+character-set-server    = utf8mb4
+collation-server        = utf8mb4_unicode_ci
+
+# about a quarter of the RAM; the rest is left to PHP-FPM, Nginx and the page cache
+innodb_buffer_pool_size = 1G
+innodb_log_file_size    = 256M
+innodb_flush_method     = O_DIRECT
+innodb_file_per_table   = 1
+
+max_connections         = 60
+tmp_table_size          = 32M
+max_heap_table_size     = 32M
+
+slow_query_log          = 1
+slow_query_log_file     = /var/log/mysql/worj-slow.log
+long_query_time         = 2

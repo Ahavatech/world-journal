@@ -1,0 +1,49 @@
+# OJS routing and the deny rules. Regex locations are matched in file order: first match wins.
+
+# 1. nothing hidden is ever served (the ACME challenge path is handled in the port 80 block)
+location ~ /\.(?!well-known/) { return 404; }
+
+# 2. configuration, templates, backups and source-like files, from any directory
+location ~* (^|/)config(\.TEMPLATE)?\.inc\.php$ { return 404; }
+location ~* \.(tpl|inc|bak|old|orig|save|swp|sql|log|env|ini|dist|lock|sh|md|po|pot|yml|yaml)$ { return 404; }
+location ~* /(composer\.json|composer\.lock|package(-lock)?\.json|Makefile)$ { return 404; }
+
+# 3. directories that hold code or private data and are never requested by a browser
+location ~ ^/(cache|tools|dbscripts|registry|docs|classes|controllers|pages|jobs|schemas|templates|locale|plugins/[^/]+/[^/]+/(classes|templates|locale|schema|filter|controllers))(/|$) { return 404; }
+# lib/pkp/lib/vendor is NOT denied as a directory: the admin UI loads TinyMCE and Plupload from it. Its PHP is
+# unreachable anyway (rule 4: only /index.php runs) and its README, composer and test files match rule 2.
+location ~ ^/lib/pkp/(classes|controllers|pages|templates|schemas|locale|tools|registry|docs|jobs|xml|plugins/[^/]+/[^/]+/(classes|templates))(/|$) { return 404; }
+
+# 4. PHP: only /index.php runs. Any other .php (including one uploaded into public/) is a 404:
+#    it is never executed and never shown as text.
+location ~ ^/index\.php/[^/]+/api/ {
+    # the admin UI reads JSON error bodies: no fastcgi_intercept_errors here
+    include @@SNIPPETS@@/worj-fastcgi.conf;
+}
+location ~ ^/index\.php(/|$) {
+    include @@SNIPPETS@@/worj-fastcgi.conf;
+    fastcgi_intercept_errors on;
+}
+location ~ \.php(/|$) { return 404; }
+
+# 5a. THEME files: OJS appends ?v=<OJS application version> to theme CSS and JS (PKPTemplateManager.php), never the
+#     theme's own version, and theme images carry no version at all. A theme update therefore keeps the same URL, so
+#     these are cached for ONE HOUR (clients revalidate with ETag afterwards), not a week.
+location ~* ^/plugins/themes/.+\.(css|js|map|woff2?|ttf|otf|eot|svg|ico|png|jpe?g|gif|webp|avif)$ {
+    try_files $uri /index.php$uri?$args;
+    expires 1h;
+    access_log off;
+}
+
+# 5. other static assets (OJS core files carry ?v=<OJS version>, which changes on an upgrade): cached for a week,
+#    never HTML. A file that does not exist goes to OJS.
+location ~* \.(css|js|map|woff2?|ttf|otf|eot|svg|ico|png|jpe?g|gif|webp|avif)$ {
+    try_files $uri /index.php$uri?$args;
+    expires 7d;
+    access_log off;
+}
+
+# 6. everything else is an OJS route (restful_urls = On); PDFs and other files go through OJS
+location / {
+    try_files $uri $uri/ /index.php$uri?$args;
+}

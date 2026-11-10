@@ -1,0 +1,18 @@
+# Port 80 only, used until the certificate exists (certbot HTTP-01 needs a web server first).
+# Replaced by worj.conf as soon as the certificate files are present. Value between double at-signs is filled at provisioning.
+server {
+    listen @@HTTP_PORT@@ default_server;
+    server_name _;
+    return 444;
+}
+server {
+    listen @@HTTP_PORT@@;
+    server_name @@HOST@@ @@ALT_HOST@@;
+    location ^~ /.well-known/acme-challenge/ {
+        root @@ACME_ROOT@@;
+        default_type text/plain;
+    }
+    location / {
+        return 503;
+    }
+}

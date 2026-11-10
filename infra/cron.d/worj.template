@@ -1,0 +1,18 @@
+# World Open Research Journal: scheduled jobs (installed as /etc/cron.d/worj, owner root, mode 644).
+# Values between double at-signs are filled at provisioning. Times are SERVER time.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin
+MAILTO=""
+
+# Nightly encrypted backup. backup.sh takes its own lock, raises its own alert on failure (FAILED marker, syslog,
+# WORJ_ALERT_CMD) and writes /var/backups/worj/last-success for an external heartbeat to watch.
+17 2 * * * root @@INSTALL_DIR@@/worj-backup --env /etc/worj/backup.env >>/var/log/worj-backup.log 2>&1
+
+# Refresh Cloudflare's published IP ranges (real client address). On any failure the previous file is kept.
+43 3 * * 1 root @@INSTALL_DIR@@/worj-update-cloudflare-ips --out @@REALIP_CONF@@ >>/var/log/worj-cloudflare-ips.log 2>&1
+
+# OJS scheduled tasks and queued jobs, every minute, as the web user. The built-in web runner is switched off
+# ([schedule] task_runner = Off): it only runs on a request AND only for a task whose cron expression matches that
+# exact minute, so a quiet site misses daily and monthly tasks (reviewer reminders, usage statistics, editorial
+# statistics emails). [queues] process_jobs_at_task_scheduler = On makes this same run process queued emails.
+* * * * * www-data cd @@WEBROOT@@ && php lib/pkp/tools/scheduler.php run >>/var/log/worj-scheduler.log 2>&1

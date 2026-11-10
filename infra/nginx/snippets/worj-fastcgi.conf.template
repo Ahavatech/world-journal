@@ -1,0 +1,6 @@
+# Shared FastCGI settings for the two PHP locations.
+fastcgi_split_path_info ^(.+?\.php)(/.*)$;
+include /etc/nginx/fastcgi.conf;
+fastcgi_param PATH_INFO $fastcgi_path_info;
+fastcgi_pass unix:@@PHP_SOCK@@;
+fastcgi_read_timeout 120s;

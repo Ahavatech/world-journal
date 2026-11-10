@@ -2,6 +2,29 @@ SHELL := /bin/bash
 .SHELLFLAGS := -o pipefail -ec
 THEME := ojs/plugins/themes/worj
 
+# Needs php-fpm8.3, mariadbd and nginx in this sandbox; not part of `make lint` (CI has no FPM or MariaDB).
+.PHONY: infra-test infra-test-nginx infra-test-backup infra-test-reset infra-test-chroot
+infra-test:
+	scripts/test-infra-config.sh
+	scripts/test-provision-preflight.sh | tail -1
+	scripts/test-provision-ssh-firewall.sh | tail -1
+
+# Needs root, the sandbox up, and age + rclone (apt-get install -y age rclone).
+infra-test-backup:
+	scripts/test-backup-restore.sh
+
+# Needs root and the sandbox up; restores the sandbox admin row afterwards.
+infra-test-reset:
+	scripts/test-reset-admin-password.sh
+
+# Needs root, debootstrap, apt access and about 6 GB; 15 to 25 minutes. Provisions a clean Ubuntu 24.04 chroot twice.
+infra-test-chroot:
+	scripts/test-provision-chroot.sh
+
+# Needs the sandbox (make sandbox-up sandbox-seed), root, and `cd autoresearch/eval && npm ci`. Takes a few minutes.
+infra-test-nginx:
+	scripts/test-nginx-harness.sh
+
 .PHONY: setup lint eval check-placeholders sandbox-up sandbox-down sandbox-seed check-citation check-placeholders-url
 
 setup:
@@ -38,6 +61,9 @@ lint:
 	python3 -I scripts/check-config-template.py | tail -1
 	python3 -I scripts/make-config-template.py --check
 	scripts/test-config-template.sh | tail -1
+	scripts/test-config-tools.sh | tail -1
+	scripts/test-check-live-config.sh | tail -1
+	scripts/test-cloudflare-ips.sh | tail -1
 	@if [ -n "$$(find ojs scripts -name '*.php' -print -quit)" ]; then \
 	  find ojs scripts -name '*.php' -print0 | xargs -0 -n1 php -l >/dev/null && echo "php -l ok"; \
 	else echo "no PHP files yet"; fi
