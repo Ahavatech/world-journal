@@ -11,6 +11,10 @@ This file is created early so that production-safety rules are written down befo
 3. Pages a human has edited (placeholder banner gone) are never touched by the script, so editing in OJS afterwards is safe.
 4. `ojs/content/` and `ojs/fixtures/` hold placeholders and fake samples. They are not deployed content; the launch gate (Phase 8.3) requires `make check-placeholders` to be empty.
 
+## Importing real users and articles
+
+Use `scripts/import-ojs-xml.sh` (usage and safeguards in `docs/IMPORT.md`), never the raw tool. **Take a backup first and run each file once.** `--i-have-a-backup` is only a speed bump: nothing verifies the backup. A users import emails every new user, so test the mail settings first. Real files live in `ojs/import/` (gitignored, personal data).
+
 ## DNS for the sending domain (SPF, DKIM, DMARC)
 
 OJS sends mail **from the Technical Support Contact address** (checklist step 6.3). Mail from a domain without authentication usually lands in spam or is rejected, and with `require_validation = On` that stops people registering.
