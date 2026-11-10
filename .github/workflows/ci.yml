@@ -21,6 +21,9 @@ jobs:
         with:
           php-version: "8.3"
       - run: npm ci
+      # test-check-pdf.sh needs pdftotext, test-check-discovery.sh needs xmllint
+      - name: Install poppler-utils and libxml2-utils
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils libxml2-utils
       - name: Lint (shellcheck, php -l, markdownlint, stylelint)
         run: make lint
       # Warn only until Phase 8: the target is not implemented yet, and
