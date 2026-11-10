@@ -26,7 +26,17 @@ location ~ ^/index\.php(/|$) {
 }
 location ~ \.php(/|$) { return 404; }
 
-# 5. static assets: cached for a week, never HTML. A file that does not exist goes to OJS.
+# 5a. THEME files: OJS appends ?v=<OJS application version> to theme CSS and JS (PKPTemplateManager.php), never the
+#     theme's own version, and theme images carry no version at all. A theme update therefore keeps the same URL, so
+#     these are cached for ONE HOUR (clients revalidate with ETag afterwards), not a week.
+location ~* ^/plugins/themes/.+\.(css|js|map|woff2?|ttf|otf|eot|svg|ico|png|jpe?g|gif|webp|avif)$ {
+    try_files $uri /index.php$uri?$args;
+    expires 1h;
+    access_log off;
+}
+
+# 5. other static assets (OJS core files carry ?v=<OJS version>, which changes on an upgrade): cached for a week,
+#    never HTML. A file that does not exist goes to OJS.
 location ~* \.(css|js|map|woff2?|ttf|otf|eot|svg|ico|png|jpe?g|gif|webp|avif)$ {
     try_files $uri /index.php$uri?$args;
     expires 7d;

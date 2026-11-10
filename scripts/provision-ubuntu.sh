@@ -166,6 +166,7 @@ stage_ojs_config() {
     if [ -f "$cfg" ] && grep -q '^installed = On' "$cfg"; then
       ok "OJS is installed"
       if python3 -I "$ROOT/scripts/check-live-config.py" "$cfg" --host "$HOST" --web-root "$WEBROOT" --owner root:www-data >/dev/null 2>&1; then ok "live config check passes"; else chg "live config needs fixing (check-live-config.py lists what)"; fi
+      if grep -q '^ADMIN_PASSWORD=' "$ENV_FILE"; then chg "remove the initial ADMIN_PASSWORD line from $ENV_FILE"; fi
     else chg "render config.inc.php with generated secrets, run tools/install.php (answers file removed on exit), re-apply allowed_hosts and time_zone, verify with check-live-config.py"; fi
     return 0
   fi
@@ -195,6 +196,9 @@ stage_ojs_config() {
       rm -f "$ANSWERS_DIR/answers"; die "the OJS installer failed; its output is in $ANSWERS_DIR/install.log (mode 600, check it, then delete the directory)"
     fi
     cleanup_answers
+    # first login must change the initial password (OJS then redirects to the change-password form)
+    printf "UPDATE \`%s\`.users SET must_change_password=1 WHERE username='%s';\n" "$DB_NAME" "$ADMIN_USERNAME" | mariadb
+    chg "the administrator must change the initial password at the first login"
     # the installer ran as root: the web server's user must be able to write its cache and public files
     chown -R www-data:www-data "$WEBROOT/cache" "$WEBROOT/public" "$FILES_DIR"
     ok "installer finished; answers file removed"
@@ -205,6 +209,12 @@ stage_ojs_config() {
   grep -q '^changed' "$ANSWERS_DIR.set.txt" && chg "re-applied allowed_hosts / time_zone after the installer"
   rm -f "$ANSWERS_DIR.set.txt"
   chown root:www-data "$cfg"; chmod 640 "$cfg"
+  if grep -q '^ADMIN_PASSWORD=' "$ENV_FILE"; then
+    chg "remove the initial ADMIN_PASSWORD line from $ENV_FILE (the password is now only a hash in the database)"
+    local keep; keep="$(mktemp "$ENV_FILE.XXXXXX")"
+    grep -v '^ADMIN_PASSWORD=' "$ENV_FILE" >"$keep" || true
+    chown root:root "$keep"; chmod 600 "$keep"; mv -f "$keep" "$ENV_FILE"
+  fi
   python3 -I "$ROOT/scripts/check-live-config.py" "$cfg" --host "$HOST" --web-root "$WEBROOT" --owner root:www-data || die "the live config check failed (above): fix before continuing"
 }
 
@@ -282,6 +292,11 @@ stage_backup_cron() {
   ensure_rendered "$ROOT/infra/cron.d/worj.template" /etc/cron.d/worj 644 root:root
   ensure_copy "$ROOT/infra/logrotate/worj" /etc/logrotate.d/worj 644 root:root
   ensure_dir /var/backups/worj 700 root:root
+  # the cron job runs as www-data and appends here
+  if [ ! -f /var/log/worj-scheduler.log ] || [ "$(stat -c '%U:%G %a' /var/log/worj-scheduler.log)" != "www-data:adm 640" ]; then
+    chg "create /var/log/worj-scheduler.log (www-data:adm 640)"
+    [ "$CHECK" = 1 ] || { touch /var/log/worj-scheduler.log; chown www-data:adm /var/log/worj-scheduler.log 2>/dev/null || chown www-data:www-data /var/log/worj-scheduler.log; chmod 640 /var/log/worj-scheduler.log; }
+  fi
   ensure_content /etc/worj/backup.env 600 root:root <<CONF
 WORJ_DB_NAME=$DB_NAME
 WORJ_DB_DEFAULTS=/etc/worj/mysql-backup.cnf

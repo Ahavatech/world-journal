@@ -137,7 +137,10 @@ yes "the theme CSS is served (200)" has "$css_h" "200"
 for h in "Strict-Transport-Security: max-age=300" "X-Content-Type-Options: nosniff" "X-Frame-Options: SAMEORIGIN"; do
   yes "static file has $h" has "$css_h" "$h"
 done
-yes "static asset has a cache lifetime (7 days)" has "$css_h" "max-age=604800"
+yes "THEME files are cached for one hour only (OJS versions them with the OJS version, not the theme's)" has "$css_h" "max-age=3600"
+core_h="$(hdr "$S/lib/pkp/styles/fontawesome/fontawesome.css")"
+yes "OJS core static files are cached for 7 days (their ?v= changes on an OJS upgrade)" has "$core_h" "max-age=604800"
+yes "theme images (no version at all) are also one hour" has "$(hdr "$S/plugins/themes/worj/assets/img/logo-header.jpg")" "max-age=3600"
 yes "the HTML page has no 7-day Cache-Control (OJS sends: $(grep -i '^cache-control:' <<<"$home_h" | tr -d '\r'))" lacks "$(grep -i '^cache-control:' <<<"$home_h")" "max-age=604800"
 yes "public page sends CSP Report-Only" has "$home_h" "Content-Security-Policy-Report-Only:"
 yes "public page never sends an ENFORCING CSP" bash -c "! grep -qiE '^Content-Security-Policy:' <<<'$home_h'"

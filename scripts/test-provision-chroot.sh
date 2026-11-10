@@ -215,6 +215,26 @@ yes "mysql-backup.cnf and secrets.env are mode 600" bash -c "[ \"\$(stat -c %a '
 inch /usr/local/sbin/worj-backup --env /etc/worj/backup.env --check >"$log/backup-check.out" 2>&1; rc=$?
 yes "the installed backup script runs in --check mode (exit $rc)" eq "$rc" 0
 
+echo "=== 6b. regression checks for what the first chroot runs found, plus the password and scheduler decisions"
+yes "the initial ADMIN_PASSWORD line was REMOVED from provision.env after the install" eq "$(grep -c '^ADMIN_PASSWORD=' "$RUN/etc/worj/provision.env")" 0
+yes "...and the settings file is still root-only (mode 600)" eq "$(stat -c '%a %U:%G' "$RUN/etc/worj/provision.env")" "600 root:root"
+yes "...while SMTP_PASSWORD is still there (needed later)" grep -q '^SMTP_PASSWORD=' "$RUN/etc/worj/provision.env"
+yes "the administrator MUST change the initial password at the first login (must_change_password = 1)" eq "$(inch mariadb -N -e "select must_change_password from $dbname.users where username='journalops'")" 1
+yes "REGRESSION the installer ran as root, yet cache/, public/ and files_dir belong to www-data (nothing in them is root-owned)" eq "$(find "$RUN/var/www/worj/cache" "$RUN/var/www/worj/public" "$RUN/var/lib/worj/files" ! -user www-data 2>/dev/null | wc -l)" 0
+yes "REGRESSION the installed code tree outside cache/ and public/ is root-owned (nothing writable by the web user)" eq "$(find "$RUN/var/www/worj" \( -path "$RUN/var/www/worj/cache" -o -path "$RUN/var/www/worj/public" \) -prune -o ! -user root -print 2>/dev/null | wc -l)" 0
+yes "REGRESSION no second allowed_hosts line (the installer appends one): exactly one, the real domain" bash -c "[ \$(grep -c '^allowed_hosts' '$cfg') = 1 ] && grep -q \"^allowed_hosts = '\\[\\\"journal.example.org\\\"\\]'\" '$cfg'"
+yes "REGRESSION no python3 problem: the provision log never mentions a missing interpreter" bash -c "! grep -qi 'python3: not found\|command not found' '$log'/full-1.out '$log'/stages-1.out"
+yes "scheduled tasks come from cron: task_runner Off, job_runner Off, process_jobs_at_task_scheduler On" bash -c "grep -q '^task_runner = Off' '$cfg' && grep -q '^job_runner = Off' '$cfg' && grep -q '^process_jobs_at_task_scheduler = On' '$cfg'"
+yes "the cron file runs the OJS scheduler every minute as www-data" grep -qE '^\* \* \* \* \* www-data cd /var/www/worj && php lib/pkp/tools/scheduler.php run' "$RUN/etc/cron.d/worj"
+inch su -s /bin/sh www-data -c "cd /var/www/worj && php lib/pkp/tools/scheduler.php list" >"$log/sched-list.out" 2>&1; rc=$?
+yes "the scheduler command from the cron line works as www-data (list: exit $rc)" eq "$rc" 0
+for t in ReviewReminder StatisticsReport EditorialReminders UsageStatsLoader ProcessQueueJobs; do
+  yes "...and it lists the task $t" grep -q "$t" "$log/sched-list.out"
+done
+inch su -s /bin/sh www-data -c "cd /var/www/worj && php lib/pkp/tools/scheduler.php run" >"$log/sched-run.out" 2>&1; rc=$?
+yes "...and a run exits cleanly (exit $rc)" eq "$rc" 0
+yes "theme CSS is cached one hour only through the rendered Nginx (OJS versions it with the OJS version)" bash -c "$(declare -f cu); H=$H; cu -o /dev/null -D - https://$H/plugins/themes/worj/assets/css/base.css | tr -d '\r' | grep -qi 'cache-control: max-age=3600'"
+
 echo "=== 7. secret hygiene: where do the secrets appear?"
 db_pw="$(sed -n 's/^DB_PASSWORD=//p' "$RUN/etc/worj/secrets.env")"
 salt="$(sed -n 's/^salt = "\(.*\)"$/\1/p' "$cfg")"; api="$(sed -n 's/^api_key_secret = "\(.*\)"$/\1/p' "$cfg")"
@@ -224,7 +244,7 @@ leak() { # name value : files under the chroot (and the logs) that contain it, e
   hits="$( { grep -rlF --exclude-dir=proc --exclude-dir=dev --exclude-dir=sys --exclude-dir=worj-src -e "$val" "$RUN" 2>/dev/null; grep -lF -e "$val" "$log"/*.out "$log/cmdlines.txt" 2>/dev/null; } | sed "s#^$RUN##" | sort -u | grep -v -E "$allowed" || true)"
   if [ -z "$hits" ]; then ok "$name appears only where it must ($allowed)"; else bad "$name leaked into: $(echo "$hits" | tr '\n' ' ')"; fi
 }
-leak "the administrator password" "$ADMIN_PW" '^/etc/worj/provision\.env$'
+leak "the administrator password (it must be GONE from provision.env too)" "$ADMIN_PW" '^$'
 leak "the SMTP password" "$SMTP_PW" '^/etc/worj/provision\.env$|^/var/www/worj/config\.inc\.php$'
 leak "the database password" "$db_pw" '^/etc/worj/secrets\.env$|^/etc/worj/mysql-backup\.cnf$|^/var/www/worj/config\.inc\.php$'
 leak "the salt" "$salt" '^/var/www/worj/config\.inc\.php$'

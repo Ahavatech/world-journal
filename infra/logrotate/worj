@@ -1,5 +1,5 @@
 # /etc/logrotate.d/worj
-/var/log/worj-backup.log /var/log/worj-cloudflare-ips.log {
+/var/log/worj-backup.log /var/log/worj-cloudflare-ips.log /var/log/worj-scheduler.log {
     weekly
     rotate 8
     compress

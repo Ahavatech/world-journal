@@ -10,6 +10,7 @@ It is the production gate behind Phase 5.1b and Phase 8.3. It fails on:
   - `api_key_secret` empty, a leftover token, or under 32 chars
   - `allowed_hosts` empty or `[""]` (the installer's value, which rejects every request), or missing --host
   - `time_zone` blank
+  - `task_runner` On or `process_jobs_at_task_scheduler` Off (scheduled tasks run from cron, see infra/cron.d/worj.template)
   - `base_url` not https, or still the shipped PKP URL or a token
   - `force_ssl` / `force_login_ssl` not On, `restful_urls` not On
   - `show_stacktrace` or `display_errors` On
@@ -91,6 +92,8 @@ def main():
     check("security.force_ssl", on("security.force_ssl"), "must be On")
     check("security.force_login_ssl", on("security.force_login_ssl"), "must be On")
     check("general.restful_urls", on("general.restful_urls"), "must be On (clean URLs)")
+    check("schedule.task_runner", not on("schedule.task_runner"), "must be Off: scheduled tasks run from cron (a quiet site misses tasks otherwise)")
+    check("queues.process_jobs_at_task_scheduler", on("queues.process_jobs_at_task_scheduler"), "must be On: queued emails are processed by the cron scheduler")
     check("debug.show_stacktrace", not on("debug.show_stacktrace"), "must be Off in production")
     check("debug.display_errors", not on("debug.display_errors"), "must be Off in production")
     files_dir = bare(cfg.get("files.files_dir", ""))

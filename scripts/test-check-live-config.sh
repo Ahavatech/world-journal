@@ -31,6 +31,10 @@ force_ssl = On
 force_login_ssl = On
 salt = "k3Jf9sLx02QpVbn7TzR4wYhA81mCdEuGq9Ws5Xe7"
 api_key_secret = "Vn3Tq8Lm0Rz5Xc2Bw7Yd4Hs9Je6Pk1Af8Ug3Ny5"
+[schedule]
+task_runner = Off
+[queues]
+process_jobs_at_task_scheduler = On
 [debug]
 show_stacktrace = Off
 display_errors = Off
@@ -62,6 +66,8 @@ mutate "installed Off" 's/^installed = On/installed = Off/' "general.installed"
 mutate "empty app_key" 's/^app_key = .*/app_key =/' "general.app_key"
 mutate "force_ssl Off" 's/^force_ssl = On/force_ssl = Off/' "security.force_ssl"
 mutate "plain http base_url" 's#^base_url = .*#base_url = "http://journal.example.org"#' "general.base_url"
+mutate "the web task runner left On (quiet sites miss daily tasks)" 's/^task_runner = Off/task_runner = On/' "schedule.task_runner"
+mutate "queued jobs not processed by the scheduler" 's/^process_jobs_at_task_scheduler = On/process_jobs_at_task_scheduler = Off/' "queues.process_jobs_at_task_scheduler"
 mutate "restful_urls Off" 's/^restful_urls = On/restful_urls = Off/' "general.restful_urls"
 mutate "show_stacktrace On" 's/^show_stacktrace = Off/show_stacktrace = On/' "debug.show_stacktrace"
 mutate "files_dir inside the web root" 's#^files_dir = .*#files_dir = /var/www/worj/files#' "files.files_dir"

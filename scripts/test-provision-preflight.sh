@@ -121,5 +121,37 @@ rc="$(run "$UB" --env "$tmp/good.env" --os 24.04 --check --stage php)"
 yes "a single stage can be checked (exit $rc)" eq "$rc" 0
 yes "...and it lists the stages it ran (preflight is added)" bash -c "grep -q '== stage: preflight' '$tmp/out.txt' && grep -q '== stage: php' '$tmp/out.txt'"
 
+echo "=== regression tests for bugs the chroot run found (each one must keep failing without its fix)"
+# 1. a minimal image has no python3: preflight must say so instead of failing deep inside a stage
+mkdir -p "$tmp/nopy"; ln -sf "$(command -v dirname)" "$tmp/nopy/dirname"; ln -sf "$(command -v id)" "$tmp/nopy/id"
+WORJ_OS_RELEASE="$UB" env PATH="$tmp/nopy" /bin/bash "$P" --env "$tmp/good.env" --os 24.04 --check >"$tmp/out.txt" 2>&1; rc=$?
+yes "REGRESSION no python3 on the image: refused with a clear message (exit $rc)" bash -c "[ '$rc' = 1 ] && grep -q 'python3 is required' '$tmp/out.txt'"
+# 2. the dev OJS tree has a plugins/themes/worj symlink: it must not be copied, and the theme must be a real directory
+mkdir -p "$tmp/src2/plugins/themes" "$tmp/theme2"; : >"$tmp/src2/index.php"; ln -s /nonexistent/dev/worj "$tmp/src2/plugins/themes/worj"; : >"$tmp/src2/config.inc.php"; echo "theme file" >"$tmp/theme2/version.xml"
+mkenv "$tmp/rs.env" "OJS_SRC=$tmp/src2" "THEME_SRC=$tmp/theme2" "WEBROOT=$tmp/web2" "FILES_DIR=$tmp/files2"
+rc="$(run "$UB" --env "$tmp/rs.env" --os 24.04 --stage ojs-code)"
+yes "REGRESSION ojs-code with a dev theme symlink in the source succeeds (exit $rc)" eq "$rc" 0
+yes "...the symlink was not copied: the theme is a real directory with its file" bash -c "[ ! -L '$tmp/web2/plugins/themes/worj' ] && [ -f '$tmp/web2/plugins/themes/worj/version.xml' ]"
+yes "...the source's own config.inc.php was not copied" test ! -e "$tmp/web2/config.inc.php"
+rc="$(run "$UB" --env "$tmp/rs.env" --os 24.04 --stage ojs-code)"
+yes "...a second run changes nothing" grep -q '^   -> unchanged' "$tmp/out.txt"
+yes "...cache/ and public/ belong to the web user (the installer runs as root, so this must be explicit elsewhere)" eq "$(stat -c '%U' "$tmp/web2/cache" "$tmp/web2/public" | sort -u | tr '\n' ' ')" "www-data "
+# 3. the Cloudflare stage must not run `nginx -t` before our site includes the file (a stock default site can fail it)
+mkdir -p "$tmp/stub"; printf '#!/bin/sh\necho "nginx stub: test failed" >&2\nexit 1\n' >"$tmp/stub/nginx"; chmod +x "$tmp/stub/nginx"
+cf=/etc/nginx/worj-cloudflare-realip.conf; cfsite=/etc/nginx/conf.d/worj.conf
+had_cf=0; [ ! -e "$cf" ] || { had_cf=1; cp -p "$cf" "$tmp/cf.orig"; }; had_site=0; [ ! -e "$cfsite" ] || { had_site=1; cp -p "$cfsite" "$tmp/site.orig"; }
+mkdir -p /etc/nginx/conf.d; rm -f "$cf" "$cfsite"
+mkenv "$tmp/cf.env" "CLOUDFLARE_SOURCE=file://$root/scripts/fixtures/cloudflare/good"
+PATH="$tmp/stub:$PATH" rc="$(run "$UB" --env "$tmp/cf.env" --os 24.04 --stage cloudflare-ip)"
+yes "REGRESSION first run: a failing 'nginx -t' (nothing includes the file yet) does not block the ranges file (exit $rc)" bash -c "[ '$rc' = 0 ] && [ -f $cf ]"
+cp -p "$cf" "$tmp/cf.good"; printf '# real-ip from /etc/nginx/worj-cloudflare-realip.conf\n' >"$cfsite"
+mkdir -p "$tmp/cfalt"; { cat "$root/scripts/fixtures/cloudflare/good/ips-v4"; echo 198.51.100.0/24; } >"$tmp/cfalt/ips-v4"
+cp "$root/scripts/fixtures/cloudflare/good/ips-v6" "$tmp/cfalt/"
+mkenv "$tmp/cf2.env" "CLOUDFLARE_SOURCE=file://$tmp/cfalt"
+PATH="$tmp/stub:$PATH" rc="$(run "$UB" --env "$tmp/cf2.env" --os 24.04 --stage cloudflare-ip)"
+yes "once our site includes the file, the config test IS run: a failing one stops the run (exit $rc)" eq "$rc" 1
+yes "...and the previous ranges file is restored byte for byte" cmp -s "$cf" "$tmp/cf.good"
+rm -f "$cf" "$cfsite"; [ "$had_cf" = 0 ] || cp -p "$tmp/cf.orig" "$cf"; [ "$had_site" = 0 ] || cp -p "$tmp/site.orig" "$cfsite"
+
 if [ "$fail" = 0 ]; then echo "ALL PASS"; else echo "$fail FAILED"; fi
 exit "$fail"

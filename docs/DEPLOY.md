@@ -20,16 +20,30 @@ Defaults are what the scripts do when nobody decides. The owner's view is a reco
 | # | Decision | Default in the scripts | Recommendation |
 |---|---|---|---|
 | P1 | Main host: apex or `www` | none: both host names are required and must differ | either works if the other redirects and the certificate covers both |
-| P2 | Certificate: Cloudflare Origin CA, or certbot | `CERT_METHOD=origin` (you place the files) | Origin CA is simplest while the site stays proxied; choose certbot DNS-01 instead if the client might leave Cloudflare, because an origin certificate shows browser errors the moment the proxy is paused. Only `origin` and certbot **HTTP-01** are implemented; DNS-01 is not scripted |
-| P3 | Firewall: 80/443 open to all, or only to Cloudflare | open to all (`FIREWALL_CLOUDFLARE_ONLY=no`) | open during setup; restrict to Cloudflare once the site works behind it, so the origin cannot be reached directly with the rate limits bypassed. This blocks direct-IP testing. Only the IPv4 ranges are used (the origin listens on IPv4 only) |
+| P2 | Certificate: Cloudflare Origin CA, or certbot **HTTP-01** (these are the only two implemented) | `CERT_METHOD=origin` (you place the files) | Origin CA is simplest while the site stays proxied. Choose certbot HTTP-01 if the client might leave Cloudflare: an origin certificate shows browser errors the moment the proxy is paused. HTTP-01 needs the host name to resolve to this server (proxy set to "DNS only") for the first issuance |
+| P3 | Firewall: 80/443 open to all, or only to Cloudflare (**do not create AAAA records unless Nginx is configured for IPv6**: the origin listens on IPv4 only) | open to all (`FIREWALL_CLOUDFLARE_ONLY=no`) | open during setup; restrict to Cloudflare once the site works behind it, so the origin cannot be reached directly with the rate limits bypassed. This blocks direct-IP testing. Only the IPv4 ranges are used (the origin listens on IPv4 only) |
 | P4 | HSTS | `max-age=300`, no preload, no `includeSubDomains` | raise in stages by hand; no preload at launch |
 | P5 | Swap file | none | reasonable on a small VPS (not scripted: add it by hand) |
 | P6 | Time zone | **none: the script refuses to run without one** | the client's choice |
 | P7 | Cloudflare Access in front of `/index/admin` | not used | optional, only after the plain setup works, and it must not block `/api/` for logged-in users |
 | P8 | Backup remote versioning or object lock | not controlled by the scripts | **strongly recommended** (see Backups) |
-| P9 | Where OJS runs background jobs | the built-in web runners (shipped defaults) | cron (`php lib/pkp/tools/scheduler.php run`) is an untested alternative; no OJS cron line is installed |
-| P10 | `open_basedir` for PHP-FPM | not set | optional hardening that needs its own tested path list |
+| P9 | Where OJS runs scheduled tasks and queued jobs | **cron, every minute** (`/etc/cron.d/worj`); the web runners are switched off | decided from the source, see "Scheduled tasks" below |
+| P10 | `open_basedir` for PHP-FPM | not set | an **optional** hardening measure, not something we claim: it needs its own tested path list (see Hardening notes) |
 | D21 | Bot protection (see the admin checklist) | none | `require_validation = On` plus Cloudflare rate limiting first; ALTCHA only if spam appears |
+
+## Scheduled tasks: why cron, and what a quiet site would miss
+
+Read from the pinned 3.5.0-6 source:
+
+- `lib/pkp/classes/core/ScheduleServiceProvider.php` (lines 46 to 65): with `[schedule] task_runner = On` (the shipped default) OJS registers a PHP shutdown function on an ordinary **web request**, and only if the last run is older than `task_runner_interval` (60 s). **Nothing runs unless a request arrives.**
+- The runner executes the Laravel scheduler, and `Illuminate\Console\Scheduling\Event::isDue` runs a task only when its **cron expression matches the current minute**. `daily()` is `0 0 * * *` and `monthlyOn(1)` is `0 0 1 * *` (`ManagesFrequencies::daily` is `hourBasedSchedule(0, 0)`). On a quiet site a daily or monthly task is skipped unless a request happens to land in that exact minute.
+- Tasks defined in `classes/scheduler/Scheduler.php` and `lib/pkp/classes/scheduledTask/PKPScheduler.php` that a low-traffic journal would miss: **daily** `ReviewReminder` (reviewer reminders), `UsageStatsLoader` (usage statistics), `DepositDois`, `OpenAccessNotification` (subscriptions), `RemoveFailedJobs`, `RemoveExpiredInvitations`; **monthly** `EditorialReminders`, `StatisticsReport` (the editorial statistics emails), `SubscriptionExpiryReminder`, `RemoveUnvalidatedExpiredUsers`, `UpdateRorRegistryDataset`, and on the 10th `UpdateIPGeoDB`. `ProcessQueueJobs` (queued emails) runs every minute only when `[queues] process_jobs_at_task_scheduler` is On.
+
+So the config template sets `task_runner = Off`, `job_runner = Off` and `process_jobs_at_task_scheduler = On`, and `/etc/cron.d/worj` runs `php lib/pkp/tools/scheduler.php run` every minute as `www-data` (log: `/var/log/worj-scheduler.log`). `check-live-config.py` fails if the web runner is left On. In the chroot test the exact cron command ran as `www-data`, listed the tasks above and exited cleanly; cron itself executing it is `UNVERIFIED (not run on VPS)`. Turning reminders on or off is a client decision (D4 in the admin checklist); the scheduler only makes them reliable.
+
+## Caching of theme files
+
+OJS appends `?v=<OJS application version>` to theme CSS and JS (`PKPTemplateManager.php`, lines 2224 and 2313), never the theme's own version, and theme images carry no version. A theme update therefore keeps the same URLs, so Nginx caches `/plugins/themes/` for **one hour** (clients then revalidate), while OJS core files, whose `?v=` changes on an OJS upgrade, are cached for 7 days. Cloudflare honours these `Cache-Control` values. After a theme update, purge the Cloudflare cache if the change must show at once.
 
 ## Content Security Policy: report-only means no protection
 
@@ -39,7 +53,7 @@ Nginx sends `Content-Security-Policy-Report-Only` on public pages and **no polic
 
 1. A VPS with **Ubuntu 24.04 LTS**, a provider **snapshot** taken now, and the provider's **browser console** (out-of-band rescue) tested once.
 2. Your own account (`OPERATOR_USER`) with sudo and your SSH **key** already working. Note the key login in the log: the SSH stage refuses without a recent `Accepted publickey`.
-3. DNS: the host names pointing at the VPS (through Cloudflare, proxied, when the site goes live).
+3. DNS: the host names pointing at the VPS (through Cloudflare, proxied, when the site goes live). **Create A records only. Do not create AAAA records unless Nginx is configured for IPv6**: the origin listens on IPv4 only, so an AAAA record would send some visitors to a port that does not answer.
 4. **An `age` key pair, made by the client, off the server**: `age-keygen -o worj-backup.key`. Give the server only the **public** key (`age1...`). The **private key never goes on the server** (the scripts refuse it); keep it in the client's password manager and in one offline copy.
 5. A backup bucket you own (rclone remote), with **versioning or object lock enabled**.
 6. Mail provider credentials: a **provider-issued app password or API credential**, never a personal mailbox password.
@@ -53,6 +67,10 @@ Rollback is never literal: package upgrades, database changes and a firewall loc
 ### 0. Snapshot
 
 Take a provider snapshot. **Rollback for everything below:** restore the snapshot (you lose changes made since).
+
+### 0b. Rehearse on a throwaway VPS first
+
+The firewall and SSH stages are the ones that can lock you out, and they were only stub-tested here. **Before the client's server, run the whole sequence (provision, firewall and SSH with the second-terminal confirmation, backup, restore rehearsal) end to end on a fresh disposable VPS** (take a provider snapshot first and rehearse the console rescue), fix what it shows, then repeat on the real one. A throwaway VPS costs very little compared with a lockout on the client's server. This is a Phase 8.3 launch-gate item.
 
 ### 1. Get the code
 
@@ -72,7 +90,7 @@ sudo install -m 600 infra/provision.env.example /etc/worj/provision.env
 sudoedit /etc/worj/provision.env        # replace every REPLACE value; no secret on a command line
 ```
 
-The file holds `ADMIN_PASSWORD` and `SMTP_PASSWORD` for the run: **delete the `ADMIN_PASSWORD` line when provisioning has finished.** The salt, the API key secret and the database password are not in this file; the script generates them.
+The file holds `ADMIN_PASSWORD` and `SMTP_PASSWORD`. **After a successful install the script removes the `ADMIN_PASSWORD` line itself** (the password then exists only as a hash in the database) and **forces a password change at the first login** (`must_change_password`); both are tested in the chroot run. `SMTP_PASSWORD` stays, because it is needed later: the file is root-only, mode 600; do not copy it anywhere. The salt, the API key secret and the database password are not in this file; the script generates them.
 
 ### 3. Dry run
 
@@ -185,6 +203,24 @@ scripts/restore.sh --bundle worj-YYYYmmddTHHMMSSZ.tar.age --identity worj-backup
 1. **Preferred:** a **second break-glass site administrator** account, created before launch, with its password in the client's password manager. The credential is held by **the client's named business owner** (and the operator holds nothing). Editors get the **Journal Manager** role, never the site administrator role.
 2. **Last resort, as root on the server:** `scripts/reset-ojs-admin-password.sh --config /var/www/worj/config.inc.php --username NAME` reads the new password on standard input (or a prompt), hashes it with the same function OJS uses (`password_hash` bcrypt cost 12, from the 3.5.0-6 source), updates `users.password` and sets `must_change_password`. Tested on the sandbox with a real OJS login. **Rehearse it on staging**, not for the first time during an outage. OJS 3.5.0-6 has no password-reset command line tool.
 3. OJS core has **no two-factor authentication** (checked in the source and the Plugin Gallery). Compensate with the rate limiting above, unique passwords in a password manager, and the key-only SSH rule.
+
+## Routine operation
+
+- **Reboots.** Unattended upgrades install security updates but **never reboot**, so a new kernel takes effect only after a reboot. Check `ls /var/run/reboot-required` (and `cat /var/run/reboot-required.pkgs`) at least monthly. **Operator monthly step:** if the file exists, reboot in a quiet window agreed with the editors (announce it first), then re-run the smoke tests below and confirm `systemctl is-active nginx php8.3-fpm mariadb`.
+- **Backups.** Watch `/var/backups/worj/last-success` with an external heartbeat; run a restore rehearsal before launch and after any backup change.
+- **Raise HSTS in stages** after launch (P4); purge the Cloudflare cache after a theme update.
+- **Theme updates:** re-run the `ojs-code` stage (it syncs the theme), then purge the Cloudflare cache.
+
+## Handover
+
+At handover the **developer's own administrator account is removed, or its ownership is transferred to the client** (a named person, a role address the client controls). Also: the break-glass administrator exists and its credential is held by the client's named business owner; the operator account and SSH keys are the client's choice; the Cloudflare, mail-provider and backup-bucket logins belong to the client; the age private key is with the client (the developer never needs it after the first rehearsal).
+
+## Hardening notes (optional measures; we do not claim them)
+
+- **`open_basedir`** for the PHP-FPM pool would limit which directories PHP may read. It is **not set**: it needs its own tested path list (the web root, `files_dir`, `/tmp`, PHP's own directories) and a full crawl, including uploads and the admin UI, before it is safe. Treat it as an optional extra.
+- **Content-Security-Policy** is report-only: no protection (see above).
+- **Cloudflare Access** in front of `/index/admin` (P7) and restricting 80/443 to Cloudflare (P3) are optional later steps.
+- OJS core has no two-factor authentication.
 
 ## Installing OJS: the CLI installer
 
