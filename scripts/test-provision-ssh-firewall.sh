@@ -73,6 +73,7 @@ mkenv() { # extra NAME=VALUE overrides
 HOST=journal.example.org
 ALT_HOST=www.journal.example.org
 TIME_ZONE=UTC
+ROBOTS_MODE=staging
 OPERATOR_USER=$user
 ADMIN_USERNAME=journalops
 ADMIN_EMAIL=ops@journal.example.org

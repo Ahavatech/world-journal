@@ -25,6 +25,7 @@ Read before starting work: `docs/01-SPEC.md` (what), `docs/02-ARCHITECTURE.md` (
 - Theme code: PHP namespaced classes, Smarty templates, plain CSS with custom properties, no frameworks, no CDN or remote fonts (self-host). Total theme CSS+JS budget: 150 KB uncompressed.
 - Accessibility target: WCAG 2.2 AA. Semantic HTML first.
 - Every public page must work with JavaScript disabled.
+- CI installs `poppler-utils` (`pdftotext`) and `libxml2-utils` (`xmllint`) before `make lint` because `scripts/test-check-pdf.sh` and `scripts/test-check-discovery.sh` need them; a missing tool makes those tests exit 2 and lint red.
 
 ## Working style (keeps usage low)
 - Plan first for anything touching more than 3 files; list the files, wait for approval.

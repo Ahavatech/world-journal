@@ -1,0 +1,7 @@
+# robots.txt for the live journal (ROBOTS_MODE=production). Rendered at provisioning; nothing here is secret.
+# Same rule as the file OJS 3.5.0-6 ships (only /cache/), plus the sitemap index. Nothing blocks article pages,
+# galleys, issue pages, /public/ or /plugins/themes/ (Google needs CSS and JS to render pages).
+User-agent: *
+Disallow: /cache/
+
+Sitemap: https://@@HOST@@/index/sitemap

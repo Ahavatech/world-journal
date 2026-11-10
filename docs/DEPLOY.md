@@ -167,6 +167,10 @@ OJS sends mail **from the Technical Support Contact address** (checklist step 6.
 3. Send a real "Validate Your Account" email through production (register a test account) and read the headers: SPF, DKIM and DMARC should pass.
 4. **Search Console:** add the property and publish the **verification TXT record** Google gives you at the DNS provider; then submit `https://HOST/sitemap` and inspect a real article URL (Phase 6.4).
 
+## Staging versus production: robots and noindex
+
+`ROBOTS_MODE` in `provision.env` has **no default** and the script refuses a missing or unknown value. **`staging`** serves `robots.txt` with `Disallow: /` and sends `X-Robots-Tag: noindex, nofollow` on every response; **`production`** serves the normal `robots.txt` (the shipped `Disallow: /cache/` plus `Sitemap: https://HOST/index/sitemap`) and no `X-Robots-Tag`. The classic launch failure goes both ways: a staging site that gets indexed, or a live site left on `noindex` and never found. `scripts/check-discovery.sh --robots-mode MODE https://HOST` fails if the site does not match its mode, and it is a **Phase 8.3 launch-gate item** (run with `--launch`). Switching a site from staging to production is: set `ROBOTS_MODE=production`, re-run the `nginx` stage, then run the check. Tested in the sandbox with the rendered Nginx (`make infra-test-nginx`); `UNVERIFIED (not run on VPS)`.
+
 ## Smoke tests (after stage 5 and again after Cloudflare)
 
 ```bash
@@ -179,8 +183,17 @@ curl -s https://HOST/index/login | grep -c 'name="username"'           # 1
 curl -sI https://HOST/ | grep -i -E 'strict-transport|x-content-type|content-security'
 curl -s https://HOST/JOURNAL/no-such-page | grep -c 'Page not found'   # 1 (static 404; JOURNAL is the journal path, so create the journal first)
 sudo python3 -I scripts/check-live-config.py /var/www/worj/config.inc.php --host HOST --web-root /var/www/worj --owner root:www-data
+sudo python3 -I scripts/check-live-config.py /var/www/worj/config.inc.php --host HOST --web-root /var/www/worj --owner root:www-data --launch   # Phase 8.3 gate only: also fails on any placeholder host (example, localhost, .invalid, sandbox)
 scripts/check-placeholders.sh --url https://HOST/JOURNAL        # must be empty at launch (Phase 8.3)
+sudo stat -c '%y' /var/log/worj-scheduler.log                   # modified within the last 2 minutes (the scheduler ran)
+sudo tail -n 3 /var/log/worj-scheduler.log                      # "Running [...]" lines with a time, no PHP errors
 ```
+
+**Scheduler check, because nothing else tells you it stopped.** The cron line runs the scheduler every minute and appends to `/var/log/worj-scheduler.log` (a rotated file, never mail: `MAILTO=""`). With `process_jobs_at_task_scheduler` On, each run prints at least one `Running [ProcessQueueJobs...]` line (Laravel `ScheduleRunCommand`: a run with nothing due prints `No scheduled commands are ready to run.` instead), so the log's modification time moves every minute. **If it stops, review reminders, statistics emails and queued emails stop silently**: no error page, no alert. Operator checks:
+
+1. After stage 4, wait two minutes and run the `stat` line above (`UNVERIFIED (not run on VPS)`).
+2. **After the first full day** (server time is the clock, daily tasks fire at 00:00): `sudo grep -a -c 'Running \[' /var/log/worj-scheduler.log` is in the hundreds, and `sudo grep -a 'Running' /var/log/worj-scheduler.log | grep -a -v ProcessQueueJobs | tail` shows the daily tasks (for example `ReviewReminder`, `UsageStatsLoader`).
+3. Repeat the `stat` line at every monthly reboot check, and put the log mtime on the same external heartbeat as the backup if the client wants an alert.
 
 ## Backups
 
@@ -209,7 +222,7 @@ scripts/restore.sh --bundle worj-YYYYmmddTHHMMSSZ.tar.age --identity worj-backup
 - **Reboots.** Unattended upgrades install security updates but **never reboot**, so a new kernel takes effect only after a reboot. Check `ls /var/run/reboot-required` (and `cat /var/run/reboot-required.pkgs`) at least monthly. **Operator monthly step:** if the file exists, reboot in a quiet window agreed with the editors (announce it first), then re-run the smoke tests below and confirm `systemctl is-active nginx php8.3-fpm mariadb`.
 - **Backups.** Watch `/var/backups/worj/last-success` with an external heartbeat; run a restore rehearsal before launch and after any backup change.
 - **Raise HSTS in stages** after launch (P4); purge the Cloudflare cache after a theme update.
-- **Theme updates:** re-run the `ojs-code` stage (it syncs the theme), then purge the Cloudflare cache.
+- **Theme updates:** re-run the `ojs-code` stage (it syncs the theme), then **purge the Cloudflare cache** (dashboard: Caching > Configuration > Purge Cache; purge everything, or the changed files by URL under `/plugins/themes/worj/`) `UNVERIFIED (not run on VPS)`. Without the purge, visitors may keep the old copy for up to one hour (the Nginx cache time for theme files) or longer in Cloudflare's own copy. Check with `curl -sI https://HOST/plugins/themes/worj/styles/main.css | grep -i -E 'cf-cache-status|age|cache-control'` after the purge (adjust the path to a real theme file).
 
 ## Handover
 

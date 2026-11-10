@@ -1,5 +1,13 @@
 # OJS routing and the deny rules. Regex locations are matched in file order: first match wins.
 
+# 0. robots.txt is a file written by the provisioning script (ROBOTS_MODE), not an OJS route.
+#    An exact-match location wins over every regex location below.
+location = /robots.txt {
+    root @@ERRORS_ROOT@@;
+    default_type text/plain;
+    expires 1h;
+}
+
 # 1. nothing hidden is ever served (the ACME challenge path is handled in the port 80 block)
 location ~ /\.(?!well-known/) { return 404; }
 

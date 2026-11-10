@@ -15,7 +15,7 @@
 #    Google Scholar accepts either), format YYYY/MM/DD
 #  - one citation_author per author (compared with DC.Creator.PersonalName)
 #  - citation_pdf_url must return a PDF (checked for URL input only)
-#  - citation_doi is optional (only when a DOI is assigned)
+#  - citation_doi is optional (only when a DOI is assigned); present but empty FAILS; not a bare DOI is a WARN
 set -uo pipefail
 
 placeholder_issn=0
@@ -99,8 +99,19 @@ else
   if [ "$head" = "%PDF-" ]; then pass "citation_pdf_url returns a PDF ($pdf)"; else fail "citation_pdf_url does not return a PDF ($pdf)"; fi
 fi
 
+# citation_doi: OPTIONAL (OJS adds it only when a DOI is assigned: GoogleScholarPlugin.php `if ($doi = $publication->getDoi())`).
+# If the tag is present its value must be non-empty. OJS emits the bare DOI ("10.1234/abc"), not a URL; anything else is a WARN.
+doi_tags="$(grep -c '<meta name="citation_doi"' "$tmp" || true)"
 doi="$(first citation_doi)"
-if [ -n "$doi" ]; then echo "INFO  citation_doi = $doi"; fi
+if [ "$doi_tags" -gt 0 ] && [ -z "$doi" ]; then
+  fail "citation_doi tag is present with an empty value (OJS omits the tag when there is no DOI)"
+elif [ -n "$doi" ]; then
+  if grep -Eq '^10\.[0-9]{4,9}/[^[:space:]]+$' <<<"$doi"; then
+    echo "INFO  citation_doi = $doi"
+  else
+    echo "WARN  citation_doi '$doi' is not a bare DOI (10.NNNN/suffix) as OJS 3.5.0-6 emits it"
+  fi
+fi
 
 if [ "$fails" -eq 0 ]; then echo "RESULT: PASS"; exit 0; fi
 echo "RESULT: FAIL ($fails)"
