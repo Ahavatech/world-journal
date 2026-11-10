@@ -198,6 +198,27 @@ yes "check-discovery in staging (closed) mode passes on the closed render (exit 
 echo "=== login page works behind the rules"
 yes "the login page has a username field" has "$(cu "$S/worj/login")" 'name="username"'
 
+echo "=== scripts/check-live-site.sh (the same matrix, for the real host) against this stand-in"
+CL=("$root/scripts/check-live-site.sh" --curl-arg -k --curl-arg --noproxy --curl-arg '*' --curl-arg --resolve --curl-arg "$H:443:127.0.0.1" --curl-arg --resolve --curl-arg "$H:80:127.0.0.1" --curl-arg --resolve --curl-arg "www.$H:443:127.0.0.1")
+install_web production
+"${CL[@]}" --robots-mode production "$S" >"$tmp/cl-prod.txt" 2>&1; rc=$?
+yes "check-live-site passes on the production render (exit $rc)" eq "$rc" 0
+[ "$rc" = 0 ] || sed 's/^/      /' "$tmp/cl-prod.txt" | grep -v '^      OK'
+"${CL[@]}" --robots-mode closed "$S" >/dev/null 2>&1; rc=$?
+yes "check-live-site in closed mode FAILS on the production render (exit $rc)" eq "$rc" 1
+install_web closed
+"${CL[@]}" --robots-mode closed "$S" >"$tmp/cl-closed.txt" 2>&1; rc=$?
+yes "check-live-site passes on the closed render in closed mode (exit $rc)" eq "$rc" 0
+"${CL[@]}" --robots-mode production "$S" >/dev/null 2>&1; rc=$?
+yes "check-live-site in production mode FAILS on the closed render (exit $rc)" eq "$rc" 1
+install_web production
+for pat in "Strict-Transport-Security" "RewriteRule (^|/)\\.(?!well-known/)" "RewriteRule ^(cache|tools|dbscripts" "RewriteRule ^index\\.php(?:/(.*))?\$"; do
+  cp "$core/.htaccess" "$tmp/htaccess.good"; grep -vF -- "$pat" "$tmp/htaccess.good" >"$core/.htaccess"
+  "${CL[@]}" --robots-mode production "$S" >/dev/null 2>&1; rc=$?
+  yes "check-live-site FAILS when a rule is missing ($pat; exit $rc)" eq "$rc" 1
+  cp "$tmp/htaccess.good" "$core/.htaccess"
+done
+
 echo "=== mutation proof: remove each rule and the matching check must fail"
 install_web production
 mutate() { # name sed-delete-pattern probe...

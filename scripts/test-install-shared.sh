@@ -180,6 +180,12 @@ yes "ADMIN_PASSWORD was removed from the env file" bash -c "! grep -q '^ADMIN_PA
 yes "the env file is still mode 600" test "$(stat -c %a "$tmp/env")" = 600
 yes "--finish printed no secret" bash -c "! grep -qE '$dbp|$ADMINPW|smtp-secret' '$tmp/finish.txt'"
 
+echo "=== --launch-check (the launch gate)"
+I --env "$tmp/env" --launch-check >"$tmp/launch.txt" 2>&1; rc=$?
+yes "--launch-check FAILS on a placeholder host (journal.example.org; exit $rc)" test "$rc" = 1
+yes "...naming the placeholder host rule" grep -qi 'placeholder host' "$tmp/launch.txt"
+yes "--launch-check printed no secret" bash -c "! grep -qE '$dbp|$ADMINPW|smtp-secret' '$tmp/launch.txt'"
+
 echo "=== re-run is idempotent"
 sum1="$(sha256sum "$cfg" | cut -d' ' -f1)"
 I --env "$tmp/env" >"$tmp/again.txt" 2>&1; rc=$?

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Install OJS on the shared host from YOUR machine, after scripts/deploy-shared.sh has sent the release.
 #
-#   scripts/install-shared.sh [--env FILE] [--check] [--finish]       default env file: .env.shared (see infra/shared-hosting/install.env.example)
+#   scripts/install-shared.sh [--env FILE] [--check] [--finish] [--launch-check]       default env file: .env.shared (see infra/shared-hosting/install.env.example)
 #
 # What it does, in order (each step is skipped when already done, so it can be re-run):
 #   1. preflight over ssh: PHP >= 8.2 and the extensions OJS needs, on the SAME php the installer will use
@@ -12,17 +12,20 @@
 # Then, after scripts/seed-shared.sh (which logs in with the initial password):
 #   scripts/install-shared.sh --finish     make the administrator change the initial password at the first login, and
 #                                          remove ADMIN_PASSWORD from the env file
+#   scripts/install-shared.sh --launch-check   pull config.inc.php and run check-live-config.py --launch (the launch gate 2.1):
+#                                          fails on a placeholder host anywhere in it
 # --check prints WOULD: lines and changes nothing (it does read the host: php version, whether OJS is installed).
 # Nothing secret is printed or put on a command line. UNVERIFIED (not run on the host): see docs/DEPLOY-SHARED.md.
 set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-envfile="$root/.env.shared"; check=0; finish=0
+envfile="$root/.env.shared"; check=0; finish=0; launch=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --env) envfile="${2:-}"; shift 2 ;;
     --check) check=1; shift ;;
     --finish) finish=1; shift ;;
-    *) echo "usage: $0 [--env FILE] [--check] [--finish]" >&2; exit 2 ;;
+    --launch-check) launch=1; shift ;;
+    *) echo "usage: $0 [--env FILE] [--check] [--finish] [--launch-check]" >&2; exit 2 ;;
   esac
 done
 die() { echo "FAIL  $*" >&2; exit 1; }
@@ -51,6 +54,13 @@ rsh=""; for a in "${sshbase[@]}"; do rsh="$rsh '$a'"; done
 
 tmp="$(mktemp -d)"; chmod 700 "$tmp"
 trap 'rm -rf -- "${tmp:?}"' EXIT
+
+if [ "$launch" = 1 ]; then
+  remote "cat $(printf '%q' "$cfg")" >"$tmp/live.inc.php" || die "cannot read config.inc.php on the host"
+  chmod 600 "$tmp/live.inc.php"
+  python3 -I "$root/scripts/check-live-config.py" "$tmp/live.inc.php" --host "$HOST" --web-root "$webroot" --launch
+  exit $?
+fi
 
 # 1. preflight
 php_v="$(remote 'php -r "echo PHP_VERSION;"' 2>"$tmp/ssh.err")" || { sed 's/^/      /' "$tmp/ssh.err" >&2; die "cannot run php over ssh (is SSH on in hPanel, and the key added?)"; }
