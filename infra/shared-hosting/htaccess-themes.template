@@ -1,0 +1,8 @@
+# Theme files: OJS appends ?v=<OJS version> to theme CSS and JS, never the theme's own version, so a theme update keeps
+# the same URL. One hour (clients revalidate afterwards), not a week.
+<IfModule mod_expires.c>
+ExpiresActive On
+<FilesMatch "\.(css|js|map|woff2?|ttf|otf|eot|svg|ico|png|jpe?g|gif|webp|avif)$">
+ExpiresDefault "access plus 1 hour"
+</FilesMatch>
+</IfModule>

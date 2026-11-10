@@ -4,25 +4,24 @@
 // as the generated admin from .env.sandbox through Playwright.
 // Requires: `playwright` resolvable (preinstalled in the Claude sandbox).
 'use strict';
-const fs = require('fs');
 const { execFileSync } = require('child_process');
 const path = require('path');
 const { chromium } = require('playwright');
 const { guarded, assertId } = require('./lib/sandbox-guard');
 
-const root = path.resolve(__dirname, '..');
-const env = Object.fromEntries(
-  fs.readFileSync(path.join(root, '.env.sandbox'), 'utf8').trim().split('\n')
-    .map((l) => l.split(/=(.*)/s).slice(0, 2)));
-const base = process.env.SANDBOX_URL || 'http://127.0.0.1:8082';
+const target = require('./lib/target');
+
+const t = target.load();
+const base = t.base;
 
 async function main() {
+  await target.assertAllowed(t);
   const browser = await chromium.launch();
   const ctx = await browser.newContext();
   const page = await ctx.newPage();
   await page.goto(`${base}/index/login`);
-  await page.fill('input[name=username]', env.SANDBOX_ADMIN_USER);
-  await page.fill('input[name=password]', env.SANDBOX_ADMIN_PASSWORD);
+  await page.fill('input[name=username]', t.user);
+  await page.fill('input[name=password]', t.pass);
   await Promise.all([page.waitForEvent('load'), page.click('button[type=submit]')]);
   await page.goto(`${base}/index/admin/contexts`);
   const csrf = await page.evaluate(() => document.querySelector('meta[name=csrf-token]')?.content);
@@ -76,7 +75,8 @@ async function main() {
   }
   const here = __dirname;
   execFileSync('node', [path.join(here, 'sandbox-content.js'), '--force-sandbox'], { stdio: 'inherit' });
-  execFileSync('php', [path.join(here, 'import-pages.php'), '--journal=worj'], { stdio: ['ignore', 'inherit', 'ignore'] });
+  // on the host the custom pages are imported by scripts/seed-shared.sh (php over ssh)
+  if (!t.remote) execFileSync('php', [path.join(here, 'import-pages.php'), '--journal=worj'], { stdio: ['ignore', 'inherit', 'ignore'] });
 
   // Sidebar state for layout testing: SANDBOX_SIDEBAR=blocks (default) | none | empty
   //   blocks: Make a Submission + Information (the information texts come from the content step)

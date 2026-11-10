@@ -1,5 +1,7 @@
 # Launch blockers
 
+> **Reworked for shared hosting (2026-11-10).** Decision **D-VPS is resolved**: there is no VPS (the client bought shared hosting, `docs/DEPLOY-SHARED.md`) and no staging site; the closed main domain is the rehearsal. Rows below about the firewall, SSH hardening, certbot, Cloudflare and the reboot step were replaced by their shared-hosting versions; four new rows (A35 to A38) hold the open items the change created. Everything about the host is `UNVERIFIED (not run on the host)`.
+
 Every human step that nobody can do from the repository, in one table per kind, so the handover does not depend on anyone's memory. **Nothing in this file is done.** A row is ticked only by the person who did it, with a date and a name, and only after the "how we know" check passed.
 
 - **Owner:** *client*, *developer*, *operator* (whoever runs the server: normally the developer unless the client names someone else), or a **named third party** (for example Crossref support, a sponsor, the hosting provider, the mail provider).
@@ -25,42 +27,46 @@ Every human step that nobody can do from the repository, in one table per kind, 
 | A08 | **Submission checklist and reviewer guidelines** | client | | Keep OJS's shipped checklist or give approved text (D10); give reviewer guidelines or accept the shipped "no guidelines" screen | Recorded in the decision table | **Yes** | checklist D10, `docs/QA-SCRIPT.md` B1, QF5 |
 | A09 | **A client reviewer reads every enabled email template** | client | | One named reviewer reads each enabled template in full; no timeframe or policy claim they have not approved | A signed record with name and date | **Yes** | gate 4.2 |
 | A10 | **When submissions open** | client | | The date or event after which "Disable Submissions" is switched off | The option is off at launch | **Yes** | gate 4.6 |
-| A11 | **Deployment decisions P1 to P10 and D21** | client | | Main host, certificate method, firewall mode, HSTS, swap, time zone, Cloudflare Access, backup lock, `open_basedir`, bot protection (each has a default and a recommendation) | Each row answered in writing | **Yes** | `docs/DEPLOY.md`, "Decisions the client must make" |
+| A11 | **Deployment decisions** | client | | The canonical host (**decided: `worldopenresearchjournal.com`, no www**), Cloudflare (**decided: not at launch**), staging (**decided: none**), the **time zone** (never assumed), HSTS stages, backup cadence and owner (A38), the remote backup lock, bot protection after launch (no Cloudflare rate limit exists) | Each remaining row answered in writing | **Yes** | `docs/DEPLOY-SHARED.md`, `docs/DEPLOY.md` "Decisions the client must make" (VPS-era wording) |
 | A12 | **Testers for the QA script, with inboxes they control** | client | | One or more named testers and their own addresses | The testers are named before the QA run | **Yes** | `docs/QA-SCRIPT.md` |
 
 ### A2. Accounts and access
 
 | ID | Item | Owner | Named person | What is needed | How we know it is done | Gates the launch date? | Documented in |
 |---|---|---|---|---|---|---|---|
-| A13 | **The VPS account** (the developer does not pay for hosting) | client | | A VPS with Ubuntu 24.04 LTS at a provider the client pays, snapshot ability, and the provider's **browser console** login | The VPS exists; the console login was used once | **Yes** | `docs/DEPLOY.md` stage 0 |
-| A14 | **Domain, DNS and Cloudflare access** | client | | Rights to create A records (no AAAA unless Nginx is set up for IPv6) and to configure the Cloudflare zone, shared with the operator | Records live; the operator can change Cloudflare settings | **Yes** | gate 2.5, 2.7 |
+| A13 | **The hosting account and SSH access** (the plan is bought) | client, with the operator | | SSH switched on in hPanel with the operator's **public** key; the user, port and real home path written down; PHP 8.3 and the extensions enabled; a database and its user created | `scripts/install-shared.sh --check` passes its PHP and extension preflight | **Yes** | `docs/DEPLOY-SHARED.md` runbook |
+| A14 | **Domain and DNS access** (no Cloudflare at launch) | client | | Rights to edit the domain's DNS at Hostinger (A record for the host, `www` reaching it) without touching the mailbox's SPF and DKIM records | Records live; gate 2.5 | **Yes** | gate 2.5 |
 | A15 | **Mail provider account and SMTP credential** | client, with the mail provider | | A provider-issued app password or API credential, never a personal mailbox password | Gate 5.1 passes | **Yes** | `docs/DEPLOY.md`, gate 5.1 |
-| A16 | **The age key pair** | client | | The client generates it off the server; only the **public** key goes to the operator | Gate 3.1: no private key on the server | **Yes** | `docs/DEPLOY.md` "Before you start" |
+| A16 | **The age key pair** | client | | The client generates it off the host and off the operator's disk where possible; only the **public** key goes into `.env.shared` | Gate 3.1: no private key in `.env.shared` or on the host | **Yes** | `docs/DEPLOY-SHARED.md` "Backups" |
 | A17 | **Backup bucket and versioning or object lock** | client decides, operator sets | | A bucket the client owns, with the retention choice written down | Gate 3.4 | **Yes** | decision P8, gate 3.4 |
 | A18 | **Break-glass administrator and credential holder** | client | | A named business owner holds the credential in a password manager | Gate 6.2 | **Yes** | `docs/DEPLOY.md` "Administrator recovery", gate 6.2 |
-| A19 | **The operator and their SSH key** | client names the operator | | A named person with a working SSH key (the developer unless the client says otherwise) | The SSH stage accepts the key login | **Yes** | `docs/DEPLOY.md` |
-| A20 | **Certificate files, or the certbot choice** | client / operator | | Cloudflare Origin CA files placed, or certbot HTTP-01 chosen | The nginx stage passes | **Yes** | decision P2 |
+| A19 | **The operator and their SSH key** | client names the operator | | A named person with a working SSH key on the host (the developer unless the client says otherwise) | The preflight in A13 passes from the operator's machine | **Yes** | `docs/DEPLOY-SHARED.md` |
+| A20 | **HTTPS certificate** | client / operator | | Hostinger's SSL is active for the domain (an `AGENT CLAIM`, not checked) and renews by itself | `scripts/check-live-site.sh` reaches `https://HOST` and the http to https redirect passes | **Yes** | gate 2.4 |
 
 ### A3. Rehearsal and server
 
 | ID | Item | Owner | Named person | What is needed | How we know it is done | Gates the launch date? | Documented in |
 |---|---|---|---|---|---|---|---|
-| **D-VPS** | **Decision: where the rehearsal runs.** (a) the client approves a **short-term second VPS** for the rehearsal, or (b) **rehearse on the real VPS** before any real content or DNS cutover, with a provider snapshot or a rebuild afterwards. **Trade-off:** (b) costs nothing extra but skips the safety of a separate machine, so a mistake in the firewall or SSH stage happens on the real server. **The console-rescue rehearsal is required either way.** | client | | An answer, a or b, in writing | The decision is recorded; gate 3.5 names the machine used | **Yes** | gate 3.5, `docs/DEPLOY.md` stage 0b |
-| A21 | **The full rehearsal and the console rescue** | operator | | Provision, firewall and SSH with the second-terminal confirmation, backup and restore, on the machine chosen in D-VPS; the console login used once | Gate 3.5 | **Yes** | gate 3.5 |
-| A22 | **A real backup restored with the client's key** | operator, with the client | | The operator restores a real backup using the client's private key, off the server | Gates 3.2 and 3.3 | **Yes** | `docs/DEPLOY.md` "Backups" |
-| A23 | **Smoke tests, Cloudflare settings, no AAAA records** | operator | | The `docs/DEPLOY.md` smoke tests; Cloudflare SSL Full (strict), rate limits, no challenge to crawlers | Gates 2.4, 2.5, 2.7, 2.8 | **Yes** | gates 2.4 to 2.8 |
+| **D-VPS** | **RESOLVED 2026-11-10: no VPS and no staging site.** The client bought shared hosting. The rehearsal is the full runbook run on the real domain while it is closed to search engines, with nothing real on it, and a Hostinger backup before risky steps. | client | | Done: answer given in writing in the session | Gate 3.5 names the closed main domain | **Yes** | gate 3.5, `docs/DEPLOY-SHARED.md` "No staging site" |
+| A21 | **The whole runbook run once on the closed site** | operator | | Build, deploy, install, seed, the host checks, a pulled backup and a restore rehearsal, and where Hostinger's own restore is started (read, not run on the live site) | Gate 3.5 | **Yes** | gate 3.5 |
+| A22 | **A real backup restored with the client's key** | operator, with the client | | The operator restores a real pulled backup using the client's private key, off the host | Gates 3.2 and 3.3 | **Yes** | `docs/DEPLOY-SHARED.md` "Backups" |
+| A23 | **Host checks and ModSecurity** | operator | | `scripts/check-live-site.sh`, DNS answers, the admin and upload steps on the closed site without a firewall block | Gates 2.4, 2.5, 2.7, 2.8 | **Yes** | gates 2.4 to 2.8 |
 | A24 | **The scheduler's first-day check** | operator | | The day after launch: the log shows daily tasks ran | Gate 2.6 | No (can follow: it is the day after launch) | gate 2.6 |
 | A25 | **First administrator password changed** | operator, client's administrator | | The forced change at first login | Gate 2.9 | **Yes** | gate 2.9 |
+| A35 | **The Day-0 results** | operator, with the client | | The checks in `docs/DEPLOY-SHARED.md` run on the host and the results table filled in: PHP extensions, `open_basedir`, `.htaccess` directives on LiteSpeed, shortest cron interval, tools on the host, SMTP, ModSecurity | Every row has a result, a date and a name; a failure is answered before the runbook goes on | **Yes** | `docs/DEPLOY-SHARED.md` Day-0 |
+| A36 | **The mailbox's SMTP limit and its price after the first free year** | client | | The current per-mailbox sending limit read from hPanel, and the renewal price recorded by the client (the plan page says the mailbox is free for the first year; the cost afterwards is not known here) | The limit is written down and the client has decided whether to keep the mailbox | No (before the first year ends) | `docs/DEPLOY-SHARED.md` |
+| A37 | **MariaDB 10.5's support status** | client asks Hostinger | | Whether the host's MariaDB 10.5 is still supported and when it is upgraded (OJS 3.5.0-6 needs MariaDB or MySQL 5.7.22+; the lifecycle is `UNVERIFIED`) | Hostinger's answer in writing | No (can follow) | `docs/DEPLOY-SHARED.md` |
+| A38 | **Who runs the pulled backup, how often, and where the age key lives** | client decides, operator runs | | A named person and a cadence (weekly at the least). Without cron on the host side, the recovery point is only as fresh as the last run; Hostinger's own 7 daily backups are not encrypted to the client's key | The decision is written down; gate 3.3 shows a bundle newer than the cadence | **Yes** | gate 3.3, `docs/DEPLOY-SHARED.md` "Backups" |
 
 ### A4. Real-domain checks
 
 | ID | Item | Owner | Named person | What is needed | How we know it is done | Gates the launch date? | Documented in |
 |---|---|---|---|---|---|---|---|
-| A26 | **`check-live-config.py ... --launch`** | operator | | The production config on the VPS | Gate 2.1: exit 0 | **Yes** | gate 2.1 |
+| A26 | **`install-shared.sh --launch-check`** | operator | | The production `config.inc.php` on the host | Gate 2.1: exit 0 | **Yes** | gate 2.1 |
 | A27 | **`check-discovery.sh --launch`, and the robots mode per site** | operator | | The live domain, with real content and no sample records | Gates 2.2 and 2.3: exit 0 | **Yes** | gates 2.2, 2.3 |
 | A28 | **A real validation email, and SPF, DKIM and DMARC passing** | operator, client (DNS and provider) | | A test registration on the live site; the sending domain's DNS records | Gates 5.1 and 5.2 | **Yes** | gates 5.1, 5.2 |
-| A29 | **The QA script run by a person** | client's tester, developer for fixes | | Every step run on staging and ticked with a date and a name | Gate 6.3 | **Yes** | `docs/QA-SCRIPT.md` |
-| A30 | **Canonical tag recheck on staging** | developer runs, client decides | | The staging site on the real domain | Gate 2.11: the result is written down (INFO, never a failure) | No (can follow; decision D25) | gate 2.11 |
+| A29 | **The QA script run by a person** | client's tester, developer for fixes | | Every step run on the closed site (there is no staging) and ticked with a date and a name | Gate 6.3 | **Yes** | `docs/QA-SCRIPT.md` |
+| A30 | **Canonical tag recheck on the live host** | developer runs, client decides | | The closed site on the real domain | Gate 2.11: the result is written down (INFO, never a failure) | No (can follow; decision D25) | gate 2.11 |
 | A31 | **Search Console verification and the sitemap** | client, developer assists | | A Domain property by DNS TXT; the sitemap index submitted | Gate 2.10 | No (can follow: the domain must be live first) | `docs/SEARCH-CONSOLE.md` |
 | A32 | **Support contact and the date the 14 days start** | developer supplies the contact; the start date is confirmed in writing at launch | | The contact's name and email; the written start date | `docs/HANDOVER.md` shows both with no BLOCKED left | **Yes** (the start date is written at launch) | `docs/HANDOVER.md` |
 | A33 | **The change request is signed** | developer sends, client signs | | A written change request covering the awards pages and the Crossref configuration if the client expects them inside the agreed price | Gate 6.4 | **Yes** | gate 6.4 |
@@ -72,7 +78,7 @@ Every human step that nobody can do from the repository, in one table per kind, 
 |---|---|---|---|---|---|---|---|
 | B01 | **Placeholders replaced and fixtures removed** | developer, with the client's text | | The client's content (A04 to A07) placed; fixtures not shipped | Gates 1.1 and 1.2: exit 0 | **Yes** | gates 1.1, 1.2 |
 | B02 | **The launch-day commit** removes `continue-on-error` and every `--placeholder-issn` caller | developer | | Done only after A01 | Gates 1.3 and 1.4, and **CI green on the head commit after the removal** | **Yes** | gates 1.3, 1.4 |
-| B03 | **Every suite on the release commit** | developer | | `make lint`, `make infra-test`, `make infra-test-nginx`, `make infra-test-backup`, `make infra-test-reset`, `make infra-test-chroot`, `make eval` | Gate 1.7: every exit code 0 | **Yes** | gate 1.7, `docs/PHASE8-NOTES.md` |
+| B03 | **Every suite on the release commit** | developer | | `make lint`, `make infra-test`, `make infra-test-day0`, `make infra-test-htaccess`, `make infra-test-install`, `make infra-test-backup`, `make infra-test-reset`, `make eval` | Gate 1.7: every exit code 0 | **Yes** | gate 1.7, `docs/PHASE8-NOTES.md` |
 | B04 | **Secret scan of the whole git history** | developer, client's reviewer reads the triage | | The procedure in `docs/LAUNCH-GATES.md` | Gate 1.8 | **Yes** | gate 1.8 |
 | B05 | **Deliver the repository, with the licence and copyright notice decided** | developer delivers, client confirms | | The repository transferred or the source handed over; licence and notice chosen (see D13) | Gate 1.9: the client confirms receipt in writing | **Yes** | gate 1.9 |
 | B06 | **Revoke tokens and deploy keys used by the Claude Code sessions** | developer | | A list of every key, token and installed app, and each revoked | Gate 1.10 | **Yes** | gate 1.10 |
@@ -88,7 +94,7 @@ Every human step that nobody can do from the repository, in one table per kind, 
 | C04 | **The canonical-tag hook, only if staging still shows none** | client decides, developer builds | | A written decision (D25); `make check-citation` before and after to show the citation tags did not change | The hook, if approved, passes both checks | No (can follow) | decision D25 |
 | C05 | **HSTS raised in stages** | operator | | A staged plan after a clean period; never preload at launch | `curl` shows the new value | No (can follow) | decision P4 |
 | C06 | **`open_basedir`** (optional hardening) | operator | | A tested path list | Documented as done, or not claimed | No (can follow) | decision P10 |
-| C07 | **Monthly reboot check and scheduler check** | operator | | A monthly calendar item | `ls /var/run/reboot-required` checked and logged each month | No (recurring) | `docs/HANDOVER.md` |
+| C07 | **Monthly plan check and scheduler check** | operator | | A monthly calendar item: the plan renewal date, the PHP version notices in hPanel, the scheduler log, the date of the last pulled backup | The four items checked and logged each month | No (recurring) | `docs/HANDOVER.md` |
 | C08 | **Phase 9 polish** | developer | | Only if a measurable problem appears after launch | A measured problem and a fix | No (skipped by default) | `autoresearch/program.md` |
 
 ## D. Research tasks for a person (not for the repository tooling)

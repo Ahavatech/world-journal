@@ -1,5 +1,7 @@
 # Deploying the journal to a VPS
 
+> **This is the VPS path, and it does not apply to this client.** The client's hosting is a shared plan: see `docs/DEPLOY-SHARED.md`. This file stays for a future VPS and for the reasoning behind the shared-hosting design. The scripts it names (`provision-ubuntu.sh`, the Nginx templates, `backup.sh`) are not used on shared hosting.
+
 **Nothing in this document has been run on a VPS.** Every step that touches a real server is `UNVERIFIED (not run on VPS)`. What was checked, and how, is in the table below; read it before trusting a step. The scripts exist so that a human runs them in a known order, with a way back at each stage.
 
 ## What was and was not tested

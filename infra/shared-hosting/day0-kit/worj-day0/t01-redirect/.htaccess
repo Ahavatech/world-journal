@@ -1,0 +1,2 @@
+RewriteEngine On
+RewriteRule ^go$ /worj-day0/t01-redirect/landing.txt [R=301,L]

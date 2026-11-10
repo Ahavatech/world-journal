@@ -1,0 +1,67 @@
+# World Open Research Journal: .htaccess for OJS 3.5 on shared hosting (LiteSpeed reads Apache rules).
+# Rendered by scripts/render-template.py (values on stdin) into public_html/.htaccess by scripts/build-release.sh.
+# Translates infra/nginx/*. Nothing secret is in this file. Value between double at-signs is filled at build time.
+# UNVERIFIED (not run on the host): tested against a stand-in Apache (scripts/test-htaccess-harness.sh), not LiteSpeed.
+# The Day-0 kit (infra/shared-hosting/day0-kit) shows on the real host which of these directives it honours.
+
+DirectoryIndex index.php
+Options -Indexes
+ServerSignature Off
+ErrorDocument 404 /_errors/404.html
+
+# --- security headers (HSTS starts short; a human raises it in stages, no preload, no includeSubDomains) ---
+<IfModule mod_headers.c>
+Header always set Strict-Transport-Security "max-age=@@HSTS_MAX_AGE@@"
+Header always set X-Content-Type-Options "nosniff"
+Header always set X-Frame-Options "SAMEORIGIN"
+Header always set Referrer-Policy "strict-origin-when-cross-origin"
+Header always set Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=()"
+# While the site is closed (ROBOTS_MODE=closed) ask crawlers to index nothing; at launch this line is a comment.
+@@ROBOTS_HEADER_LINE@@
+# Report-only: observation, not protection. Backend pages (Vue admin UI) get no policy: not measured.
+SetEnvIf Request_URI "^(/index\.php)?/[^/]+/(management|workflow|submission|dashboard|stats|tasks|api)(/|$)" NO_CSP=1
+SetEnvIf Request_URI "^(/index\.php)?/index/(admin|api)(/|$)" NO_CSP=1
+SetEnvIf Request_URI "\$\$\$call\$\$\$" NO_CSP=1
+Header always set Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'self'; form-action 'self'; base-uri 'self'; object-src 'none'" env=!NO_CSP
+</IfModule>
+
+# --- static assets: a week (OJS core files carry ?v=<OJS version>); theme files get one hour in plugins/themes/.htaccess ---
+<IfModule mod_expires.c>
+ExpiresActive On
+<FilesMatch "\.(css|js|map|woff2?|ttf|otf|eot|svg|ico|png|jpe?g|gif|webp|avif)$">
+ExpiresDefault "access plus 7 days"
+</FilesMatch>
+</IfModule>
+
+RewriteEngine On
+
+# --- 1. one canonical form: https on the main host (www and unknown hosts redirect too) ---
+RewriteCond %{HTTPS} !=on [OR]
+RewriteCond %{HTTP_HOST} !=@@HOST@@ [NC]
+RewriteRule ^ https://@@HOST@@%{REQUEST_URI} [R=301,L]
+
+# --- 2. /index.php/worj/about -> /worj/about, only for GET and HEAD (a 301 turns a POST into a GET).
+#        Matched on THE_REQUEST, so the internal rewrite in rule 7 does not loop. The query string is kept. ---
+RewriteCond %{THE_REQUEST} ^(GET|HEAD)\ /index\.php(/[^?\ ]*)?(\?[^\ ]*)?\ HTTP/
+RewriteRule ^index\.php(?:/(.*))?$ https://@@HOST@@/$1 [R=301,L]
+
+# --- 3. nothing hidden is ever served (.well-known is allowed) ---
+RewriteRule (^|/)\.(?!well-known/) - [R=404,L]
+
+# --- 4. only index.php runs PHP: any other script (also one uploaded into public/) is a 404, never run, never shown ---
+RewriteRule ^index\.php(/|$) - [L]
+RewriteRule \.(php[0-9]?|phtml|pht|phar)(/|$) - [R=404,L]
+
+# --- 5. configuration, templates, backups and source-like files, from any directory ---
+RewriteRule (^|/)config(\.TEMPLATE)?\.inc\.php$ - [NC,R=404,L]
+RewriteRule \.(tpl|inc|bak|old|orig|save|swp|sql|log|env|ini|dist|lock|sh|md|po|pot|yml|yaml)$ - [NC,R=404,L]
+RewriteRule (^|/)(composer\.json|composer\.lock|package(-lock)?\.json|Makefile)$ - [NC,R=404,L]
+
+# --- 6. directories that hold code or private data ---
+# lib/pkp/lib/vendor is NOT denied as a directory: the admin UI loads TinyMCE and Plupload from it.
+RewriteRule ^(cache|tools|dbscripts|registry|docs|classes|controllers|pages|jobs|schemas|templates|locale|plugins/[^/]+/[^/]+/(classes|templates|locale|schema|filter|controllers))(/|$) - [R=404,L]
+RewriteRule ^lib/pkp/(classes|controllers|pages|templates|schemas|locale|tools|registry|docs|jobs|xml|plugins/[^/]+/[^/]+/(classes|templates))(/|$) - [R=404,L]
+
+# --- 7. everything that is not a real file is an OJS route (restful_urls = On); directories never list ---
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^(.*)$ index.php/$1 [L,QSA]

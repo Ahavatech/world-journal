@@ -21,30 +21,26 @@ const root = path.resolve(__dirname, '..');
 const args = process.argv.slice(2);
 const dryRun = args.includes('--check');
 const force = args.includes('--force-sandbox');
-const base = process.env.SANDBOX_URL || 'http://127.0.0.1:8082';
+const target = require('./lib/target');
 
-const host = new URL(base).hostname.replace(/^\[|\]$/g, '').toLowerCase();
-if (!['localhost', '127.0.0.1', '::1'].includes(host)) {
-  console.error(`REFUSED: sandbox-content.js only runs against localhost (SANDBOX_URL host is '${host}').`);
-  process.exit(3);
-}
+const t = target.load();
+const base = t.base;
 
 const { chromium } = require('playwright');
 const { guarded, assertId } = require('./lib/sandbox-guard');
 const manifest = JSON.parse(fs.readFileSync(path.join(root, 'ojs/content/pages.json'), 'utf8'));
 const BANNER = '[PLACEHOLDER: replace with client-approved text]';
-const env = Object.fromEntries(
-  fs.readFileSync(path.join(root, '.env.sandbox'), 'utf8').trim().split('\n').map((l) => l.split(/=(.*)/s).slice(0, 2)));
 
 const isPlaceholderValue = (v) => /\[PLACEHOLDER|\.invalid/i.test(v) || /^Placeholder /.test(v);
 
 async function main() {
+  try { await target.assertAllowed(t); } catch (e) { console.error(e.message); process.exit(3); }
   const browser = await chromium.launch();
   const ctx = await browser.newContext();
   const page = await ctx.newPage();
   await page.goto(`${base}/index/login`);
-  await page.fill('input[name=username]', env.SANDBOX_ADMIN_USER);
-  await page.fill('input[name=password]', env.SANDBOX_ADMIN_PASSWORD);
+  await page.fill('input[name=username]', t.user);
+  await page.fill('input[name=password]', t.pass);
   await Promise.all([page.waitForEvent('load'), page.click('button[type=submit]')]);
   await page.goto(`${base}/index/admin/contexts`);
   const csrf = await page.evaluate(() => document.querySelector('meta[name=csrf-token]')?.content);

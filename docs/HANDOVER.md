@@ -10,7 +10,7 @@ Labels used: `VERIFIED-SANDBOX 2026-11-10` (seen on screen in the sandbox, in a 
 |---|---|
 | Set the journal up or change a setting, step by step | `docs/ADMIN-SETUP-CHECKLIST.md` |
 | Test the editorial workflow end to end | `docs/QA-SCRIPT.md` |
-| Run or check the server | `docs/DEPLOY.md` |
+| Run or check the host (shared hosting) | `docs/DEPLOY-SHARED.md` |
 | See what must be true before launch, and who does it | `docs/LAUNCH-GATES.md`, `docs/LAUNCH-BLOCKERS.md` |
 | Set up DOIs (blocked on the client) | `docs/DOI-SETUP.md` |
 | See which services the journal has applied to (none yet) | `docs/INDEXING-READINESS.md` |
@@ -48,13 +48,14 @@ Seen in the sandbox in a throwaway journal (`VERIFIED-SANDBOX 2026-11-10`), on a
 
 ## After a theme change
 
-- **Theme changes can take up to an hour to appear to visitors.** Theme files are cached for one hour by the server, and Cloudflare keeps its own copy; whoever deploys a theme change purges the Cloudflare cache, but a visitor's browser may still show the old version for up to an hour. Do not re-deploy in a panic if a change is not visible at once.
+- **Theme changes can take up to an hour to appear to visitors.** Theme files are cached for one hour by the server (there is no Cloudflare at launch; if Hostinger's CDN is turned on later, whoever deploys a theme change purges it too), and a visitor's browser may still show the old version for up to an hour. Do not re-deploy in a panic if a change is not visible at once.
 
-## Routine server care (the operator)
+## Routine care of the hosting (the operator)
 
-- **Scheduled tasks run from the server's cron, not from website visits.** If review reminders or statistics emails ever stop, nothing shows an error: ask the operator to run the scheduler check in `docs/DEPLOY.md` ("Scheduler check"): the log's modification time must be within the last two minutes.
-- **Monthly reboot step.** Security updates install automatically but the server never reboots by itself. Once a month the operator checks `ls /var/run/reboot-required`; if the file exists, reboot in a quiet window agreed with the editors, announce it first, then re-run the smoke tests and the scheduler check (`docs/DEPLOY.md`, "Routine operation").
-- **Backups** run nightly and are encrypted with the client's public key; **only the client holds the private key**. A restore needs that key, off the server (`docs/DEPLOY.md`, "Backups"). A restore must be rehearsed once before launch.
+- **Scheduled tasks run from a hosting cron job, not from website visits.** If review reminders or statistics emails ever stop, nothing shows an error: ask the operator to run the scheduler check (`docs/DEPLOY-SHARED.md` step 8): `worj-logs/scheduler.log` must end with `end exit=0` within two cron intervals, and the hPanel cron job must still exist.
+- **The host patches the server, so there is no reboot step.** Once a month the operator checks the plan's renewal date, the PHP version notices in hPanel (OJS 3.5 needs PHP 8.2 or newer: do not let the site be moved to an older one), the scheduler log, and the date of the last pulled backup, and writes down that it was done.
+- **Backups.** Hostinger keeps its own daily backups (7 days, `AGENT CLAIM`), **not encrypted to the client's key**. Ours is `scripts/pull-backup.sh`, which someone has to run: **the recovery point is only as fresh as the last run** (gate 3.3 and blocker A38 name who and how often). It is encrypted with the client's public key; **only the client holds the private key**. A restore needs that key, off the host (`docs/DEPLOY-SHARED.md`, "Backups"). A restore must be rehearsed once before launch.
+- **Do not connect Hostinger's Git deployment to this repository's `main`** (`docs/DEPLOY-SHARED.md`, "Delivery"): releases are built and deployed by `scripts/build-release.sh` and `scripts/deploy-shared.sh`.
 - **HSTS** starts short and is raised in stages after launch, never with preload at launch.
 
 ## Accessibility: what was checked and what was not

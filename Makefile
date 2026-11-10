@@ -3,7 +3,7 @@ SHELL := /bin/bash
 THEME := ojs/plugins/themes/worj
 
 # Needs php-fpm8.3, mariadbd and nginx in this sandbox; not part of `make lint` (CI has no FPM or MariaDB).
-.PHONY: infra-test infra-test-nginx infra-test-backup infra-test-reset infra-test-chroot
+.PHONY: infra-test infra-test-nginx infra-test-backup infra-test-reset infra-test-chroot infra-test-day0 infra-test-htaccess infra-test-install
 infra-test:
 	scripts/test-infra-config.sh
 	scripts/test-provision-preflight.sh | tail -1
@@ -24,6 +24,20 @@ infra-test-chroot:
 # Needs the sandbox (make sandbox-up sandbox-seed), root, and `cd autoresearch/eval && npm ci`. Takes a few minutes.
 infra-test-nginx:
 	scripts/test-nginx-harness.sh
+
+# The Day-0 kit and its probe against a stand-in Apache (apt-get install apache2); not LiteSpeed, see scripts/test-day0-kit.sh.
+infra-test-day0:
+	scripts/test-day0-kit.sh
+
+# The shared-hosting .htaccess on a stand-in Apache in front of the sandbox (make sandbox-up sandbox-seed), root, apache2.
+# Proves Apache semantics, not LiteSpeed's: see docs/DEPLOY-SHARED.md. Binds 127.0.0.1:80 and :443 for a minute.
+infra-test-htaccess:
+	scripts/test-htaccess-harness.sh
+
+# Release -> deploy -> install-shared.sh with a stand-in ssh, a scratch MariaDB database and the real OJS CLI installer.
+# Needs root (mariadb socket), rsync and ojs-core (make setup). Proves the script, not the host.
+infra-test-install:
+	scripts/test-install-shared.sh
 
 .PHONY: setup lint eval check-placeholders sandbox-up sandbox-down sandbox-seed check-citation check-pdf check-discovery check-placeholders-url
 
@@ -70,6 +84,7 @@ lint:
 	python3 -I scripts/check-content-claims.py | tail -1
 	python3 -I scripts/extract-ojs-default-wording.py --check
 	node scripts/test-sandbox-guard.js | tail -1
+	node scripts/test-target.js | tail -1
 	scripts/test-import-wrapper.sh | tail -1
 	python3 -I scripts/check-config-template.py | tail -1
 	python3 -I scripts/make-config-template.py --check
@@ -80,6 +95,8 @@ lint:
 	scripts/test-check-pdf.sh | tail -1
 	scripts/test-check-discovery.sh | tail -1
 	scripts/test-check-citation-meta.sh | tail -1
+	scripts/test-release.sh | tail -1
+	scripts/test-run-scheduler.sh | tail -1
 	@if [ -n "$$(find ojs scripts -name '*.php' -print -quit)" ]; then \
 	  find ojs scripts -name '*.php' -print0 | xargs -0 -n1 php -l >/dev/null && echo "php -l ok"; \
 	else echo "no PHP files yet"; fi

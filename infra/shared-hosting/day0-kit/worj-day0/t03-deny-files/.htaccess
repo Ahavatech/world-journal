@@ -1,0 +1,3 @@
+<FilesMatch "\.secret$">
+    Require all denied
+</FilesMatch>
