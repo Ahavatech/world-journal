@@ -26,7 +26,7 @@ Walkthroughs run in the sandbox against a **throwaway journal `probe`** (path `/
 | Submission settings, review settings and forms, users and roles (sections 3, 4, 5) | written; checked on screen except where marked UNVERIFIED |
 | Email templates, notifications and delivery (section 6) | written; reviewer-invitation email UNVERIFIED (no submission in review) |
 | Distribution: DOI, licence, search description (section 7) | written; DOI-off and meta description checked in the sandbox |
-| Navigation menus, theme options, blocks, `showAwardsCard`, Highlights note | pending |
+| Website: theme, navigation, blocks, masthead, announcements, Highlights (section 8) | written; most steps checked on screen |
 | Admin hardening, email credentials, importer note, launch notes | pending |
 
 ## Findings so far
@@ -59,3 +59,11 @@ Walkthroughs run in the sandbox against a **throwaway journal `probe`** (path `/
 - Setting Search Indexing > Description makes the homepage emit `<meta name="description">`; before it, none (checked by fetching the homepage).
 - Public COUNTER SUSHI statistics are on by default (D20); OAI on by default.
 - Not walked: Access, Archiving, Registration, PKP Preservation Network, LOCKSS/CLOCKSS tabs.
+
+## Website findings (session 1)
+
+- Menu assignment is drag and drop in the **Edit** dialog of Settings > Website > Setup > Navigation (click the menu name). Playwright `mouse.down/move/up` with small steps works; `dragTo` was not tried. Dropping on an item inside *About* nests under it.
+- **Mishap, repaired:** a script with an empty id clicked the first edit link (the *Register* item in the throwaway `probe` journal) and saved the title "Editorial Team" there. I deleted that title setting row (probe only, id 42) and redid the change on the Editorial Masthead item (id 55). Lesson: never build a selector from an empty variable; assert the id first.
+- The Make a Submission block plugin: enabling the plugin is not enough; the block must also be ticked in Appearance > Setup > Sidebar, then Save. Enabled-state in the plugin grid lags; read the database or the homepage.
+- Announcements are **disabled** on a new journal; enrollment masthead is **enabled**.
+- Probe journal now carries: theme worj, awards card on, blocks on, navigation assigned. Delete it before finishing.
