@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Render a template that holds @@TOKEN@@ placeholders into a file, without leaking values.
 
-  python3 -I scripts/render-template.py TEMPLATE OUTPUT [--mode 640] [--owner USER] [--group GROUP] < values
+  python3 -I scripts/render-template.py TEMPLATE OUTPUT [--mode 640] [--owner USER] [--group GROUP] [--allow-unused] < values
 
 Values arrive on STANDARD INPUT as `NAME=VALUE` lines (the value is everything after the first `=`),
 never on the command line: anything on argv is visible to every user in /proc/*/cmdline and ps. The
@@ -9,6 +9,8 @@ script prints only `changed` or `unchanged` and token NAMES (never values).
 
   - Fails (exit 1) if the template still has a token with no value, or if stdin names a token the
     template does not use (a typo would otherwise be silently ignored). Nothing is written then.
+    --allow-unused skips the second check, for callers that render several templates from one value set
+    and check the union themselves (scripts/render-nginx.sh).
   - Writes atomically: a temporary file created with mode 600 in the destination directory, fsynced,
     chmod/chown, then os.replace. The output is never readable by others, even briefly.
   - If the output already has the same content and mode, it is left alone (`unchanged`).
@@ -33,6 +35,7 @@ def main():
     ap.add_argument("--mode", default="640")
     ap.add_argument("--owner")
     ap.add_argument("--group")
+    ap.add_argument("--allow-unused", action="store_true")
     try:
         a = ap.parse_args()
     except SystemExit:
@@ -56,6 +59,8 @@ def main():
     used = set(TOKEN.findall(text))
     missing = sorted(used - set(values))
     unknown = sorted(set(values) - used)
+    if a.allow_unused:
+        unknown = []
     if missing or unknown:
         if missing:
             print("FAIL  no value for token(s): " + ", ".join(missing), file=sys.stderr)

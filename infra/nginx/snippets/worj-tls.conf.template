@@ -1,0 +1,6 @@
+# TLS settings shared by the HTTPS server blocks (Cloudflare connects with TLS 1.2 or newer).
+ssl_protocols TLSv1.2 TLSv1.3;
+ssl_prefer_server_ciphers off;
+ssl_session_cache shared:worj_ssl:10m;
+ssl_session_timeout 1d;
+ssl_session_tickets off;

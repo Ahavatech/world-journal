@@ -1,0 +1,12 @@
+# Security headers, set once at server level. Nginx drops inherited add_header lines in any
+# location that sets its own add_header, so NO location in these templates uses add_header
+# (static caching uses `expires`). Test: scripts/test-nginx-harness.sh checks them on PHP and static files.
+#
+# HSTS starts short and is raised in stages by a human (no preload, no includeSubDomains at launch).
+add_header Strict-Transport-Security "max-age=@@HSTS_MAX_AGE@@" always;
+add_header X-Content-Type-Options "nosniff" always;
+add_header X-Frame-Options "SAMEORIGIN" always;
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+add_header Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=()" always;
+# Report-only: observation, not protection. An empty value (backend paths) sends no header.
+add_header Content-Security-Policy-Report-Only $worj_csp_report_only always;

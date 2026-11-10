@@ -85,5 +85,74 @@ else
   echo "SKIP  mariadbd not installed"
 fi
 
+# ---------- Nginx: render the templates and let nginx -t judge them
+if command -v nginx >/dev/null; then
+  ng="$tmp/nginx"; mkdir -p "$ng/errors" "$ng/acme" "$ng/web" "$ng/tmp"
+  cp "$root/infra/nginx/errors/404.html" "$root/infra/nginx/errors/404.css" "$ng/errors/"
+  : >"$ng/realip.conf"
+  openssl req -x509 -newkey rsa:2048 -nodes -keyout "$ng/key.pem" -out "$ng/cert.pem" -days 1 -subj "/CN=journal.example.org" >/dev/null 2>&1
+  vals="HOST=journal.example.org
+ALT_HOST=www.journal.example.org
+WEBROOT=$ng/web
+CERT_FULLCHAIN=$ng/cert.pem
+CERT_KEY=$ng/key.pem
+PHP_SOCK=$ng/php.sock
+SNIPPETS=$ng/out/snippets
+ERRORS_ROOT=$ng/errors
+ACME_ROOT=$ng/acme
+REALIP_CONF=$ng/realip.conf
+HTTP_PORT=18080
+HTTPS_PORT=18443
+HSTS_MAX_AGE=300"
+  printf '%s\n' "$vals" | "$root/scripts/render-nginx.sh" "$ng/out" >/dev/null
+  cat >"$ng/nginx.conf" <<CFG
+pid $ng/nginx.pid;
+error_log $ng/error.log;
+events {}
+http {
+  access_log off;
+  include /etc/nginx/mime.types;
+  client_body_temp_path $ng/tmp/body;
+  fastcgi_temp_path $ng/tmp/fcgi;
+  proxy_temp_path $ng/tmp/proxy;
+  uwsgi_temp_path $ng/tmp/uwsgi;
+  scgi_temp_path $ng/tmp/scgi;
+  include $ng/out/worj.conf;
+}
+CFG
+  out="$(nginx -t -c "$ng/nginx.conf" 2>&1)"; rc=$?
+  yes "nginx -t accepts the rendered site (exit $rc)" eq "$rc" 0
+  [ "$rc" = 0 ] || echo "$out" | head -4
+  yes "nginx says the configuration test is successful" grep -q "test is successful" <<<"$out"
+  # the same check must reject a broken snippet
+  cp -r "$ng/out" "$ng/broken"; echo 'this_directive_does_not_exist on;' >>"$ng/broken/snippets/worj-errors.conf"
+  sed -i "s#$ng/out/#$ng/broken/#g" "$ng/broken/worj.conf" "$ng"/broken/snippets/*.conf
+  sed "s#$ng/out/#$ng/broken/#" "$ng/nginx.conf" >"$ng/nginx-broken.conf"
+  nginx -t -c "$ng/nginx-broken.conf" >/dev/null 2>&1; rc=$?
+  yes "a broken snippet is rejected by the same check (exit $rc)" test "$rc" != 0
+  # rules the templates must keep
+  yes "the site refuses unknown hosts (444 and ssl_reject_handshake)" grep -q "return 444" "$ng/out/worj.conf"
+  yes "no location in the templates uses add_header (headers would be lost)" bash -c "! grep -hE '^[[:space:]]+add_header' '$ng'/out/snippets/worj-ojs-locations.conf '$ng'/out/snippets/worj-errors.conf '$ng'/out/snippets/worj-fastcgi.conf"
+  yes "exactly one FastCGI pass, in the shared snippet" eq "$(grep -hc 'fastcgi_pass' "$ng"/out/snippets/worj-fastcgi.conf)" 1
+  yes "any other .php path is a 404" grep -qF 'location ~ \.php(/|$) { return 404; }' "$ng/out/snippets/worj-ojs-locations.conf"
+  api_block="$(sed -n '/index\\.php\/\[^\/\]+\/api/,/^}/p' "$ng/out/snippets/worj-ojs-locations.conf")"
+  yes "the API location exists" grep -q 'fastcgi.conf\|worj-fastcgi' <<<"$api_block"
+  no_intercept() { ! grep -v '^[[:space:]]*#' <<<"$api_block" | grep -q fastcgi_intercept_errors; }
+  yes "the API location does not intercept errors" no_intercept
+  yes "CSP is report-only, never enforcing" bash -c "grep -q 'Content-Security-Policy-Report-Only' '$ng'/out/snippets/worj-security-headers.conf && ! grep -hq 'add_header Content-Security-Policy ' '$ng'/out/snippets/*.conf '$ng'/out/worj.conf"
+  yes "HSTS has no preload and no includeSubDomains" bash -c "grep -v '^#' '$ng'/out/snippets/worj-security-headers.conf | grep -qiE 'preload|includeSubDomains' && exit 1 || exit 0"
+else
+  echo "SKIP  nginx not installed"
+fi
+
+# ---------- the static 404 page
+page="$root/infra/nginx/errors/404.html"
+yes "404 page has lang" grep -q '<html lang="en">' "$page"
+yes "404 page has a title" grep -q '<title>.\+</title>' "$page"
+yes "404 page has header, main and footer landmarks" bash -c "grep -q '<header>' '$page' && grep -q '<main' '$page' && grep -q '<footer>' '$page'"
+yes "404 page has exactly one h1" eq "$(grep -c '<h1>' "$page")" 1
+yes "404 page has no script, inline style or remote asset" bash -c "! grep -qiE '<script|<style|style=|https?://' '$page'"
+yes "404 stylesheet has no remote url" bash -c "! grep -qiE 'url\\(|@import|https?://' '$root/infra/nginx/errors/404.css'"
+
 if [ "$fail" = 0 ]; then echo "ALL PASS"; else echo "$fail FAILED"; fi
 exit "$fail"

@@ -1,0 +1,88 @@
+# World Open Research Journal: Nginx site for OJS 3.5 behind Cloudflare (Full (strict)).
+# Rendered by scripts/render-template.py (values on stdin) into /etc/nginx/conf.d/worj.conf.
+# Value between double at-signs is filled at provisioning. Nothing secret is in this file.
+# IPv4 only: Cloudflare reaches the origin over IPv4, and the sandbox cannot test IPv6.
+
+# --- one canonical form per URL ------------------------------------------------------------
+# /index.php/worj/about -> /worj/about, only for GET and HEAD: a 301 turns a POST into a GET,
+# which would break forms and the admin API. Matched on $request_uri because try_files rewrites $uri.
+map "$request_method:$request_uri" $worj_clean_uri {
+    default "";
+    "~^(?:GET|HEAD):/index\.php$"                         "/";
+    "~^(?:GET|HEAD):/index\.php(?<worj_p1>/[^?]*)$"       "$worj_p1";
+    "~^(?:GET|HEAD):/index\.php(?<worj_p2>/[^?]*)\?(?<worj_q2>.*)$" "$worj_p2?$worj_q2";
+}
+
+# --- Content-Security-Policy-Report-Only (NOT enforced: gives no protection yet) -------------
+# Public pages are checked against self-hosted assets only. Backend pages (Vue admin UI) get no
+# policy: their inline script and style use has not been measured. See docs/DEPLOY.md.
+map $request_uri $worj_csp_report_only {
+    default "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'self'; form-action 'self'; base-uri 'self'; object-src 'none'";
+    "~^/[^/]+/(management|workflow|submission|dashboard|stats|tasks|api)(/|\?|$)" "";
+    "~^/index/(admin|api)(/|\?|$)" "";
+    "~\$\$\$call\$\$\$" "";
+}
+
+server_tokens off;
+
+# --- unknown Host headers: drop the connection (no certificate needed for the HTTPS default) -----
+server {
+    listen @@HTTP_PORT@@ default_server;
+    server_name _;
+    return 444;
+}
+server {
+    listen @@HTTPS_PORT@@ ssl default_server;
+    server_name _;
+    ssl_reject_handshake on;
+}
+
+# --- port 80: ACME challenge, then everything to https on the main host ------------------------
+server {
+    listen @@HTTP_PORT@@;
+    server_name @@HOST@@ @@ALT_HOST@@;
+    location ^~ /.well-known/acme-challenge/ {
+        root @@ACME_ROOT@@;
+        default_type text/plain;
+    }
+    location / {
+        return 301 https://@@HOST@@$request_uri;
+    }
+}
+
+# --- port 443, alternate host (www or apex): redirect to the main host --------------------------
+server {
+    listen @@HTTPS_PORT@@ ssl;
+    server_name @@ALT_HOST@@;
+    ssl_certificate     @@CERT_FULLCHAIN@@;
+    ssl_certificate_key @@CERT_KEY@@;
+    include @@SNIPPETS@@/worj-tls.conf;
+    return 301 https://@@HOST@@$request_uri;
+}
+
+# --- port 443, the journal ----------------------------------------------------------------------
+server {
+    listen @@HTTPS_PORT@@ ssl;
+    server_name @@HOST@@;
+    ssl_certificate     @@CERT_FULLCHAIN@@;
+    ssl_certificate_key @@CERT_KEY@@;
+    include @@SNIPPETS@@/worj-tls.conf;
+
+    # the real client address from Cloudflare's published ranges (file written by
+    # scripts/update-cloudflare-ips.sh; provisioning fails if it does not exist)
+    include @@REALIP_CONF@@;
+
+    root @@WEBROOT@@;
+    index index.php;
+    client_max_body_size 64m;
+    charset utf-8;
+
+    include @@SNIPPETS@@/worj-security-headers.conf;
+
+    if ($worj_clean_uri != "") {
+        return 301 https://@@HOST@@$worj_clean_uri;
+    }
+
+    include @@SNIPPETS@@/worj-errors.conf;
+    include @@SNIPPETS@@/worj-ojs-locations.conf;
+}

@@ -1,0 +1,15 @@
+# A static, accessible 404 page instead of OJS core's bare `<h1>404 Not Found</h1>`
+# (no lang, title or landmarks; no theme can change it: docs/A11Y-REPORT.md).
+# Applies to Nginx's own 404s (denied paths) and, through fastcgi_intercept_errors in the
+# main PHP location, to OJS 404 and 410 responses. The status code is kept.
+error_page 404 /_errors/404.html;
+error_page 410 /_errors/404.html;
+
+location = /_errors/404.html {
+    internal;
+    alias @@ERRORS_ROOT@@/404.html;
+}
+location = /_errors/404.css {
+    alias @@ERRORS_ROOT@@/404.css;
+    expires 7d;
+}
