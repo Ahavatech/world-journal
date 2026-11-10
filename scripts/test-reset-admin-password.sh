@@ -6,7 +6,10 @@
 set -uo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 [ "$(id -u)" = 0 ] || { echo "run as root"; exit 2; }
-set -a; . "$root/.env.sandbox"; set +a
+set -a
+# shellcheck source=/dev/null
+. "$root/.env.sandbox"
+set +a
 export NODE_PATH="${NODE_PATH:-/opt/node22/lib/node_modules}"
 cfg="$root/ojs-core/config.inc.php"
 Z="$root/scripts/reset-ojs-admin-password.sh"

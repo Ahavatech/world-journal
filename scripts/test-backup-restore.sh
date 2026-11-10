@@ -7,7 +7,10 @@ set -uo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 [ "$(id -u)" = 0 ] || { echo "run as root (sandbox container)"; exit 2; }
 for t in age age-keygen rclone mysqldump mariadb php; do command -v "$t" >/dev/null || { echo "missing tool: $t (apt-get install -y age rclone)"; exit 2; }; done
-set -a; . "$root/.env.sandbox"; set +a
+set -a
+# shellcheck source=/dev/null
+. "$root/.env.sandbox"
+set +a
 tmp="$(mktemp -d)"; chmod 755 "$tmp"
 sampler_pid=""
 trap '[ -z "$sampler_pid" ] || kill "$sampler_pid" 2>/dev/null; rm -rf -- "${tmp:?}"' EXIT
