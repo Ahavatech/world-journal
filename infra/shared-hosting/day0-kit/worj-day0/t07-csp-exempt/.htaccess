@@ -1,0 +1,2 @@
+SetEnvIf Request_URI "/admin/" NO_CSP=1
+Header always set Content-Security-Policy-Report-Only "default-src 'self'" env=!NO_CSP

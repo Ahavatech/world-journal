@@ -1,0 +1,2 @@
+php_value memory_limit 123M
+php_flag display_errors off

@@ -46,11 +46,13 @@ Run these **before** anything else is built or deployed. **Do not paste a passwo
 3. Run each of these and write the version or "not found": `php -v`, `php -m`, `mysqldump --version`, `mysql --version`, `tar --version`, `rsync --version`, `git --version`, `composer --version`, `python3 --version`, `age --version`, `rclone --version`.
 4. Compare `php -v` with the PHP version shown in the dashboard's PHP configuration: **are they the same minor version?**
 
-**C. The web PHP and its extensions** (on the staging subdomain only):
-1. In the dashboard's PHP configuration, choose **PHP 8.3** (the version the sandbox tests ran) and note the options for memory, upload, POST size and execution time.
-2. Put a temporary `phpinfo()` page on the staging subdomain, open it, and compare the loaded extensions with this list from the OJS README: `bcmath, ctype, curl, dom, fileinfo, filter, ftp, gd, hash, intl, json, libxml, mbstring, openssl, pcre, phar, session, simplexml, spl, tokenizer, xml, xmlwriter, zip, zlib`. Write every one that is missing. **Delete the page immediately afterwards.**
+**C, D and F: the Day-0 kit** (a ready-made test folder; replaces the manual `phpinfo()`, folder and `.htaccess` checks). The kit is `infra/shared-hosting/day0-kit/worj-day0/` (its `README.txt` says how to use it).
+1. In the dashboard's PHP configuration, choose **PHP 8.3** (the version the sandbox tests ran) for the staging site.
+2. Upload the folder `worj-day0` to the **web root of the staging subdomain**, so that `https://STAGING_HOST/worj-day0/probe.php` exists. **Never upload it to the production site.** The staging site must be password-protected.
+3. Tell the developer. The developer runs `scripts/probe-day0-kit.sh https://STAGING_HOST` (a staging login goes in a netrc file or the secure credential card, **never on a command line**) and reports every line. It checks: the PHP version, every extension on the OJS README list plus `mysqli`, the memory, upload and execution limits, `open_basedir`, whether PHP can write **above the web root** (where the private files folder goes), and thirteen small `.htaccess` features, each in its own folder (a 301 redirect, rewrite to `index.php`, deny rules, headers including on error responses, a conditional header, `ErrorDocument`, cache lifetimes, redirect for GET and HEAD but not POST, no PHP in a protected folder, no directory listing, and whether `php_value` is allowed).
+4. **Delete the `worj-day0` folder** afterwards. The probe prints only non-secret facts, never `phpinfo()` or environment variables, and masks the account folder as `uXXXXXXXXX`.
 
-**D. Folders:** over SSH, create a folder **above** `public_html` (for example `files` next to it). From a temporary PHP page on staging, check that PHP can write and read a file there, and read the page's `open_basedir`. Then delete the temporary files.
+The kit and the probe are tested in the sandbox against a **stand-in Apache, not LiteSpeed** (`make infra-test-day0`): that proves the files are valid Apache-style rules and that the probe tells a working host from a broken one, but only the real run on the host shows what LiteSpeed does.
 
 **E. Cron:** in the dashboard create a **test** cron job on the staging account.
 1. What is the **shortest interval** the dashboard offers? (OJS needs one that divides 60 and includes minute 0.)
@@ -58,7 +60,7 @@ Run these **before** anything else is built or deployed. **Do not paste a passwo
 3. Does the job's output appear in the dashboard, and is there a maximum run time?
 4. Delete the test job.
 
-**F. `.htaccess` on LiteSpeed** (staging only): add a small test `.htaccess` and check, with a browser or `curl -I`, that each of these works: a 301 redirect; a `RewriteRule` that sends a non-existing path to `index.php`; `Require all denied` (or a `<FilesMatch>` deny) returns 403 or 404; `Header always set X-Test 1` appears in the response; `ErrorDocument 404 /something.html` shows for a missing file. Write what each did.
+**F. `.htaccess` on LiteSpeed:** done by the kit (see "C, D and F" above); nothing to do by hand.
 
 **G. Email:** create the SMTP settings from the `editorial@` mailbox's own page (host, port, encryption: read them from there). Send **one** test message from OJS (staging) to an inbox the tester controls. Write: did it arrive, did it reach spam, what **From** and **Reply-To** did it show, and does SMTP accept a From that differs from the login?
 
@@ -73,10 +75,10 @@ Run these **before** anything else is built or deployed. **Do not paste a passwo
 | B2 home path | NOT RUN | | `files_dir` and the cron paths |
 | B3 tools present (`php`, `mysqldump`, `rsync`, `git`, `composer`, `python3`, `age`, `rclone`) | NOT RUN | | whether config checks and encrypted backups can run on the host |
 | B4 CLI PHP equals web PHP | NOT RUN | | whether the CLI installer and the scheduler use the same PHP |
-| C extensions missing | NOT RUN | | whether the plan can run OJS at all |
-| D write above `public_html`; `open_basedir` | NOT RUN | | where `files_dir` goes |
+| C extensions missing, PHP version and limits (kit) | NOT RUN | | whether the plan can run OJS at all |
+| D write above `public_html`; `open_basedir` (kit) | NOT RUN | | where `files_dir` goes |
 | E shortest cron interval; argument support; run time | NOT RUN | | the scheduler design |
-| F `.htaccess` directives that worked | NOT RUN | | which rules the `.htaccess` template can rely on |
+| F `.htaccess` directives that worked (kit, thirteen folders) | NOT RUN | | which rules the `.htaccess` template can rely on |
 | G SMTP: arrival, spam, From and Reply-To | NOT RUN | | the mailbox and sender design |
 | H ModSecurity blocks | NOT RUN | | whether exceptions are needed |
 | I MariaDB version, backups | NOT RUN | | the database lifecycle question and the backup plan |

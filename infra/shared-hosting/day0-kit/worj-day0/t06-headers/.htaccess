@@ -1,0 +1,3 @@
+Header always set X-Day0-Test "ok"
+Header always set Strict-Transport-Security "max-age=300"
+Header always set Content-Security-Policy-Report-Only "default-src 'self'; img-src 'self' data:; frame-ancestors 'self'"

@@ -3,7 +3,7 @@ SHELL := /bin/bash
 THEME := ojs/plugins/themes/worj
 
 # Needs php-fpm8.3, mariadbd and nginx in this sandbox; not part of `make lint` (CI has no FPM or MariaDB).
-.PHONY: infra-test infra-test-nginx infra-test-backup infra-test-reset infra-test-chroot
+.PHONY: infra-test infra-test-nginx infra-test-backup infra-test-reset infra-test-chroot infra-test-day0
 infra-test:
 	scripts/test-infra-config.sh
 	scripts/test-provision-preflight.sh | tail -1
@@ -24,6 +24,10 @@ infra-test-chroot:
 # Needs the sandbox (make sandbox-up sandbox-seed), root, and `cd autoresearch/eval && npm ci`. Takes a few minutes.
 infra-test-nginx:
 	scripts/test-nginx-harness.sh
+
+# The Day-0 kit and its probe against a stand-in Apache (apt-get install apache2); not LiteSpeed, see scripts/test-day0-kit.sh.
+infra-test-day0:
+	scripts/test-day0-kit.sh
 
 .PHONY: setup lint eval check-placeholders sandbox-up sandbox-down sandbox-seed check-citation check-pdf check-discovery check-placeholders-url
 
