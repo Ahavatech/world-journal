@@ -2,7 +2,7 @@
 
 **Status: part 1 of 2. Nothing in this document has been run on the host.** The client bought a **shared web hosting plan** (managed hosting on LiteSpeed), not a root VPS, so `docs/DEPLOY.md` (the VPS path) does **not** apply to this client. This file is the shared-hosting path. Part 1 records what is known about the plan and gives the **Day-0 checks** a person runs on the host before anything else is built or deployed: their results decide several choices below.
 
-Decisions already made by the client: the canonical host is **`worldopenresearchjournal.com`** (no `www`; `www` redirects to it); **no Cloudflare at launch** (DNS stays at Hostinger so the mailbox's SPF and DKIM records stay as they are, and Hostinger's own CDN setting stays off while testing). The mailbox is **`editorial@`**, with aliases `support@`, `privacy@` and `doi@`.
+Decisions already made by the client: **there is no staging site** (2026-11-10): the main domain is the test bed until the day it goes public (see "No staging site" below); the canonical host is **`worldopenresearchjournal.com`** (no `www`; `www` redirects to it); **no Cloudflare at launch** (DNS stays at Hostinger so the mailbox's SPF and DKIM records stay as they are, and Hostinger's own CDN setting stays off while testing). The mailbox is **`editorial@`**, with aliases `support@`, `privacy@` and `doi@`.
 
 Labels: `READ 2026-11-10` (paraphrased from the Hostinger page named beside it, read on that date), `AGENT CLAIM` (what Hostinger's platform agent told the client, not cross-checked), `UNVERIFIED (<reason>)`, `NOT RUN` (a Day-0 check nobody has run yet). Hostinger changes its pages and limits: read the page again before relying on a figure. This document contains no price, no password and no account identifier; the account folder is written `uXXXXXXXXX`.
 
@@ -23,22 +23,26 @@ Labels: `READ 2026-11-10` (paraphrased from the Hostinger page named beside it, 
 | Mailbox | The plan page says mailboxes are free for the first year. SMTP limits are per mailbox and depend on the email product (read the current figures in the dashboard's Emails section) | `READ 2026-11-10` [web-hosting page](https://www.hostinger.com/web-hosting), [email limits](https://www.hostinger.com/support/4625828-parameters-and-limits-of-hostinger-email/). **Which email product is attached is `UNVERIFIED`** |
 | Backups | Daily backups with restore are advertised; the platform agent said 7 days of dailies, downloadable, and a manual backup. The client's plan details put the backups in **Germany** and the server in the **United Kingdom** | `READ 2026-11-10` [web-hosting page](https://www.hostinger.com/web-hosting); the rest `AGENT CLAIM`. Restore time and whether backups are encrypted are `UNVERIFIED` |
 | SSL | Lifetime SSL active and HTTPS redirect enabled (`AGENT CLAIM`) | |
-| Staging | Subdomains are available (the agent said up to 100, none created yet). The plan's CPU, memory and PHP workers are **per plan**, so a staging site **shares them** with production (my reading of the limits table) | Subdomain count `AGENT CLAIM`; limits `READ 2026-11-10` [limits](https://www.hostinger.com/support/6976044-parameters-and-limits-for-hosting-plans) |
+| Staging (not used: client decision) | Subdomains are available (the agent said up to 100, none created yet). The plan's CPU, memory and PHP workers are **per plan**, so a staging site would **share them** with production (my reading of the limits table) | Subdomain count `AGENT CLAIM`; limits `READ 2026-11-10` [limits](https://www.hostinger.com/support/6976044-parameters-and-limits-for-hosting-plans) |
 | CDN versus Cloudflare | Hostinger warns against running its CDN and Cloudflare together as two caching layers | `AGENT CLAIM` (the agent cited Hostinger's CDN-versus-Cloudflare article, which was not read here) |
 
 ## What this changes compared with the VPS design
 
 - **Provisioning, firewall, SSH hardening, certbot, unattended upgrades, the reboot step and the Cloudflare real-IP files no longer apply:** the host runs them.
-- **The Nginx rules become an `.htaccess`** (redirects, deny rules, headers, `robots.txt`), tested in a stand-in Apache and then again on the host's staging site.
+- **The Nginx rules become an `.htaccess`** (redirects, deny rules, headers, `robots.txt`), tested in a stand-in Apache and then again on the real site before it goes public.
 - **The accessible static 404 page is mostly lost.** On Apache-style servers `ErrorDocument` shows only for errors the web server generates (our deny rules), not for OJS's own bare `<h1>404 Not Found</h1>`. The Phase 2 accessibility finding returns.
 - **Backups are weaker** than the VPS design (the host's backups are not encrypted with the client's key; ours must be pulled from outside).
-- **Less control and isolation:** ModSecurity may block admin actions, there is no per-site server tuning, and staging shares the production limits.
+- **Less control and isolation:** ModSecurity may block admin actions, and there is no per-site server tuning.
 
 ## Day-0 checks (about half an hour, run by the client or the operator)
 
 Run these **before** anything else is built or deployed. **Do not paste a password, a key's private half or any credential into chat, into the repository or into a ticket.** Write each result in the table at the end, with the date and your name. The test files and pages below are temporary and must be deleted when done.
 
-**A. Create a protected staging subdomain** (for the rest of the checks): in the dashboard create `staging.worldopenresearchjournal.com`, password-protect it, and keep the production site untouched.
+**A. No staging site (client decision): use the main domain before it goes public.** Because there is no separate site to break, these controls matter more:
+- **Nothing real on it.** No real content, no real users, no real author's work, no DOIs. Test accounts use addresses the tester controls. Everything is removed or reinstalled clean before launch (`docs/LAUNCH-GATES.md` gate 4.4); the safest option is a fresh database and a fresh files folder on launch day.
+- **Closed to search engines from the first day.** Put a `robots.txt` containing `User-agent: *` and `Disallow: /` in the web root now (and `X-Robots-Tag: noindex` once the `.htaccess` exists). Switch to the production robots file only at launch (`ROBOTS_MODE`, `docs/DEPLOY.md` "Staging versus production").
+- **Password-protect it while testing if the dashboard allows** (an agent claim, not checked). If it does, give the developer a login on the secure credential card (never in chat or on a command line); if not, the kit below is harmless and short-lived.
+- **Take a Hostinger backup before each risky step** (an on-demand backup was described by the agent), and note that a restore is rehearsed on a scratch database, not on a staging site.
 
 **B. SSH** (dashboard SSH access page; the exact menu name is `UNVERIFIED`):
 1. Enable SSH. Use a **key**, not a password: give the operator only the **public** key to add.
@@ -47,14 +51,14 @@ Run these **before** anything else is built or deployed. **Do not paste a passwo
 4. Compare `php -v` with the PHP version shown in the dashboard's PHP configuration: **are they the same minor version?**
 
 **C, D and F: the Day-0 kit** (a ready-made test folder; replaces the manual `phpinfo()`, folder and `.htaccess` checks). The kit is `infra/shared-hosting/day0-kit/worj-day0/` (its `README.txt` says how to use it).
-1. In the dashboard's PHP configuration, choose **PHP 8.3** (the version the sandbox tests ran) for the staging site.
-2. Upload the folder `worj-day0` to the **web root of the staging subdomain**, so that `https://STAGING_HOST/worj-day0/probe.php` exists. **Never upload it to the production site.** The staging site must be password-protected.
-3. Tell the developer. The developer runs `scripts/probe-day0-kit.sh https://STAGING_HOST` (a staging login goes in a netrc file or the secure credential card, **never on a command line**) and reports every line. It checks: the PHP version, every extension on the OJS README list plus `mysqli`, the memory, upload and execution limits, `open_basedir`, whether PHP can write **above the web root** (where the private files folder goes), and thirteen small `.htaccess` features, each in its own folder (a 301 redirect, rewrite to `index.php`, deny rules, headers including on error responses, a conditional header, `ErrorDocument`, cache lifetimes, redirect for GET and HEAD but not POST, no PHP in a protected folder, no directory listing, and whether `php_value` is allowed).
+1. In the dashboard's PHP configuration, choose **PHP 8.3** (the version the sandbox tests ran) for the site.
+2. Upload the folder `worj-day0` to the **web root of the site**, so that `https://worldopenresearchjournal.com/worj-day0/probe.php` exists. **Only before launch, with the site still closed to search engines (A above).**
+3. Tell the developer. The developer runs `scripts/probe-day0-kit.sh https://worldopenresearchjournal.com` (a login, if the site is password-protected, goes in a netrc file or the secure credential card, **never on a command line**) and reports every line. It checks: the PHP version, every extension on the OJS README list plus `mysqli`, the memory, upload and execution limits, `open_basedir`, whether PHP can write **above the web root** (where the private files folder goes), and thirteen small `.htaccess` features, each in its own folder (a 301 redirect, rewrite to `index.php`, deny rules, headers including on error responses, a conditional header, `ErrorDocument`, cache lifetimes, redirect for GET and HEAD but not POST, no PHP in a protected folder, no directory listing, and whether `php_value` is allowed).
 4. **Delete the `worj-day0` folder** afterwards. The probe prints only non-secret facts, never `phpinfo()` or environment variables, and masks the account folder as `uXXXXXXXXX`.
 
 The kit and the probe are tested in the sandbox against a **stand-in Apache, not LiteSpeed** (`make infra-test-day0`): that proves the files are valid Apache-style rules and that the probe tells a working host from a broken one, but only the real run on the host shows what LiteSpeed does.
 
-**E. Cron:** in the dashboard create a **test** cron job on the staging account.
+**E. Cron:** in the dashboard create a **test** cron job.
 1. What is the **shortest interval** the dashboard offers? (OJS needs one that divides 60 and includes minute 0.)
 2. Can a PHP-type job run `…/lib/pkp/tools/scheduler.php` **with an argument** (`run`), or is a custom job with a small `.sh` file needed?
 3. Does the job's output appear in the dashboard, and is there a maximum run time?
@@ -62,9 +66,9 @@ The kit and the probe are tested in the sandbox against a **stand-in Apache, not
 
 **F. `.htaccess` on LiteSpeed:** done by the kit (see "C, D and F" above); nothing to do by hand.
 
-**G. Email:** create the SMTP settings from the `editorial@` mailbox's own page (host, port, encryption: read them from there). Send **one** test message from OJS (staging) to an inbox the tester controls. Write: did it arrive, did it reach spam, what **From** and **Reply-To** did it show, and does SMTP accept a From that differs from the login?
+**G. Email:** create the SMTP settings from the `editorial@` mailbox's own page (host, port, encryption: read them from there). Send **one** test message from OJS (the pre-launch site) to an inbox the tester controls. Write: did it arrive, did it reach spam, what **From** and **Reply-To** did it show, and does SMTP accept a From that differs from the login?
 
-**H. ModSecurity:** on staging, once OJS is installed, try one large upload and one admin action. If something is blocked, write the exact URL and the time, and look for the security log (its location is `UNVERIFIED`).
+**H. ModSecurity:** on the pre-launch site, once OJS is installed, try one large upload and one admin action. If something is blocked, write the exact URL and the time, and look for the security log (its location is `UNVERIFIED`).
 
 **I. Backups and the database:** in the dashboard, note the MariaDB version, whether `utf8mb4` is the default, the backup schedule, and what a restore asks for. Do **not** run a restore on production.
 
@@ -83,6 +87,19 @@ The kit and the probe are tested in the sandbox against a **stand-in Apache, not
 | H ModSecurity blocks | NOT RUN | | whether exceptions are needed |
 | I MariaDB version, backups | NOT RUN | | the database lifecycle question and the backup plan |
 
+## Delivery: how the files reach the host (decision pending)
+
+Two ways, both starting from a **release package** built from the pinned OJS core plus our theme and rules (part 2 builds it).
+
+1. **rsync or SFTP over SSH** (the plan in part 2): a dry run (`--check`) first, the config, `public/`, `cache/` and the files folder are never touched. Needs SSH switched on.
+2. **Hostinger's Git deployment** (`AGENT CLAIM`, not read in Hostinger's documentation: connect a GitHub repository and branch, set the deployment folder, optionally auto-deploy on every push).
+
+**Do not connect this repository's `main` to `public_html`.** This repository is where the project is *authored*, not an OJS site: it has no OJS core (that is fetched at a pinned version and never committed), and it contains `docs/`, `scripts/`, tests, `ojs/content` and `ojs/fixtures` (fake sample articles that must never ship), `autoresearch/` and `CLAUDE.md`. Deploying it would put all of that on the public web root and still leave OJS missing.
+
+If Git deployment is chosen, it needs a **separate release repository or branch** containing only the built release (the OJS tree with our theme and `.htaccess`), updated only by a deliberate release step, never `main`. Open questions to ask Hostinger before relying on it (`UNVERIFIED`): can it deploy only a branch or subfolder; what exactly does it overwrite or delete in a folder that already has files (the agent said deploying into an existing directory can overwrite files); does a `.gitignore` protect `config.inc.php`, `public/` and `cache/` (it only protects *untracked* files, and these must also not be tracked); which GitHub permissions does the authorisation ask for (grant only the one repository); and what deploy key or webhook it leaves behind (it must be removed at handover, `docs/LAUNCH-GATES.md` gate 1.10). **After launch, auto-deployment should be off:** a deploy should follow our checks, not every push.
+
+Git deployment does not carry the database, uploaded files, the private files folder, `config.inc.php`, cron jobs or the PHP and email settings (the agent said the same); those stay manual in either method.
+
 ## What part 2 will add
 
-After the Day-0 results: the `.htaccess` template and its test harness, the release package and deploy script, the installer and configuration steps, the scheduler wrapper, the backup and staging-restore procedure, and the staging-then-production runbook. Until then none of those exist, and nothing here is a claim that the host is tested.
+After the Day-0 results: the `.htaccess` template and its test harness, the release package and deploy script, the installer and configuration steps, the scheduler wrapper, the backup and scratch-database restore procedure, and the runbook (test on the pre-launch site, then launch). Until then none of those exist, and nothing here is a claim that the host is tested.

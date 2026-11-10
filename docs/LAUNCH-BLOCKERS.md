@@ -1,5 +1,7 @@
 # Launch blockers
 
+> **Partly out of date (2026-11-10).** Decision **D-VPS is resolved**: there is no VPS (the client bought shared hosting, `docs/DEPLOY-SHARED.md`) and no staging site. Rows about the VPS, the firewall, SSH hardening, certbot, the reboot step and a staging rehearsal are reworked when part 2 of the shared-hosting path lands. New open items from the hosting change: the Day-0 results, the mailbox's cost after the first free year, the MariaDB 10.5 lifecycle, and the choice of how files are delivered to the host (see "Delivery" in `docs/DEPLOY-SHARED.md`).
+
 Every human step that nobody can do from the repository, in one table per kind, so the handover does not depend on anyone's memory. **Nothing in this file is done.** A row is ticked only by the person who did it, with a date and a name, and only after the "how we know" check passed.
 
 - **Owner:** *client*, *developer*, *operator* (whoever runs the server: normally the developer unless the client names someone else), or a **named third party** (for example Crossref support, a sponsor, the hosting provider, the mail provider).

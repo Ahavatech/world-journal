@@ -1,5 +1,7 @@
 # Launch gates
 
+> **Partly out of date (2026-11-10).** Several rows below (firewall, SSH, certbot, the VPS rehearsal, the reboot step, the Nginx checks) describe the VPS path, but the client's hosting is shared (`docs/DEPLOY-SHARED.md`) and there is **no staging site**. Those rows are reworked when part 2 of the shared-hosting path lands. The checks that need no server (`make lint`, the HTTP checks, the content gates) still apply.
+
 One list of everything that must be true before the journal goes live. **Every row has an owner, a command or check, and a pass condition.** Nothing in this table has been run for launch: the status column says what exists today. Rows that need the VPS, a real domain, a real mail provider or a real Cloudflare are `UNVERIFIED (not run on VPS)`.
 
 Owners: **developer** (the person who built and maintains the repository), **client** (the publisher and its editors), **operator** (whoever runs the server, normally the developer unless the client names another), **third party** (named in the row). `HOST` is the journal's main host, `JOURNAL` its path. The people who tick a row write the date and their name beside it; this file never does.

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Probe the WORJ Day-0 kit uploaded to a STAGING site, and report what the host honours.
-# Usage: scripts/probe-day0-kit.sh [--curl-arg ARG]... BASE_URL        BASE_URL = https://STAGING_HOST (no path)
+# Probe the WORJ Day-0 kit uploaded to a site that is not yet public, and report what the host honours.
+# Usage: scripts/probe-day0-kit.sh [--curl-arg ARG]... BASE_URL        BASE_URL = https://HOST (no path)
 #   --curl-arg   extra curl argument (repeatable). For a password-protected site use a netrc file:
 #                --curl-arg --netrc-file --curl-arg /path/to/netrc     NEVER put a password on the command line.
 # Output: one line per check, `OK`, `FAIL`, `WARN` or `INFO`, then `RESULT`. Exit 0 no FAIL, 1 any FAIL, 2 usage or no connection.
 # FAIL means the host does not honour something the deployment design relies on. This is information, not an error:
 # the result is written into docs/DEPLOY-SHARED.md ("Day-0 results") and decides the next steps.
-# Run it only against staging. The kit lives at BASE_URL/worj-day0/ (infra/shared-hosting/day0-kit/worj-day0/).
+# Run it only before launch, then delete the kit. The kit lives at BASE_URL/worj-day0/ (infra/shared-hosting/day0-kit/worj-day0/).
 set -uo pipefail
 base=""; curl_args=()
 while [ $# -gt 0 ]; do
@@ -152,7 +152,7 @@ elif [ "$code" = 200 ] && body_has memory_limit=123M; then info "t13-php-setting
 elif [ "$code" = 200 ]; then info "t13-php-settings: php_value in .htaccess is accepted but ignored ($(head -n1 "$tmp/b"))";
 else warn "t13-php-settings: unexpected answer (HTTP $code)"; fi
 
-echo "INFO  Now DELETE the worj-day0 folder from the staging site, and write these results into docs/DEPLOY-SHARED.md."
+echo "INFO  Now DELETE the worj-day0 folder from the site, and write these results into docs/DEPLOY-SHARED.md."
 if [ "$fails" -eq 0 ]; then echo "RESULT: PASS (no FAIL; read the INFO and WARN lines too)"; exit 0; fi
 echo "RESULT: FAIL ($fails)"
 exit 1

@@ -1,11 +1,13 @@
 WORJ Day-0 kit: temporary test files for the shared-hosting plan. Delete the whole folder when done.
 
 HOW TO USE
-1. Upload this folder, named exactly  worj-day0  , to the WEB ROOT of the STAGING subdomain
-   (so that  https://STAGING_HOST/worj-day0/probe.php  exists). Never upload it to the production site.
-2. The staging site must be password-protected. Tell the developer when it is uploaded.
+1. Upload this folder, named exactly  worj-day0  , to the WEB ROOT of the site
+   (so that  https://worldopenresearchjournal.com/worj-day0/probe.php  exists).
+   Only BEFORE the site is public, while it is closed to search engines. Never on a live journal.
+2. If the site is password-protected, tell the developer; the login goes on the secure credential card,
+   never in chat. Tell the developer when the folder is uploaded.
 3. The developer runs scripts/probe-day0-kit.sh against it and reports what worked.
-4. DELETE the folder afterwards, and delete the staging login if it was created only for this.
+4. DELETE the folder afterwards (the probe says so at the end).
 
 WHAT IT CONTAINS
 probe.php           prints PHP facts as JSON (version, extensions, limits, open_basedir, whether PHP can write
