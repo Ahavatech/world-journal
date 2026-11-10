@@ -24,7 +24,7 @@ Walkthroughs run in the sandbox against a **throwaway journal `probe`** (path `/
 | Masthead and contact (section 1) | written, `VERIFIED-SANDBOX 2026-11-10` |
 | Sections (section 2) | written, `VERIFIED-SANDBOX 2026-11-10` |
 | Submission settings, review settings and forms, users and roles (sections 3, 4, 5) | written; checked on screen except where marked UNVERIFIED |
-| Email templates and notifications | pending |
+| Email templates, notifications and delivery (section 6) | written; reviewer-invitation email UNVERIFIED (no submission in review) |
 | DOI, licence, search settings and description | pending |
 | Navigation menus, theme options, blocks, `showAwardsCard`, Highlights note | pending |
 | Admin hardening, email credentials, importer note, launch notes | pending |
@@ -44,3 +44,11 @@ Walkthroughs run in the sandbox against a **throwaway journal `probe`** (path `/
 - Journal Settings (Settings > Journal) tabs: Masthead, Contact, Sections, Categories. Required: title, initials, country; contact name and email; technical support name and email.
 - Decision table corrected after on-screen checks: review mode labels, deadline labels, reminders (four selectors, all "No reminder set"), licence (no option chosen; "Other license URL" selected and empty), copyright notice under Workflow > Submission > Author Guidance, DOIs **on** by default (D19), publishing mode has no radio selected.
 - Roles table (Settings > Users & Roles > Roles) is not a `<table>` I could drive with my selectors; the Author role dialog was not opened. D11 is therefore `UNVERIFIED` on screen (database values verified).
+
+## Mail catcher (session 1)
+
+- Mailpit v1.33.1 (`github.com/axllent/mailpit` release tarball, linux amd64) was downloaded into the scratchpad and run as `mailpit --smtp 127.0.0.1:1025 --listen 127.0.0.1:8025`. **The download was not checksum-verified** (no checksum was fetched); it was used only on the sandbox, never installed into the repo.
+- Sandbox only: `ojs-core/config.inc.php` (gitignored) `[email]` got `default = smtp`, `smtp_server = 127.0.0.1`, `smtp_port = 1025`, then `require_validation = On` to provoke an email. The file was restored from a backup afterwards.
+- Result: registration with `require_validation = Off` sends no email; with `On` it sends "Validate Your Account" (from = Technical Support Contact, absolute link, signature, no unreplaced variables).
+- Reviewer-invitation email not rendered (needs a submission in review with a reviewer; Phase 8.2 script).
+- Carry to 4.3: `[email] require_validation` is a config decision; `default`, `smtp_*` are set at provisioning from `.env`.
