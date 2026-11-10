@@ -9,7 +9,7 @@ This is guidance for the client and for DOI setup tasks. Verify fees and require
 1. Decide the registrant (the legal publisher, not the developer).
 2. Join Crossref directly as a member, **or** use a Crossref **sponsor** (an organisation that registers on behalf of smaller publishers). Check eligibility and current fees at https://www.crossref.org/fees/ and the membership pages.
 3. Receive a DOI prefix and deposit credentials.
-4. In OJS enable DOIs (journal settings), set prefix and a suffix pattern (e.g. `worj.%y.%a`, to be decided), assign DOIs to published articles, and enable the Crossref export/deposit plugin with the credentials. Verify the exact menu names and plugin options on the pinned OJS 3.5 release.
+4. In OJS enable DOIs (journal settings), set prefix and the suffix format (the OJS Default is random and opaque, which Crossref recommends; a custom pattern is not recommended, see `docs/DOI-SETUP.md`), assign DOIs to published articles, and enable the Crossref export/deposit plugin with the credentials. Verify the exact menu names and plugin options on the pinned OJS 3.5 release.
 5. Test with Crossref's test system first if available, then register. Confirm each DOI resolves to the article landing page.
 6. Show the DOI on article pages and in the PDF front page.
 
