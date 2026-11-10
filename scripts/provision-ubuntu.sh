@@ -46,6 +46,7 @@ OS_RELEASE="${WORJ_OS_RELEASE:-/etc/os-release}"   # a test-only override
 # --------------------------------------------------------------------------------------------------------------
 stage_preflight() {
   [ "$(id -u)" = 0 ] || die "run as root (sudo)"
+  command -v python3 >/dev/null || die "python3 is required by this script (cloud images have it): sudo apt-get install -y python3"
   [ -f "$OS_RELEASE" ] || die "cannot read $OS_RELEASE"
   local id ver lts
   id="$(sed -n 's/^ID=//p' "$OS_RELEASE" | tr -d '"')"; ver="$(sed -n 's/^VERSION_ID=//p' "$OS_RELEASE" | tr -d '"')"
@@ -97,7 +98,7 @@ stage_preflight() {
 }
 
 stage_packages() {
-  ensure_packages nginx php8.3-fpm php8.3-cli php8.3-mysql php8.3-mbstring php8.3-xml php8.3-intl php8.3-curl php8.3-gd php8.3-zip php8.3-bcmath \
+  ensure_packages python3 nginx php8.3-fpm php8.3-cli php8.3-mysql php8.3-mbstring php8.3-xml php8.3-intl php8.3-curl php8.3-gd php8.3-zip php8.3-bcmath \
     mariadb-server certbot ufw unattended-upgrades openssl age rclone curl ca-certificates rsync logrotate
 }
 
@@ -141,10 +142,10 @@ stage_ojs_code() {
   ensure_dir "$WEBROOT" 755 root:root
   ensure_dir "$FILES_DIR" 750 www-data:www-data
   local n=999
-  if [ -d "$WEBROOT" ]; then n="$(rsync -a --delete --dry-run --itemize-changes --chown=root:root --exclude=/config.inc.php --exclude=/public/ --exclude=/cache/ --exclude=.git/ "$OJS_SRC/" "$WEBROOT/" | wc -l)"; fi
+  if [ -d "$WEBROOT" ]; then n="$(rsync -a --delete --dry-run --itemize-changes --chown=root:root --exclude=/config.inc.php --exclude=/public/ --exclude=/cache/ --exclude=.git/ --exclude=/plugins/themes/worj "$OJS_SRC/" "$WEBROOT/" | wc -l)"; fi
   if [ "$n" -gt 0 ]; then
     chg "sync the OJS code from $OJS_SRC to $WEBROOT ($n item(s))"
-    [ "$CHECK" = 1 ] || rsync -a --delete --chown=root:root --exclude=/config.inc.php --exclude=/public/ --exclude=/cache/ --exclude=.git/ "$OJS_SRC/" "$WEBROOT/"
+    [ "$CHECK" = 1 ] || rsync -a --delete --chown=root:root --exclude=/config.inc.php --exclude=/public/ --exclude=/cache/ --exclude=.git/ --exclude=/plugins/themes/worj "$OJS_SRC/" "$WEBROOT/"
   else ok "OJS code in sync"; fi
   if [ -d "$THEME_SRC" ]; then
     n=999
@@ -156,7 +157,7 @@ stage_ojs_code() {
 }
 
 ANSWERS_DIR="/root/.worj-provision"
-cleanup_answers() { rm -rf -- "${ANSWERS_DIR:?}/answers" 2>/dev/null || true; }
+cleanup_answers() { rm -rf -- "${ANSWERS_DIR:?}/answers" "${ANSWERS_DIR:?}/install.log" 2>/dev/null || true; rmdir "$ANSWERS_DIR" 2>/dev/null || true; }
 trap cleanup_answers EXIT
 stage_ojs_config() {
   local cfg="$WEBROOT/config.inc.php"
@@ -191,9 +192,11 @@ stage_ojs_config() {
     printf '%s\n' en "" "$FILES_DIR" "$ADMIN_USERNAME" "$pw" "$pw" "$ADMIN_EMAIL" mysqli localhost "$DB_USER" "$DB_PASSWORD" "$DB_NAME" "$HOST" n y >"$ANSWERS_DIR/answers"
     pw=""
     if ! (cd "$WEBROOT" && php tools/install.php <"$ANSWERS_DIR/answers" >"$ANSWERS_DIR/install.log" 2>&1); then
-      cleanup_answers; die "the OJS installer failed; its output is in $ANSWERS_DIR/install.log (mode 600, check it, then delete it)"
+      rm -f "$ANSWERS_DIR/answers"; die "the OJS installer failed; its output is in $ANSWERS_DIR/install.log (mode 600, check it, then delete the directory)"
     fi
-    cleanup_answers; rm -f "$ANSWERS_DIR/install.log"
+    cleanup_answers
+    # the installer ran as root: the web server's user must be able to write its cache and public files
+    chown -R www-data:www-data "$WEBROOT/cache" "$WEBROOT/public" "$FILES_DIR"
     ok "installer finished; answers file removed"
   fi
   printf 'general.allowed_hosts=%s\ngeneral.time_zone="%s"\n' "'[\"$HOST\"]'" "$TIME_ZONE" |
@@ -207,7 +210,11 @@ stage_ojs_config() {
 
 stage_cloudflare_ip() {
   local out=/etc/nginx/worj-cloudflare-realip.conf rc=0
-  local args=(--out "$out" --source "$CLOUDFLARE_SOURCE" --test-cmd "nginx -t" --no-reload)
+  # `nginx -t` is only a meaningful test once our site includes the file; on the first run nothing includes it yet
+  # (and a stock Ubuntu default site can fail the test for unrelated reasons, for example no IPv6)
+  local testcmd="true"
+  if grep -qs 'worj-cloudflare-realip' /etc/nginx/conf.d/worj.conf; then testcmd="nginx -t"; fi
+  local args=(--out "$out" --source "$CLOUDFLARE_SOURCE" --test-cmd "$testcmd" --no-reload)
   [ "$CHECK" = 0 ] || args+=(--check)
   local res
   res="$("$ROOT/scripts/update-cloudflare-ips.sh" "${args[@]}")" || rc=$?

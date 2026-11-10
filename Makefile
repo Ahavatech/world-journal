@@ -3,7 +3,7 @@ SHELL := /bin/bash
 THEME := ojs/plugins/themes/worj
 
 # Needs php-fpm8.3, mariadbd and nginx in this sandbox; not part of `make lint` (CI has no FPM or MariaDB).
-.PHONY: infra-test infra-test-nginx infra-test-backup infra-test-reset
+.PHONY: infra-test infra-test-nginx infra-test-backup infra-test-reset infra-test-chroot
 infra-test:
 	scripts/test-infra-config.sh
 	scripts/test-provision-preflight.sh | tail -1
@@ -16,6 +16,10 @@ infra-test-backup:
 # Needs root and the sandbox up; restores the sandbox admin row afterwards.
 infra-test-reset:
 	scripts/test-reset-admin-password.sh
+
+# Needs root, debootstrap, apt access and about 6 GB; 15 to 25 minutes. Provisions a clean Ubuntu 24.04 chroot twice.
+infra-test-chroot:
+	scripts/test-provision-chroot.sh
 
 # Needs the sandbox (make sandbox-up sandbox-seed), root, and `cd autoresearch/eval && npm ci`. Takes a few minutes.
 infra-test-nginx:

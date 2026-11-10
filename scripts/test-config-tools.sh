@@ -100,5 +100,19 @@ expect_rc "a missing section fails" 1 "$rc"
 printf 'general.time_zone=x\n' | "${S[@]}" "$tmp/config.inc.php" "SECRET=oops" >"$tmp/s5.txt" 2>&1; rc=$?
 yes "an extra argument is refused" differ "$rc" 0
 
+# the installer appends a second allowed_hosts line; the later one wins, so it must not survive
+cat >"$tmp/dup.inc.php" <<'CFG'
+[general]
+allowed_hosts = '["journal.example.org"]'
+installed = On
+allowed_hosts = "[\"\"]"
+time_zone =
+CFG
+printf 'general.allowed_hosts=%s\ngeneral.time_zone="UTC"\n' "'[\"journal.example.org\"]'" | "${S[@]}" "$tmp/dup.inc.php" >"$tmp/s6.txt" 2>&1; rc=$?
+expect_rc "installer-style duplicate keys: set succeeds" 0 "$rc"
+yes "only ONE allowed_hosts line is left" content_is 1 <(grep -c '^allowed_hosts' "$tmp/dup.inc.php")
+yes "...and it is the real domain, not the installer's empty list" has_line "allowed_hosts = '[\"journal.example.org\"]'" "$tmp/dup.inc.php"
+yes "the output says a duplicate was removed" grep -q 'removed 1 later duplicate' "$tmp/s6.txt"
+
 if [ "$fail" = 0 ]; then echo "ALL PASS"; else echo "$fail FAILED"; fi
 exit "$fail"

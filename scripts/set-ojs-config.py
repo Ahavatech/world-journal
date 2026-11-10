@@ -37,8 +37,11 @@ def weak(value):
 
 
 def find(lines, section, key):
+    """First active line of the key in the section, the last line of the section, and any DUPLICATE active lines.
+    The OJS installer appends a second `allowed_hosts = "[\"\"]"` after the existing one, and the later one wins."""
     cur = ""
     last_in_section = None
+    first, dups = None, []
     for i, line in enumerate(lines):
         m = SECTION.match(line)
         if m:
@@ -49,8 +52,11 @@ def find(lines, section, key):
         if cur == section:
             last_in_section = i
             if re.match(rf"^{re.escape(key)}\s*=", line):
-                return i, last_in_section
-    return None, last_in_section
+                if first is None:
+                    first = i
+                else:
+                    dups.append(i)
+    return first, last_in_section, dups
 
 
 def main():
@@ -76,11 +82,15 @@ def main():
     plan = [(k, v, False) for k, v in wanted.items()] + [(k, None, True) for k in a.generate_if_weak]
     for dotted, raw, gen in plan:
         section, key = dotted.split(".", 1)
-        idx, last = find(lines, section, key)
+        idx, last, dups = find(lines, section, key)
         if gen:
             if idx is None:
                 print(f"FAIL  {dotted}: key not found in the config", file=sys.stderr)
                 return 1
+            if dups:
+                for d in sorted(dups, reverse=True):
+                    del lines[d]
+                changed_any = True
             current = lines[idx].split("=", 1)[1]
             if not weak(current):
                 report.append(f"ok         {dotted} (already strong, kept)")
@@ -90,6 +100,12 @@ def main():
             changed_any = True
             continue
         new = f"{key} = {raw}"
+        if dups:
+            # later duplicates would override ours: drop them (highest index first so the others stay valid)
+            for d in sorted(dups, reverse=True):
+                del lines[d]
+            changed_any = True
+            report.append(f"changed    {dotted} (removed {len(dups)} later duplicate line(s))")
         if idx is None:
             if last is None:
                 print(f"FAIL  section [{section}] not found", file=sys.stderr)
