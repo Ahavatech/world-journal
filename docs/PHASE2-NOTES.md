@@ -33,10 +33,15 @@ Per phase: `make lint`, `scripts/test-nav.js` (15 of 15 must pass) and `make che
 
 ## Open decisions for the human
 
-- **Meta description on non-home pages.** OJS core emits `<meta name="description">` only on the journal homepage and only when the journal's search description is set. Article, issue and other pages have none (Lighthouse SEO 92 there). A small hook in the theme could add one from the abstract; not done, because it touches the metadata area.
+- **Meta description (decided: no hook).** OJS core emits `<meta name="description">` only on the journal homepage and only when the journal's search description is set (a Task 4.1 step). The Lighthouse SEO score of 92 on inner pages comes from OJS core and is not chased: a theme hook would touch the metadata area we agreed to leave alone, for a small gain.
 - **404 page:** needs a static page served by nginx in Phase 5 (core prints a bare `<h1>`).
 - **Parent theme dependency:** the article and issue templates still come from the parent theme; only the CSS is replaced.
 - **Lighthouse performance** is not measured; decide later whether to run it manually before launch.
+
+## Evaluator rules added after review
+
+- **Gate 8: no uncaught JavaScript error or console error on any page.** Proven by reintroducing the parent `main.js` (the Swiper bug): the gate failed with `uncaught: Swiper is not defined` on every page and exit 1; restored, it passes.
+- **Component set.** `make eval` prints `COMPONENTS: ran=... skipped=...` and `COMPONENT-SET: MATCHES|DIFFERS`. `baseline.json` records `a11y,seo,bp,resp,simplicity`. The Phase 9 loop refuses to start when it says `DIFFERS` (rule in `autoresearch/program.md`). Lighthouse stays optional.
 
 ## Resume commands
 
@@ -57,7 +62,7 @@ The sandbox needs the `world-journal` environment network allowlist (`pkp.sfu.ca
 - Focus colour is `#2f7bf5`: it holds 3:1 against white, panel grey, navy and dark navy. The old `#0b5fff` was 2.80:1 against navy buttons.
 - Parent CSS often wins on specificity (`.page_register #formErrors .pkp_form_error_list a`); prefix with `body .pkp_structure_main` or use the same id/class chain.
 - Public pages have zero inline scripts and event handlers.
-- One run of `checks/forms-errors.js` failed 4 checks and then passed in 4 reruns; cause unknown (the test now waits for `networkidle` after submitting). If it recurs, investigate.
+- **The flaky form-error check was a race in the test, not the page (resolved).** `waitForLoadState('load')` after a click resolves at once because the previous page is already loaded, so the check ran while the new page was still parsing and `forms.js` had not executed (no `role`, no focus, no `aria-describedby`). Reproduced with `EVAL_CPU_THROTTLE=8` (and the CDP throttle in a scratch script at 4x, 8x and 16x). Fix: register `page.waitForEvent('load')` before the click, which waits for the new page's own load event; no sleeps, no retries, no loosened assertion; the `networkidle` waits added earlier were removed because they only hid the race. Evidence: old pattern at 8x throttle failed 3 of 3 runs; fixed pattern passed 10 of 10 at normal speed and 10 of 10 at 8x. The same pattern in `scripts/sandbox-seed.js` and `scripts/sandbox-api.js` (login before an API call) was fixed too.
 
 - Any grid or flex container that is also a parent-theme clearfix (`.pkp_helpers_clear`) needs its `::before`/`::after` set to `content: none`, or the pseudo-elements become grid items (seen on `.pkp_structure_content` and `.obj_article_details .row`).
 - Stress test recipe: `node scripts/sandbox-api.js PUT /worj/api/v1/submissions/3/publications/3 '{"title":{"en":"...long..."}}'`, check overflow, then PUT the original title and abstract back.
