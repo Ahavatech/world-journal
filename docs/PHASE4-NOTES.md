@@ -27,7 +27,7 @@ Walkthroughs run in the sandbox against a **throwaway journal `probe`** (path `/
 | Email templates, notifications and delivery (section 6) | written; reviewer-invitation email UNVERIFIED (no submission in review) |
 | Distribution: DOI, licence, search description (section 7) | written; DOI-off and meta description checked in the sandbox |
 | Website: theme, navigation, blocks, masthead, announcements, Highlights (section 8) | written; most steps checked on screen |
-| Admin hardening, email credentials, importer note, launch notes | pending |
+| Admin hardening, credentials, importer note (section 9) | written; none run on a VPS |
 
 ## Findings so far
 
@@ -66,4 +66,11 @@ Walkthroughs run in the sandbox against a **throwaway journal `probe`** (path `/
 - **Mishap, repaired:** a script with an empty id clicked the first edit link (the *Register* item in the throwaway `probe` journal) and saved the title "Editorial Team" there. I deleted that title setting row (probe only, id 42) and redid the change on the Editorial Masthead item (id 55). Lesson: never build a selector from an empty variable; assert the id first.
 - The Make a Submission block plugin: enabling the plugin is not enough; the block must also be ticked in Appearance > Setup > Sidebar, then Save. Enabled-state in the plugin grid lags; read the database or the homepage.
 - Announcements are **disabled** on a new journal; enrollment masthead is **enabled**.
-- Probe journal now carries: theme worj, awards card on, blocks on, navigation assigned. Delete it before finishing.
+- Probe journal now carries: theme worj, awards card on, blocks on, navigation assigned. The probe journal was deleted at the end of session 1 (`DELETE /index/api/v1/contexts/2`).
+
+## State at the end of session 1 and what session 2 does
+
+- Checklist sections 1 to 9 are written in `docs/ADMIN-SETUP-CHECKLIST.md`. Every `UNVERIFIED` is labelled with its reason; nothing was run on a VPS.
+- No two-factor feature found in OJS core 3.5.0-6 (Plugin Gallery not checked). The admin username cannot be renamed in the profile form (source reading): choose it at install.
+- Session 2: **4.2** (verify `php tools/importExport.php list`, the `native` and `users` usage, record the real invocations, then wrapper scripts with the safeguards above) and **4.3** (`ojs/config/config.inc.php.template`, lint against `ojs-core/config.TEMPLATE.inc.php`, record how the sandbox install was done; `require_validation` is a config decision, see section 6.6).
+- Not walked: Distribution > Access, Archiving, Registration, PKP Preservation Network, LOCKSS/CLOCKSS tabs; Website > Setup > Information texts; Workflow > Submission > Metadata defaults; the Author role dialog; reviewer-invitation email.
