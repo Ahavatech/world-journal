@@ -84,3 +84,10 @@ Walkthroughs run in the sandbox against a **throwaway journal `probe`** (path `/
 - Script guard: `scripts/lib/sandbox-guard.js` + `scripts/test-sandbox-guard.js` (12 cases in `make lint`); wired into `sandbox-api.js`, `sandbox-seed.js`, `sandbox-content.js`.
 - Walked now: Website > Information (defaults present in the editors and on public pages); Distribution > Access (publishing mode and OAI were on the **Access** tab, not "Setup": corrected), Archiving (PN, LOCKSS and CLOCKSS), DOIs > Registration.
 - Mailpit: v1.33.1, sandbox only.
+
+## Session 2: 4.2 and 4.3 (done)
+
+- **4.2** `scripts/import-ojs-xml.sh` + `scripts/import-precheck.py`, documented with the recorded tool output in `docs/IMPORT.md`; 18 negative and positive tests in `scripts/test-import-wrapper.sh` (stub OJS, run by `make lint`). Real runs in the sandbox: users (2 throwaway `.invalid` accounts) and a native issue with 3 sample articles into the throwaway `probe` journal. New users are emailed by the tool; existing users are not updated; the same file is refused the second time.
+- **4.3** `ojs/config/config.inc.php.template` generated from the shipped file by `scripts/make-config-template.py` (23 deliberate overrides, each with a reason); `scripts/check-config-template.py` lints it (unknown keys, missing required keys, real-looking secrets, `installed`, pin, first-line guard); 12 cases in `scripts/test-config-template.sh`; `scripts/ojs-config-keys.txt` (117 keys) lets CI run the lint without `ojs-core/`. `make setup` fails after a pin change until the template is regenerated.
+- **Install findings (sandbox, 2026-11-10):** the CLI installer `php tools/install.php` exists and was used. It sets `app_key` and `installed = On`, but leaves `salt` at the public default and `api_key_secret` empty; it rewrites `allowed_hosts` to `[""]` and blanks `time_zone`. Provisioning must generate the salt and API key secret and reset `allowed_hosts` and `time_zone`.
+- Not done: a full install from the template on a clean database (only a filled-template diff against the sandbox install); web installer; real SMTP.

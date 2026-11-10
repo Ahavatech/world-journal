@@ -11,6 +11,18 @@ This file is created early so that production-safety rules are written down befo
 3. Pages a human has edited (placeholder banner gone) are never touched by the script, so editing in OJS afterwards is safe.
 4. `ojs/content/` and `ojs/fixtures/` hold placeholders and fake samples. They are not deployed content; the launch gate (Phase 8.3) requires `make check-placeholders` to be empty.
 
+## Installing OJS: the CLI installer (same path as the sandbox)
+
+**Which method:** the command-line installer `php tools/install.php`, which exists in 3.5.0-6 (`ojs-core/tools/install.php`, class `OJSInstallTool`) and is the path `scripts/sandbox-ojs.sh` used. Why not the web installer: the CLI route is scriptable and repeatable, its answers are recorded, and the install page is never exposed to the internet where anyone could reach it first. The web installer was not tried.
+
+1. Fill `ojs/config/config.inc.php.template` into `config.inc.php`: replace every `@@TOKEN@@` from `.env`, and **generate** `@@SALT@@` and `@@API_KEY_SECRET@@` (long random strings). **The installer does not do this**: in the sandbox it left the salt at the shipped public default `YouMustSetASecretKeyHere!!` and `api_key_secret` empty. `installed` stays `Off`; it is not set to `On` by hand, the installer does that.
+2. Create the database and its user (Phase 5 provisioning).
+3. Run the installer with the answers on standard input, **from a file with mode 600**, not typed on the command line (shell history). The order of prompts, taken from `scripts/sandbox-ojs.sh` and checked against `lib/pkp/classes/cliTool/InstallTool.php`: locale, additional locales (empty), files directory, administrator username, password, password again, email, database driver, host, user, password, name, OAI repository identifier, send usage beacon (n), install (y). **Choose a non-default administrator username** (checklist 9.2).
+4. **Afterwards**, compare the result with the template: `installed` is now `On` and `app_key` is generated (both expected). The installer also **rewrote `allowed_hosts` to `[""]`, which rejects every request**, and **blanked `time_zone`** in the sandbox: set both again. Expected differences are listed in `docs/PHASE4-NOTES.md`.
+5. After an OJS pin change, `make setup` fails until `scripts/make-config-template.py` is re-run and its diff reviewed.
+
+Nothing here has been run on a VPS.
+
 ## Importing real users and articles
 
 Use `scripts/import-ojs-xml.sh` (usage and safeguards in `docs/IMPORT.md`), never the raw tool. **Take a backup first and run each file once.** `--i-have-a-backup` is only a speed bump: nothing verifies the backup. A users import emails every new user, so test the mail settings first. Real files live in `ojs/import/` (gitignored, personal data).

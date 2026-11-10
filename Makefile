@@ -8,6 +8,8 @@ setup:
 	scripts/fetch-ojs.sh
 	mkdir -p ojs-core/plugins/themes
 	ln -sfn "$(CURDIR)/$(THEME)" ojs-core/plugins/themes/worj
+	# after an OJS pin change this fails until the config template is regenerated and reviewed
+	python3 -I scripts/make-config-template.py --check
 
 sandbox-up: setup
 	scripts/sandbox-ojs.sh up
@@ -33,6 +35,9 @@ lint:
 	python3 -I scripts/extract-ojs-default-wording.py --check
 	node scripts/test-sandbox-guard.js | tail -1
 	scripts/test-import-wrapper.sh | tail -1
+	python3 -I scripts/check-config-template.py | tail -1
+	python3 -I scripts/make-config-template.py --check
+	scripts/test-config-template.sh | tail -1
 	@if [ -n "$$(find ojs scripts -name '*.php' -print -quit)" ]; then \
 	  find ojs scripts -name '*.php' -print0 | xargs -0 -n1 php -l >/dev/null && echo "php -l ok"; \
 	else echo "no PHP files yet"; fi
