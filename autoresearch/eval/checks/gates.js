@@ -145,7 +145,7 @@ async function openPage(browser, pg, width, opts = {}) {
 
   if (updateBaseline) {
     const previous = fs.existsSync(BASELINE) ? JSON.parse(fs.readFileSync(BASELINE, 'utf8')) : {};
-    fs.writeFileSync(BASELINE, JSON.stringify({ note: 'Written by `node checks/gates.js --update-baseline` after a deliberate review. Gate 7 fails if a page shows fewer [PLACEHOLDER markers than here; simplicity is scored against themeBytes.', components: previous.components, themeBytes: tb, placeholders }, null, 2) + '\n');
+    fs.writeFileSync(BASELINE, JSON.stringify({ note: 'Written by `node checks/gates.js --update-baseline` after a deliberate review. Gate 7 fails if a page shows fewer [PLACEHOLDER markers than here; simplicity is scored against themeBytes. `components` is the set of score components that were measured when the baseline was recorded; it changes only by hand.', components: previous.components, themeBytes: tb, placeholders }, null, 2) + '\n');
     console.log(`baseline written: themeBytes ${tb}, placeholders ${JSON.stringify(placeholders)}`);
     return;
   }

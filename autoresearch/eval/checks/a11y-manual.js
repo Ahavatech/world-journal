@@ -205,6 +205,7 @@ const CONTRAST = {
     ['announcement title link', '.worj-announcement h3 a'], ['announcement date (muted)', '.worj-announcement__date'], ['nav link', '.worj-nav > ul > li > a'], ['nav search link', '.worj-search-link'], ['account link', '.worj-user a'], ['footer title (large)', '.worj-footer__title'], ['footer link', '.worj-footer__links a'], ['footer placeholder badge', '.worj-footer .worj-placeholder'],
   ],
   article: [['link (issue)', '.entry_details .item a'], ['metadata label (muted)', '.sub_item .label'], ['breadcrumb link', '.cmp_breadcrumbs a'], ['breadcrumb current (muted)', '.cmp_breadcrumbs .current span'], ['sidebar block title', '.pkp_block .title'], ['sidebar link', '.pkp_block li a'], ['make-submission button', '.block_make_submission_link']],
+  awards: [['placeholder banner (content page)', '.worj-placeholder'], ['content page heading (h2, large)', '.page_title ~ h2, main h2'], ['content page body text', 'main p:not(.worj-placeholder)'], ['link inside content', 'main a']],
   login: [['form label', 'label'], ['form link', '.page_login a'], ['submit button', 'button[type=submit]']],
 };
 
