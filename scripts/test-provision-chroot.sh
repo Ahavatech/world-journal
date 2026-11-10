@@ -227,7 +227,7 @@ yes "REGRESSION no second allowed_hosts line (the installer appends one): exactl
 yes "REGRESSION no python3 problem: the provision log never mentions a missing interpreter" bash -c "! grep -qi 'python3: not found\|command not found' '$log'/full-1.out '$log'/stages-1.out"
 yes "ROBOTS_MODE=staging: robots.txt is installed and closes the site" bash -c "grep -qx 'Disallow: /' '$RUN/usr/share/worj-errors/robots.txt' && ! grep -q Sitemap '$RUN/usr/share/worj-errors/robots.txt'"
 yes "ROBOTS_MODE=staging: the rendered security headers send X-Robots-Tag noindex" grep -q 'add_header X-Robots-Tag "noindex, nofollow" always' "$RUN/etc/nginx/snippets/worj/worj-security-headers.conf"
-yes "the OAI repository id is the main host (and check-live-config passes it)" grep -q '^repository_id = journal.example.org' "$cfg"
+yes "the OAI repository id is the main host (the installer writes it quoted)" grep -Eq '^repository_id = "?journal\.example\.org"?$' "$cfg"
 yes "scheduled tasks come from cron: task_runner Off, job_runner Off, process_jobs_at_task_scheduler On" bash -c "grep -q '^task_runner = Off' '$cfg' && grep -q '^job_runner = Off' '$cfg' && grep -q '^process_jobs_at_task_scheduler = On' '$cfg'"
 yes "the cron file runs the OJS scheduler every minute as www-data" grep -qE '^\* \* \* \* \* www-data cd /var/www/worj && php lib/pkp/tools/scheduler.php run' "$RUN/etc/cron.d/worj"
 inch su -s /bin/sh www-data -c "cd /var/www/worj && php lib/pkp/tools/scheduler.php list" >"$log/sched-list.out" 2>&1; rc=$?

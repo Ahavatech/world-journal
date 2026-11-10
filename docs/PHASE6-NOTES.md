@@ -28,3 +28,7 @@ Branch `claude/phase6-discoverability`. Everything below is `VERIFIED-SANDBOX 20
 - `check-pdf.sh` follows the URL `citation_pdf_url` names (the **download** URL; the galley view URL returns an HTML viewer page), sends no cookies, and treats `Set-Cookie` as INFO.
 - `check-discovery.sh` uses `sed -n 1p` instead of `head -n1` in pipelines (a `head` under `pipefail` gave exit 141 on the first mismatch; the test that found it is kept).
 - `make check-discovery` **fails in the sandbox on purpose**: the sandbox serves OJS's own `robots.txt` (no Sitemap line). The Nginx harness checks the rendered one.
+
+## Final chroot provisioning run (after the last commit)
+
+Two full runs on a fresh Ubuntu 24.04 chroot: the second ends `changed: 0`, `--check` on the provisioned machine says `changed: 0`, no secret was printed, and `check-live-config.py` passed on the provisioned config with **22 checks, 0 failed** (including the new `[oai] repository_id` check). The staging `robots.txt` and the `X-Robots-Tag` header were installed. **One assertion failed and was my error:** it expected `repository_id = journal.example.org`, but the installer writes the value quoted. The config was right; the assertion now accepts the quoted form (checked against the produced line, not re-run end to end).
