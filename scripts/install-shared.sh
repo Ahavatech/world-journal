@@ -47,6 +47,7 @@ webroot="$REMOTE_ROOT/public_html"; files_dir="$REMOTE_ROOT/worj-files"; cfg="$w
 sshbase=("${WORJ_SSH:-ssh}" -p "$SSH_PORT" -o BatchMode=yes)
 [ -z "$SSH_KEY" ] || sshbase+=(-i "$SSH_KEY")
 remote() { "${sshbase[@]}" "$SSH_TARGET" "$@"; }
+rsh=""; for a in "${sshbase[@]}"; do rsh="$rsh '$a'"; done
 
 tmp="$(mktemp -d)"; chmod 700 "$tmp"
 trap 'rm -rf -- "${tmp:?}"' EXIT
@@ -69,8 +70,12 @@ if [ "$installed" = 0 ]; then
   [ "${#ADMIN_PASSWORD}" -ge 12 ] || die "the administrator password must have at least 12 characters"
 fi
 # 2. directories
-chg "create $files_dir (mode 700), $webroot/cache and $webroot/public"
-if [ "$check" = 0 ]; then remote "mkdir -p $(printf '%q' "$files_dir") $(printf '%q' "$webroot/cache") $(printf '%q' "$webroot/public") && chmod 700 $(printf '%q' "$files_dir") && chmod 755 $(printf '%q' "$webroot/cache") $(printf '%q' "$webroot/public")"; fi
+chg "create $files_dir (mode 700), $webroot/cache and $webroot/public, and $REMOTE_ROOT/worj-ops with the scheduler wrapper"
+if [ "$check" = 0 ]; then
+  remote "mkdir -p $(printf '%q' "$REMOTE_ROOT/worj-ops") $(printf '%q' "$REMOTE_ROOT/worj-logs")"
+  rsync -a --chmod=F755 -e "$rsh" "$root/infra/shared-hosting/run-scheduler.sh" "$SSH_TARGET:$REMOTE_ROOT/worj-ops/run-scheduler.sh"
+  remote "mkdir -p $(printf '%q' "$files_dir") $(printf '%q' "$webroot/cache") $(printf '%q' "$webroot/public") && chmod 700 $(printf '%q' "$files_dir") && chmod 755 $(printf '%q' "$webroot/cache") $(printf '%q' "$webroot/public")"
+fi
 
 if [ "$installed" = 0 ]; then
   chg "render config.inc.php here (salt and API secret generated here), upload it with mode 600"

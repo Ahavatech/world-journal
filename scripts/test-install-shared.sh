@@ -95,6 +95,10 @@ yes "the output holds none of the secrets" bash -c "! grep -qE '$dbp|$ADMINPW|sm
 yes "config.inc.php exists with mode 600" test "$(stat -c %a "$cfg")" = 600
 yes "installed = On" grep -q '^installed = On' "$cfg"
 yes "the files directory is above the web root, mode 700" test -d "$R/worj-files" -a "$(stat -c %a "$R/worj-files")" = 700
+yes "the scheduler wrapper is on the host above the web root, executable" test -x "$R/worj-ops/run-scheduler.sh"
+bash "$R/worj-ops/run-scheduler.sh"; rc=$?
+yes "the REAL OJS scheduler runs through the wrapper against the installed site (exit $rc)" test "$rc" = 0
+yes "...and the log shows start and end" bash -c "grep -q ' start$' '$R/worj-logs/scheduler.log' && grep -q ' end exit=0$' '$R/worj-logs/scheduler.log'"
 yes "the installer created the database tables" test "$(mariadb -N "$dbn" -e "select count(*) from users where username='worjadmin'")" = 1
 yes "before --finish the initial password is still usable (seeding logs in with it)" test "$(mariadb -N "$dbn" -e "select coalesce(must_change_password,0) from users where username='worjadmin'")" = 0
 yes "the salt is not the public default and is long" bash -c "s=\$(sed -n 's/^salt *= *\"\\(.*\\)\"/\\1/p' '$cfg'); [ \${#s} -ge 32 ] && [ \"\$s\" != 'YouMustSetASecretKeyHere!!' ]"
@@ -108,7 +112,7 @@ S() { WORJ_SSH="$tmp/ssh" "$root/scripts/seed-shared.sh" "$@"; }
 S --env "$tmp/env" --check --with-sample-issue >"$tmp/seed.txt" 2>&1; rc=$?
 yes "seed --check exits 0 (exit $rc)" test "$rc" = 0
 yes "seed --check prints WOULD lines for the journal, the pages and the sample issue" bash -c "grep -c '^WOULD: ' '$tmp/seed.txt' | grep -qx 3"
-yes "seed --check created nothing on the host" test ! -e "$R/worj-ops"
+yes "seed --check created nothing on the host" test ! -e "$R/worj-ops/scripts" -a ! -e "$R/worj-ops/ojs"
 yes "seed --check printed no secret" bash -c "! grep -qE '$dbp|$ADMINPW|smtp-secret' '$tmp/seed.txt'"
 no "seed refuses an env file readable by others" S --env "$tmp/env644" --check
 
