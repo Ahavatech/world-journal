@@ -76,3 +76,26 @@ The missing bcmath/MariaDB/nginx are installable from apt, so OJS **does** run h
 - Lighthouse 13.6.0 runs against the sandbox with `CHROME_PATH` pointing at the Playwright Chromium (about 11 s per page). It installs 119 packages (about 190 MB in `autoresearch/eval/node_modules`, not committed). Accessibility, SEO and best-practices scores were identical across repeat runs.
 - **Limitation:** Lighthouse performance is not measured. It needs throttled, median-of-three runs per page (about 6 to 7 minutes for 11 pages, over the 5-minute budget in `autoresearch/EVAL-SPEC.md`) and is the flaky category on a shared CPU. `make eval` reports `perf=SKIPPED` and re-scales the score; no number is estimated.
 - `make eval` takes about 110 s (`autoresearch/eval/README.md`).
+
+## Phase 5 environment check (2026-11-10)
+
+Probed read-only before any Phase 5 work.
+
+| Question | Result |
+|---|---|
+| Docker or an Ubuntu 24.04 container to test provisioning in? | **No.** The docker CLI (29.9.2) is installed, but there is **no daemon and no `/var/run/docker.sock`**. |
+| systemd? | Not PID 1 (services are started by hand), so unit files, timers and `systemctl` behaviour cannot be exercised. |
+| A chroot? | Yes. The sandbox is root, `unshare --mount --pid --fork --map-root-user` works, `archive.ubuntu.com` is reachable and `apt-get install -s debootstrap ufw certbot python3-certbot-nginx rclone` resolves on noble. A `debootstrap noble` chroot is feasible (no services, no firewall, no sshd). |
+| Cloudflare's published IP ranges | `https://www.cloudflare.com/ips-v4` is **blocked** by the sandbox network proxy. The range fetch can only be tested against local fixtures. |
+| Tools present | nginx 1.24, php8.3-fpm, MariaDB 10.11 (for `nginx -t`, `php-fpm -t` and config tests); shellcheck; rclone and age are not installed (installable with apt). |
+
+**What this means for every Phase 5 script.** Provisioning is **not tested in a clean container or on a VPS**. It is checked with:
+
+- `shellcheck -x` (part of `make lint`);
+- `--check` dry-run mode (prints actions, changes nothing);
+- configuration syntax checks (`nginx -t`, `php-fpm8.3 -t`, a throwaway `mariadbd` loading the cnf);
+- stub-based unit tests of the scripts' own logic;
+- a **debootstrap chroot run with services, firewall and SSH skipped**, run twice to show idempotency;
+- a local Nginx in front of the sandbox OJS for redirect, header, deny-rule and 404 checks.
+
+**Every production step is `UNVERIFIED (not run on VPS)`**, and no document may call provisioning "tested". Not testable here at all: ufw/nftables, sshd reload and key-only login, systemd units and timers, certbot, real Cloudflare (SSL mode, rate limits, IP fetch), real DNS and mail, a real rclone remote, 4 GB tuning performance.
