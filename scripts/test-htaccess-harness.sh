@@ -276,8 +276,10 @@ mutate "nosniff" 'X-Content-Type-Options' p_nosniff
 mutate "CSP report-only" 'Header always set Content-Security-Policy-Report-Only' p_csp
 mutate "CSP exemption for backend paths" 'management|workflow' p_csp_exempt
 mutate "CSP exemption for \$\$\$call\$\$\$" 'call\$\$\$" NO_CSP' p_csp_call
-mutate "one-hour cache for static files" 'ExpiresDefault "access plus 1 hour"' p_expire1h
-mutate "theme CSS cache" 'ExpiresDefault "access plus 1 hour"' p_theme1h
+mutate "one-hour cache for CSS" 'ExpiresByType text/css "access plus 1 hour"' p_expire1h
+mutate "theme CSS cache" 'ExpiresByType text/css "access plus 1 hour"' p_theme1h
+p_logo1h() { has "$(hdr "$S/plugins/themes/worj/assets/img/logo-header.jpg")" "max-age=3600"; }
+mutate "one-hour cache for images" 'ExpiresByType image/jpeg "access plus 1 hour"' p_logo1h
 mutate "static 404 page" 'ErrorDocument 404' p_404page
 
 if [ "$fail" = 0 ]; then echo "ALL PASS"; else echo "$fail FAILED"; fi

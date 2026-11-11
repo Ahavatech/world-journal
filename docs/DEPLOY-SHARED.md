@@ -97,7 +97,7 @@ The kit and the probe are tested in the sandbox against a **stand-in Apache, not
    - **Hostinger's CDN is in front of the site** (`server: hcdn`, `x-hcdn-*` headers), although the plan was to keep it off while testing. Check hPanel and decide; it also means the visitor's address may arrive in `X-Forwarded-For` (finding 3).
    - **The host adds `Content-Security-Policy: upgrade-insecure-requests`** to every response. It restricts nothing; the check now allows exactly that value and fails on any other enforcing policy.
    - **The host's own firewall answers 403, not our 404, for `/config.inc.php`, `/.git/config` and `/.htaccess`.** Still refused; the check accepts 403 or 404.
-   - **The `.htaccess` in `plugins/themes/` was ignored** in favour of the root rule (theme CSS got a 7-day cache). There is now **one rule, one hour for all static files**, and that file is gone from the release.
+   - **The `.htaccess` in `plugins/themes/` was ignored**, and so was a `FilesMatch` + `ExpiresDefault` rule: the host's own 7-day default for static files won (confirmed with a cache-busting URL that reached the origin). **`ExpiresByType` is honoured** (as the Day-0 t09 test already showed), so there is now one `ExpiresByType` line per file type, one hour for all static files, and the themes `.htaccess` is gone from the release.
    - **The report-only CSP is sent on backend and API paths** (finding 2): now a WARN in the check, not a failure.
    - **Our static 404 page works** for the paths our rules deny (`/tools/install.php` answers 404 with the accessible page).
 6. **Still to do on the host:** B (done), E cron interval, G SMTP, H ModSecurity, I backups; the Day-0 kit was deleted afterwards.

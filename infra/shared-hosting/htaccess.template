@@ -30,9 +30,27 @@ Header always set Content-Security-Policy-Report-Only "default-src 'self'; scrip
 #     ignored a more specific rule in plugins/themes/.htaccess (Day-0 run, 2026-11-10), so there is one rule for everything. ---
 <IfModule mod_expires.c>
 ExpiresActive On
-<FilesMatch "\.(css|js|map|woff2?|ttf|otf|eot|svg|ico|png|jpe?g|gif|webp|avif)$">
-ExpiresDefault "access plus 1 hour"
-</FilesMatch>
+# One line per type (ExpiresByType): on the host a FilesMatch + ExpiresDefault rule was ignored and the host's own 7-day default won,
+# while ExpiresByType worked (Day-0 t09 and the live check, 2026-11-11).
+ExpiresByType text/css "access plus 1 hour"
+ExpiresByType text/javascript "access plus 1 hour"
+ExpiresByType application/javascript "access plus 1 hour"
+ExpiresByType application/x-javascript "access plus 1 hour"
+ExpiresByType image/png "access plus 1 hour"
+ExpiresByType image/jpeg "access plus 1 hour"
+ExpiresByType image/gif "access plus 1 hour"
+ExpiresByType image/webp "access plus 1 hour"
+ExpiresByType image/avif "access plus 1 hour"
+ExpiresByType image/svg+xml "access plus 1 hour"
+ExpiresByType image/x-icon "access plus 1 hour"
+ExpiresByType image/vnd.microsoft.icon "access plus 1 hour"
+ExpiresByType font/woff2 "access plus 1 hour"
+ExpiresByType font/woff "access plus 1 hour"
+ExpiresByType font/ttf "access plus 1 hour"
+ExpiresByType font/otf "access plus 1 hour"
+ExpiresByType application/font-woff "access plus 1 hour"
+ExpiresByType application/font-woff2 "access plus 1 hour"
+ExpiresByType application/vnd.ms-fontobject "access plus 1 hour"
 </IfModule>
 
 RewriteEngine On
