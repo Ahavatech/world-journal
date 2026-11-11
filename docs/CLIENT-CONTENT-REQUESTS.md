@@ -1,10 +1,12 @@
 # Client content: what we received, and what we still need
 
-Source: the client's document "World Open Research Journal Details" (version 1, received 2026-11-11). The text is kept as sent in `ojs/client-content/source-v1.txt` (one personal email address replaced by a REDACTED marker). **Nothing from it is on the site yet, and none of it is approved for publication.** Rule 1 of `CLAUDE.md` still holds: we do not invent an ISSN, a name, an affiliation, a licence or a fee. Where the document is blank or unclear we ask; we do not fill the gap.
+Source: the client's document "World Open Research Journal Details" (version 1, received 2026-11-11). The text is kept as sent in `ojs/client-content/source-v1.txt` (one personal email address replaced by a REDACTED marker). **None of it is approved for publication.** The parts that are usable are in `ojs/client-content/` as HTML (`make lint` checks that every sentence is a passage of the source, so nothing is added or changed) and `scripts/seed-shared.sh` puts them on the closed test site; each page keeps a pending banner naming what is unconfirmed, so the launch check (`scripts/check-placeholders.sh --url`) stays red until a person resolves it. Rule 1 of `CLAUDE.md` still holds: we do not invent an ISSN, a name, an affiliation, a licence or a fee. Where the document is blank or unclear we ask; we do not fill the gap.
 
 Send section 2 and section 3 to the client. Section 1 says what we will do with what is already here.
 
 ## 1. What was received, and where each part goes
+
+**Loaded on the test site:** About, Aims and Scope, the privacy statement, the Author Guidelines, the Disclaimer, the Access and APC policy, the Peer Review policy, the Plagiarism and Publication Ethics policy, the Copyright and Licensing terms (licence name and address left as marked blanks), the Research Awards page and the "Call for Reviewers" announcement. **Not loaded** (so nothing is shown that needs consent or is blank): the Editorial Team and reviewers, the contact details, the award recipients, and the archiving policy (not supplied).
 
 | Received | Goes to | Status |
 |---|---|---|

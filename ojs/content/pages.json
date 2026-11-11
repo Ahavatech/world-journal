@@ -31,6 +31,8 @@
       "checked": "no built-in (same check)" },
     { "id": "plagiarism-similarity", "file": "pages/plagiarism-similarity.html", "mechanism": "custom-page", "path": "plagiarism-similarity", "title": "Plagiarism and Similarity Policy", "url": "/plagiarism-similarity",
       "checked": "no built-in (same check)" },
+    { "id": "disclaimer", "file": "pages/disclaimer.html", "mechanism": "custom-page", "path": "disclaimer", "title": "Disclaimer", "url": "/disclaimer",
+      "checked": "no built-in page (same check as the other policy pages)" },
     { "id": "awards", "file": "awards/awards.html", "mechanism": "custom-page", "path": "awards", "title": "Research Awards", "url": "/awards",
       "checked": "no built-in; custom pages verified in the sandbox at /x and /x/y (200, one h1 class page_title)" },
     { "id": "awards-categories", "file": "awards/categories.html", "mechanism": "custom-page", "path": "awards-categories", "title": "Award Categories", "url": "/awards-categories",
