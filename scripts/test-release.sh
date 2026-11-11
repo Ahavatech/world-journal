@@ -76,7 +76,7 @@ survive() { # a host that keeps what is the host's
   [ "$(cat "$t/config.inc.php")" = "live secret" ] && [ "$(cat "$t/public/site/u.jpg")" = upload ] && [ -f "$t/cache/c" ] && [ -f "$t/.well-known/x" ] && [ -f "$t/cgi-bin/x" ]
 }
 yes "config.inc.php, public/, cache/, .well-known/ and cgi-bin/ survive the deploy" survive
-yes "the package arrived (index.php, theme, .htaccess)" test -f "$t/index.php" -a -f "$t/plugins/themes/worj/assets/a.css" -a -f "$t/.htaccess" -a -f "$t/plugins/themes/.htaccess"
+yes "the package arrived (index.php, theme, .htaccess)" test -f "$t/index.php" -a -f "$t/plugins/themes/worj/assets/a.css" -a -f "$t/.htaccess"
 yes "a stale file from an earlier release is removed" test ! -e "$t/old-ojs-file.php"
 D --release "$tmp/r1" --target "$t" --check >"$tmp/c2.txt" 2>&1
 yes "a second --check shows nothing to change" grep -q '^WOULD: 0 item' "$tmp/c2.txt"

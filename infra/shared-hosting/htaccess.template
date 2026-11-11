@@ -25,11 +25,13 @@ SetEnvIf Request_URI "\$\$\$call\$\$\$" NO_CSP=1
 Header always set Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'self'; form-action 'self'; base-uri 'self'; object-src 'none'" env=!NO_CSP
 </IfModule>
 
-# --- static assets: a week (OJS core files carry ?v=<OJS version>); theme files get one hour in plugins/themes/.htaccess ---
+# --- static assets: ONE hour for all of them (clients revalidate with the ETag afterwards). OJS appends ?v=<OJS version>, never the
+#     theme version, to theme CSS and JS, and theme images carry no version, so a theme update keeps its URL. LiteSpeed on the host
+#     ignored a more specific rule in plugins/themes/.htaccess (Day-0 run, 2026-11-10), so there is one rule for everything. ---
 <IfModule mod_expires.c>
 ExpiresActive On
 <FilesMatch "\.(css|js|map|woff2?|ttf|otf|eot|svg|ico|png|jpe?g|gif|webp|avif)$">
-ExpiresDefault "access plus 7 days"
+ExpiresDefault "access plus 1 hour"
 </FilesMatch>
 </IfModule>
 
