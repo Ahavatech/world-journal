@@ -182,6 +182,16 @@ STUB_CUT=$((dump_n - 200)) WORJ_SSH="$tmp/ssh" "$tmp/pull-mut.sh" --env "$tmp/en
 yes "mutation: without the completion-line check the truncated dump is accepted (exit $rc)" test "$rc" = 0
 rm -f "$tmp/bk/FAILED"
 
+echo "=== enable-block-plugin.php (the step seeding needs on a fresh journal)"
+yes "without a journal it reports 'no journal' and writes nothing" bash -c "[ \"\$(STUB_SOCKET_STDIN=1 '$tmp/ssh' x \"cd '$R/public_html' && php\" <'$root/scripts/lib/enable-block-plugin.php')\" = 'no journal' ]"
+mariadb "$dbn" -e "INSERT INTO journals (path, seq, primary_locale, enabled) VALUES ('worj', 1, 'en', 1)"
+out1="$(STUB_SOCKET_STDIN=1 "$tmp/ssh" x "cd '$R/public_html' && php" <"$root/scripts/lib/enable-block-plugin.php")"
+yes "with a journal it enables the plugin for the site and the journal" bash -c "grep -q 'enabled makesubmissionblockplugin site' <<<'$out1' && grep -q 'enabled makesubmissionblockplugin journal' <<<'$out1'"
+yes "the database holds the two enabled rows" test "$(mariadb -N "$dbn" -e "select count(*) from plugin_settings where plugin_name='makesubmissionblockplugin' and setting_name='enabled' and setting_value='1'")" = 2
+out2="$(STUB_SOCKET_STDIN=1 "$tmp/ssh" x "cd '$R/public_html' && php" <"$root/scripts/lib/enable-block-plugin.php")"
+yes "running it again changes nothing (idempotent)" bash -c "! grep -q '^enabled' <<<'$out2' && [ \"\$(mariadb -N '$dbn' -e \"select count(*) from plugin_settings where plugin_name='makesubmissionblockplugin'\")\" = 2 ]"
+mariadb "$dbn" -e "DELETE FROM plugin_settings WHERE plugin_name='makesubmissionblockplugin'; DELETE FROM journals WHERE path='worj'"
+
 echo "=== seed-shared.sh --check (the REST part needs Playwright and a real https site: NOT run here)"
 S() { WORJ_SSH="$tmp/ssh" "$root/scripts/seed-shared.sh" "$@"; }
 S --env "$tmp/env" --check --with-sample-issue >"$tmp/seed.txt" 2>&1; rc=$?

@@ -55,8 +55,14 @@ if [ "$check" = 1 ]; then
   chg "check that https://$HOST is closed to crawlers, then create the journal worj, the theme, the announcements and the placeholder texts"
 else
   command -v node >/dev/null || die "node is needed here (Playwright drives the admin interface)"
-  WORJ_TARGET=remote WORJ_URL="https://$HOST" WORJ_ADMIN_USER="$ADMIN_USERNAME" WORJ_ADMIN_PASSWORD="$ADMIN_PASSWORD" \
-    node "$root/scripts/sandbox-seed.js" || die "the journal seeding failed (the site must be closed to crawlers and the initial password still valid)"
+  seed_node() { WORJ_TARGET=remote WORJ_URL="https://$HOST" WORJ_ADMIN_USER="$ADMIN_USERNAME" WORJ_ADMIN_PASSWORD="$ADMIN_PASSWORD" node "$root/scripts/sandbox-seed.js"; }
+  seed_node | tee "$tmp/seed1.txt" || die "the journal seeding failed (the site must be closed to crawlers and the initial password still valid)"
+  if grep -q '^SIDEBAR_PENDING' "$tmp/seed1.txt"; then
+    # a fresh journal has not enabled the Make a Submission block; enable it in the database, then apply the sidebar (the rest is create-only)
+    remote "cd $(printf '%q' "$webroot") && php" <"$root/scripts/lib/enable-block-plugin.php" || die "could not enable the block plugin on the host"
+    seed_node | tee "$tmp/seed2.txt" || die "the second seeding pass failed"
+    ! grep -q '^SIDEBAR_PENDING' "$tmp/seed2.txt" || die "the sidebar block is still not available after enabling it"
+  fi
 fi
 
 # 3: the custom pages, by php on the host
