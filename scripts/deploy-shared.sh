@@ -9,7 +9,7 @@
 #
 # Never touched on the host: config.inc.php, public/ (uploaded images), cache/, .well-known/ and cgi-bin/ (the host's own).
 # Files that are no longer in the package (old OJS code) ARE removed, so a release replaces the previous one exactly.
-# The two .htaccess files are sent last, so the rules and the code they protect change together as closely as possible.
+# The .htaccess file is sent last, so the rules and the code they protect change together as closely as possible.
 set -euo pipefail
 release="" target="" check=0 sshargs=()
 usage() { echo "usage: $0 --release DIR --target TARGET [--check] [--ssh-arg ARG]..." >&2; exit 2; }
@@ -25,7 +25,7 @@ done
 { [ -n "$release" ] && [ -n "$target" ]; } || usage
 die() { echo "FAIL  $*" >&2; exit 1; }
 { [ -d "$release/public_html" ] && [ -f "$release/RELEASE.txt" ] && [ -f "$release/MANIFEST.sha256" ]; } || die "$release is not a release package (scripts/build-release.sh makes one)"
-{ [ -f "$release/public_html/.htaccess" ] && [ -f "$release/public_html/plugins/themes/.htaccess" ]; } || die "the package has no .htaccess files: refusing (without them the site would be served unprotected)"
+[ -f "$release/public_html/.htaccess" ] || die "the package has no .htaccess: refusing (without it the site would be served unprotected)"
 [ ! -e "$release/public_html/config.inc.php" ] || die "the package contains config.inc.php: refusing"
 (cd "$release/public_html" && sha256sum --quiet -c "$release/MANIFEST.sha256") || die "the package does not match its MANIFEST.sha256 (corrupted or edited): refusing"
 echo "OK    package verified: $(tr '\n' ' ' <"$release/RELEASE.txt")"
@@ -48,7 +48,6 @@ if [ "$check" = 1 ]; then
   echo "WOULD: $(printf '%s' "$plan" | grep -c . || true) item(s) change; nothing was changed (--check)"
   exit 0
 fi
-rsync "${opts[@]}" "${rshopts[@]}" --exclude=/.htaccess --exclude=/plugins/themes/.htaccess "$release/public_html/" "$target"
-rsync -a "${rshopts[@]}" "$release/public_html/plugins/themes/.htaccess" "${target}plugins/themes/.htaccess"
+rsync "${opts[@]}" "${rshopts[@]}" --exclude=/.htaccess "$release/public_html/" "$target"
 rsync -a "${rshopts[@]}" "$release/public_html/.htaccess" "${target}.htaccess"
 echo "OK    deployed to $target"

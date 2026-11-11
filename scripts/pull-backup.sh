@@ -12,7 +12,7 @@
 #   BACKUP_RCLONE_REMOTE=remote:bucket optional: `rclone copy` (never sync) of the bundle, verified by size
 #   BACKUP_KEEP=12                     bundles kept locally
 # The database password never leaves the host and never appears on a command line: the dump runs there with a defaults file
-# built on the fly from config.inc.php and read through a pipe. Before anything is encrypted the same sanity checks as
+# built on the fly from config.inc.php (mode 600, in the home folder, removed as soon as the dump ends, on success or failure). Before anything is encrypted the same sanity checks as
 # backup.sh run (gzip, size, tables, users rows, mysqldump's completion line): an empty backup that "succeeds" is the usual failure.
 # Any failure writes BACKUP_DIR/FAILED and exits non-zero. RECOVERY POINT: only as fresh as the last time YOU run this; the
 # host's own daily backups (7 days, held by Hostinger, not encrypted to your key) are the other line. docs/DEPLOY-SHARED.md.
@@ -82,8 +82,7 @@ exec 9>"$bdir/.lock"; flock -n 9 || die "another backup is already running"
 work="$(mktemp -d "$bdir/.work.XXXXXX")"; chmod 700 "$work"
 
 step="dump"
-# The remote script: a defaults file from config.inc.php through a pipe (process substitution), then mysqldump. php prints
-# the credentials into the pipe; nothing secret is on any command line or in a file on the host.
+# The remote script: a short-lived mode-600 defaults file built from config.inc.php, then mysqldump. Nothing secret is on any command line.
 # The script goes to the host on ssh's standard input (no quoting puzzles, nothing secret in it).
 remote "bash -s -- $(q "$webroot")" 2>"$work/dump.err" >"$work/db.sql" <<'EOS' || die "the dump failed on the host ($(head -c 200 "$work/dump.err" | tr '\n' ' '))"
 cd "$1" || { echo "cannot enter the web root" >&2; exit 1; }
@@ -96,7 +95,11 @@ echo "[client]\nuser=\"" . $e($d["username"]) . "\"\npassword=\"" . $e($d["passw
 PHP
 )"
 dbname="$(php -r '$c = parse_ini_file("config.inc.php", true, INI_SCANNER_RAW); echo trim($c["database"]["name"], "\"");')"
-mysqldump --defaults-extra-file=<(php -r "$creds") --single-transaction --quick --routines --triggers --no-tablespaces \
+# a mode-600 file that lives only while the dump runs and is removed on any exit (the host's mysqldump could not read a pipe)
+cnf="$(umask 077; mktemp "$HOME/.worj-dump.XXXXXX")" || { echo "cannot create a temporary file in the home folder" >&2; exit 1; }
+trap 'rm -f "$cnf"' EXIT
+php -r "$creds" >"$cnf"
+mysqldump --defaults-extra-file="$cnf" --single-transaction --quick --routines --triggers --no-tablespaces \
   --default-character-set=utf8mb4 "$dbname"
 EOS
 gzip -c "$work/db.sql" >"$work/db.sql.gz" && rm -f "$work/db.sql"

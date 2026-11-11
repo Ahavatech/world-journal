@@ -55,23 +55,31 @@ if [ "$check" = 1 ]; then
   chg "check that https://$HOST is closed to crawlers, then create the journal worj, the theme, the announcements and the placeholder texts"
 else
   command -v node >/dev/null || die "node is needed here (Playwright drives the admin interface)"
-  WORJ_TARGET=remote WORJ_URL="https://$HOST" WORJ_ADMIN_USER="$ADMIN_USERNAME" WORJ_ADMIN_PASSWORD="$ADMIN_PASSWORD" \
-    node "$root/scripts/sandbox-seed.js" || die "the journal seeding failed (the site must be closed to crawlers and the initial password still valid)"
+  seed_node() { WORJ_TARGET=remote WORJ_URL="https://$HOST" WORJ_ADMIN_USER="$ADMIN_USERNAME" WORJ_ADMIN_PASSWORD="$ADMIN_PASSWORD" node "$root/scripts/sandbox-seed.js"; }
 fi
-
-# 3: the custom pages, by php on the host
-chg "copy scripts/import-pages.php and ojs/content/ to $ops, then run the page import there (create-only)"
-if [ "$check" = 0 ]; then
+if [ "$check" = 1 ]; then
+  chg "copy scripts/import-pages.php and ojs/content/ to $ops, enable the Make a Submission block, create the placeholder pages there (create-only), then a second pass that sets the sidebar and the Awards card"
+else
+  # pass 1 creates the journal; then what needs the journal in the database; pass 2 applies the sidebar and the Awards card,
+  # which are only switched on once the block plugin is enabled and the awards pages exist. Every part is create-only.
+  seed_node | tee "$tmp/seed1.txt" || die "the journal seeding failed (the site must be closed to crawlers and the initial password still valid)"
+  remote "cd $(printf '%q' "$webroot") && php" <"$root/scripts/lib/enable-block-plugin.php" || die "could not enable the block plugin on the host"
   remote "mkdir -p $(printf '%q' "$ops/scripts") $(printf '%q' "$ops/ojs")"
   rsync -a -e "$rsh" "$root/scripts/import-pages.php" "$SSH_TARGET:$ops/scripts/"
   rsync -a --delete -e "$rsh" "$root/ojs/content/" "$SSH_TARGET:$ops/ojs/content/"
   remote "php $(printf '%q' "$ops/scripts/import-pages.php") --journal=worj --ojs=$(printf '%q' "$webroot")" | tail -3
+  seed_node | tee "$tmp/seed2.txt" || die "the second seeding pass failed"
+  ! grep -q '^SIDEBAR_PENDING' "$tmp/seed2.txt" || die "the sidebar block is still not available after enabling it"
 fi
 
 # 4: the sample issue
 if [ "$sample" = 1 ]; then
-  chg "import the 3 fake sample articles (clearly marked fake)"
+  chg "import the 3 fake sample articles (clearly marked fake), only if the journal has no issue yet"
   if [ "$check" = 0 ]; then
+    n_issues="$(remote "cd $(printf '%q' "$webroot") && php" <"$root/scripts/lib/count-issues.php")" || die "could not count the issues on the host"
+    if [ "${n_issues:-0}" -gt 0 ] 2>/dev/null; then ok "the journal already has $n_issues issue(s): the sample issue is not imported again"; sample=0; fi
+  fi
+  if [ "$check" = 0 ] && [ "$sample" = 1 ]; then
     [ -f "$root/ojs/fixtures/pdfs/sample-article-1.pdf" ] || python3 "$root/scripts/sample-issue.py" pdfs
     python3 "$root/scripts/sample-issue.py" xml "$tmp/issue.xml"
     rsync -a -e "$rsh" "$tmp/issue.xml" "$SSH_TARGET:$ops/issue.xml"

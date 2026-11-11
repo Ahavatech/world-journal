@@ -15,7 +15,7 @@ tmp="$(mktemp -d)"
 SOCK="${PHP_SOCK:-/run/php/php8.3-fpm.sock}"
 files_dir="$(sed -n 's/^files_dir *= *\(.*\)$/\1/p' "$cfg" | tr -d '"' | sed -n 1p)"
 cp "$cfg" "$tmp/config.orig"; cp "$core/robots.txt" "$tmp/robots.orig"
-touched=(.htaccess plugins/themes/.htaccess _errors public/worj-harness-upload.php public/worj-harness.sql.bak)
+touched=(.htaccess _errors public/worj-harness-upload.php public/worj-harness.sql.bak)
 cleanup() {
   [ ! -f "$tmp/apache.pid" ] || kill "$(cat "$tmp/apache.pid")" 2>/dev/null
   cp "$tmp/config.orig" "$cfg"; cp "$tmp/robots.orig" "$core/robots.txt"
@@ -144,8 +144,8 @@ css="/plugins/themes/worj/assets/css/base.css"
 css_h="$(hdr "$S$css")"
 yes "the theme CSS is served (200)" has "$css_h" "200"
 for h in "Strict-Transport-Security: max-age=300" "X-Content-Type-Options: nosniff"; do yes "static file has $h" has "$css_h" "$h"; done
-yes "THEME files are cached for one hour only" has "$css_h" "max-age=3600"
-yes "OJS core static files are cached for 7 days" has "$(hdr "$S/lib/pkp/styles/fontawesome/fontawesome.css")" "max-age=604800"
+yes "THEME files are cached for one hour only (OJS versions them with the OJS version, not the theme's)" has "$css_h" "max-age=3600"
+yes "OJS core static files are cached for one hour too (one rule: the host ignored a more specific one)" has "$(hdr "$S/lib/pkp/styles/fontawesome/fontawesome.css")" "max-age=3600"
 yes "theme images are also one hour" has "$(hdr "$S/plugins/themes/worj/assets/img/logo-header.jpg")" "max-age=3600"
 yes "the HTML page has no 7-day Cache-Control" lacks "$(grep -i '^cache-control:' <<<"$home_h")" "max-age=604800"
 yes "public page sends CSP Report-Only" has "$home_h" "Content-Security-Policy-Report-Only:"
@@ -224,7 +224,6 @@ install_web production
 mutate() { # name sed-delete-pattern probe...
   local name="$1" pat="$2" target="$core/.htaccess"; shift 2
   cp "$target" "$tmp/htaccess.good"
-  [ -n "$pat" ] || rm -f "$core/plugins/themes/.htaccess"
   local one; local IFS=$'\n'
   for one in $pat; do
     grep -qF -- "$one" "$target" || { bad "mutation $name: pattern not found in .htaccess: $one"; return; }
@@ -250,7 +249,7 @@ p_nosniff() { has "$(hdr "$S/worj/")" "X-Content-Type-Options: nosniff"; }
 p_csp() { has "$(hdr "$S/worj/")" "Content-Security-Policy-Report-Only"; }
 p_csp_exempt() { lacks "$(hdr "$S/worj/management/settings/website")" "Content-Security-Policy"; }
 p_csp_call() { lacks "$(hdr "$S/worj/\$\$\$call\$\$\$/grid/x")" "Content-Security-Policy"; }
-p_expire7() { has "$(hdr "$S/lib/pkp/styles/fontawesome/fontawesome.css")" "max-age=604800"; }
+p_expire1h() { has "$(hdr "$S/lib/pkp/styles/fontawesome/fontawesome.css")" "max-age=3600"; }
 p_theme1h() { has "$(hdr "$S$css")" "max-age=3600"; }
 p_404page() { has "$(cu "$S/config.inc.php")" '<html lang="en">'; }
 p_noindex_listing() { lacks "$(cu "$S/public/")" "Index of"; }
@@ -277,8 +276,10 @@ mutate "nosniff" 'X-Content-Type-Options' p_nosniff
 mutate "CSP report-only" 'Header always set Content-Security-Policy-Report-Only' p_csp
 mutate "CSP exemption for backend paths" 'management|workflow' p_csp_exempt
 mutate "CSP exemption for \$\$\$call\$\$\$" 'call\$\$\$" NO_CSP' p_csp_call
-mutate "7-day cache" 'ExpiresDefault "access plus 7 days"' p_expire7
-mutate "theme one-hour cache" "" p_theme1h
+mutate "one-hour cache for CSS" 'ExpiresByType text/css "access plus 1 hour"' p_expire1h
+mutate "theme CSS cache" 'ExpiresByType text/css "access plus 1 hour"' p_theme1h
+p_logo1h() { has "$(hdr "$S/plugins/themes/worj/assets/img/logo-header.jpg")" "max-age=3600"; }
+mutate "one-hour cache for images" 'ExpiresByType image/jpeg "access plus 1 hour"' p_logo1h
 mutate "static 404 page" 'ErrorDocument 404' p_404page
 
 if [ "$fail" = 0 ]; then echo "ALL PASS"; else echo "$fail FAILED"; fi

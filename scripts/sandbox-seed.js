@@ -90,8 +90,14 @@ async function main() {
     empty: { sidebar: ['informationblockplugin'], readerInformation: info(), authorInformation: info(), librarianInformation: info() },
   };
   if (!sidebars[state]) throw new Error(`SANDBOX_SIDEBAR must be blocks, none or empty (got ${state})`);
-  await call('PUT', `/worj/api/v1/contexts/${id}`, sidebars[state]);
-  console.log(`sidebar state: ${state}`);
+  try {
+    await call('PUT', `/worj/api/v1/contexts/${id}`, sidebars[state]);
+    console.log(`sidebar state: ${state}`);
+  } catch (e) {
+    // a fresh journal has not enabled the Make a Submission block: on the host scripts/seed-shared.sh enables it and runs this again
+    if (!(t.remote && /can not be found/.test(e.message))) throw e;
+    console.log('SIDEBAR_PENDING: a block plugin is not enabled yet');
+  }
 
   // The homepage Awards card links to /awards: turn it on only if that page really returns 200.
   const awards = await ctx.request.get(`${base}/worj/awards`);

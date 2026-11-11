@@ -40,6 +40,9 @@ chmod +x "$tmp/ssh"
 # the real host disables shell_exec and shows no errors: the OJS installer (stty in backticks) dies silently there
 mkdir -p "$tmp/bin"; realphp="$(command -v php)"
 printf '#!/usr/bin/env bash\nexec %s -d display_errors=0 -d disable_functions=shell_exec "$@"\n' "$realphp" >"$tmp/bin/php"; chmod +x "$tmp/bin/php"
+# the host's mysqldump could not open a defaults file given as /dev/fd/N (process substitution): a stand-in that refuses it too
+realdump="$(command -v mysqldump)"
+printf '#!/usr/bin/env bash\ncase "$*" in *--defaults-extra-file=/dev/fd/*) echo "Could not open required defaults file" >&2; exit 2 ;; esac\nexec %s "$@"\n' "$realdump" >"$tmp/bin/mysqldump"; chmod +x "$tmp/bin/mysqldump"
 export PATH="$tmp/bin:$PATH"
 H=journal.example.org
 R="$tmp/home/domains/$H"; mkdir -p "$R/public_html"
@@ -165,6 +168,7 @@ gzip -dc "$tmp/bkx/db.sql.gz" | mariadb "${dbn}_restore"
 yes "the dump RESTORES into a scratch database (administrator row back)" test "$(mariadb -N "${dbn}_restore" -e "select count(*) from users where username='worjadmin'")" = 1
 mariadb -e "DROP DATABASE \`${dbn}_restore\`"
 yes "rclone copied the bundle with the same size" test "$(stat -c %s "$tmp/rcl/$(basename "$bundle")")" = "$(stat -c %s "$bundle")"
+yes "no temporary credentials file is left on the host after the dump" bash -c "! ls \"\$HOME\"/.worj-dump.* >/dev/null 2>&1"
 yes "last-success is written and no FAILED marker" test -f "$tmp/bk/last-success" -a ! -e "$tmp/bk/FAILED"
 sleep 1; BK --env "$tmp/envbk" --no-upload >/dev/null 2>&1; sleep 1; BK --env "$tmp/envbk" --no-upload >/dev/null 2>&1
 yes "retention keeps only BACKUP_KEEP=2 bundles" test "$(find "$tmp/bk" -maxdepth 1 -name 'worj-*.tar.age' | wc -l)" = 2
@@ -182,11 +186,25 @@ STUB_CUT=$((dump_n - 200)) WORJ_SSH="$tmp/ssh" "$tmp/pull-mut.sh" --env "$tmp/en
 yes "mutation: without the completion-line check the truncated dump is accepted (exit $rc)" test "$rc" = 0
 rm -f "$tmp/bk/FAILED"
 
+echo "=== enable-block-plugin.php (the step seeding needs on a fresh journal)"
+yes "without a journal it reports 'no journal' and writes nothing" bash -c "[ \"\$(STUB_SOCKET_STDIN=1 '$tmp/ssh' x \"cd '$R/public_html' && php\" <'$root/scripts/lib/enable-block-plugin.php')\" = 'no journal' ]"
+mariadb "$dbn" -e "INSERT INTO journals (path, seq, primary_locale, enabled) VALUES ('worj', 1, 'en', 1)"
+out1="$(STUB_SOCKET_STDIN=1 "$tmp/ssh" x "cd '$R/public_html' && php" <"$root/scripts/lib/enable-block-plugin.php")"
+yes "with a journal it enables the plugin for the site and the journal" bash -c "grep -q 'enabled makesubmissionblockplugin site' <<<'$out1' && grep -q 'enabled makesubmissionblockplugin journal' <<<'$out1'"
+yes "the database holds the two enabled rows" test "$(mariadb -N "$dbn" -e "select count(*) from plugin_settings where plugin_name='makesubmissionblockplugin' and setting_name='enabled' and setting_value='1'")" = 2
+out2="$(STUB_SOCKET_STDIN=1 "$tmp/ssh" x "cd '$R/public_html' && php" <"$root/scripts/lib/enable-block-plugin.php")"
+yes "running it again changes nothing (idempotent)" bash -c "! grep -q '^enabled' <<<'$out2' && [ \"\$(mariadb -N '$dbn' -e \"select count(*) from plugin_settings where plugin_name='makesubmissionblockplugin'\")\" = 2 ]"
+mariadb "$dbn" -e "DELETE FROM plugin_settings WHERE plugin_name='makesubmissionblockplugin'; DELETE FROM journals WHERE path='worj'"
+
+echo "=== count-issues.php (keeps the sample issue from being imported twice)"
+yes "an installed OJS with no issue prints 0" bash -c "[ \"\$(STUB_SOCKET_STDIN=1 '$tmp/ssh' x \"cd '$R/public_html' && php\" <'$root/scripts/lib/count-issues.php')\" = 0 ]"
+
 echo "=== seed-shared.sh --check (the REST part needs Playwright and a real https site: NOT run here)"
 S() { WORJ_SSH="$tmp/ssh" "$root/scripts/seed-shared.sh" "$@"; }
 S --env "$tmp/env" --check --with-sample-issue >"$tmp/seed.txt" 2>&1; rc=$?
 yes "seed --check exits 0 (exit $rc)" test "$rc" = 0
 yes "seed --check prints WOULD lines for the journal, the pages and the sample issue" bash -c "grep -c '^WOULD: ' '$tmp/seed.txt' | grep -qx 3"
+yes "...and says the sample issue is only imported if there is none" grep -q 'only if the journal has no issue yet' "$tmp/seed.txt"
 yes "seed --check created nothing on the host" test ! -e "$R/worj-ops/scripts" -a ! -e "$R/worj-ops/ojs"
 yes "seed --check printed no secret" bash -c "! grep -qE '$dbp|$ADMINPW|smtp-secret' '$tmp/seed.txt'"
 no "seed refuses an env file readable by others" S --env "$tmp/env644" --check

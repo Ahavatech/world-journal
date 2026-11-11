@@ -93,7 +93,14 @@ The kit and the probe are tested in the sandbox against a **stand-in Apache, not
 2. **A header made conditional with `SetEnvIf ... env=!NO_CSP` is sent on every path** (t07), so the admin pages also get the report-only CSP. Impact: none on function, because the policy is **report-only** (it blocks nothing and nothing collects reports), but `check-live-site.sh` expects no CSP on the backend and API paths and **will fail on this host** until a decision is made: drop those two checks and keep the header everywhere, or drop the header. Not changed yet.
 3. **`trust_x_forwarded_for` is `Off` in our config template and the probe saw `X-Forwarded-For` on requests** (Hostinger sits in front of the web server). OJS then logs the proxy's address in place of the visitor's, which skews usage statistics and IP-based features. Whether `REMOTE_ADDR` already holds the visitor's address on this host is `UNVERIFIED`; check on the first real request before deciding.
 4. **`php_value` in `.htaccess` is honoured**, so the PHP options table can be applied there if the dashboard has no matching option.
-5. **Still to do on the host:** B (done), E cron interval, G SMTP, H ModSecurity, I backups; the Day-0 kit was deleted afterwards.
+5. **First `check-live-site.sh` run on the host (2026-11-11), after install and seeding.** The cron job runs every minute (`end exit=0`). Findings, and what changed because of them:
+   - **Hostinger's CDN is in front of the site** (`server: hcdn`, `x-hcdn-*` headers), although the plan was to keep it off while testing. Check hPanel and decide; it also means the visitor's address may arrive in `X-Forwarded-For` (finding 3).
+   - **The host adds `Content-Security-Policy: upgrade-insecure-requests`** to every response. It restricts nothing; the check now allows exactly that value and fails on any other enforcing policy.
+   - **The host's own firewall answers 403, not our 404, for `/config.inc.php`, `/.git/config` and `/.htaccess`.** Still refused; the check accepts 403 or 404.
+   - **The `.htaccess` in `plugins/themes/` was ignored**, and so was a `FilesMatch` + `ExpiresDefault` rule: the host's own 7-day default for static files won (confirmed with a cache-busting URL that reached the origin). **`ExpiresByType` is honoured** (as the Day-0 t09 test already showed), so there is now one `ExpiresByType` line per file type, one hour for all static files, and the themes `.htaccess` is gone from the release.
+   - **The report-only CSP is sent on backend and API paths** (finding 2): now a WARN in the check, not a failure.
+   - **Our static 404 page works** for the paths our rules deny (`/tools/install.php` answers 404 with the accessible page).
+6. **Still to do on the host:** B (done), E cron interval, G SMTP, H ModSecurity, I backups; the Day-0 kit was deleted afterwards.
 
 ## Delivery: how the files reach the host
 
