@@ -192,11 +192,15 @@ out2="$(STUB_SOCKET_STDIN=1 "$tmp/ssh" x "cd '$R/public_html' && php" <"$root/sc
 yes "running it again changes nothing (idempotent)" bash -c "! grep -q '^enabled' <<<'$out2' && [ \"\$(mariadb -N '$dbn' -e \"select count(*) from plugin_settings where plugin_name='makesubmissionblockplugin'\")\" = 2 ]"
 mariadb "$dbn" -e "DELETE FROM plugin_settings WHERE plugin_name='makesubmissionblockplugin'; DELETE FROM journals WHERE path='worj'"
 
+echo "=== count-issues.php (keeps the sample issue from being imported twice)"
+yes "an installed OJS with no issue prints 0" bash -c "[ \"\$(STUB_SOCKET_STDIN=1 '$tmp/ssh' x \"cd '$R/public_html' && php\" <'$root/scripts/lib/count-issues.php')\" = 0 ]"
+
 echo "=== seed-shared.sh --check (the REST part needs Playwright and a real https site: NOT run here)"
 S() { WORJ_SSH="$tmp/ssh" "$root/scripts/seed-shared.sh" "$@"; }
 S --env "$tmp/env" --check --with-sample-issue >"$tmp/seed.txt" 2>&1; rc=$?
 yes "seed --check exits 0 (exit $rc)" test "$rc" = 0
 yes "seed --check prints WOULD lines for the journal, the pages and the sample issue" bash -c "grep -c '^WOULD: ' '$tmp/seed.txt' | grep -qx 3"
+yes "...and says the sample issue is only imported if there is none" grep -q 'only if the journal has no issue yet' "$tmp/seed.txt"
 yes "seed --check created nothing on the host" test ! -e "$R/worj-ops/scripts" -a ! -e "$R/worj-ops/ojs"
 yes "seed --check printed no secret" bash -c "! grep -qE '$dbp|$ADMINPW|smtp-secret' '$tmp/seed.txt'"
 no "seed refuses an env file readable by others" S --env "$tmp/env644" --check
