@@ -68,7 +68,8 @@ if grep -iE '^Content-Security-Policy:' <<<"$h" | grep -viE '^Content-Security-P
 for pth in "$journal/management/settings/website" "$journal/api/v1/submissions"; do
   if hdr "$base/$pth" | grep -qi '^Content-Security-Policy-Report-Only'; then warn "backend path /$pth sends the report-only CSP (LiteSpeed ignores the exemption; harmless)"; else ok "backend path /$pth sends no CSP"; fi
 done
-has "theme CSS is cached for one hour" "$(hdr "$base/plugins/themes/worj/assets/css/base.css")" "max-age=3600"
+# a throwaway query string reaches the ORIGIN: a CDN in front (Hostinger's) may still hold an older copy of the plain URL
+has "theme CSS is cached for one hour (origin, cache-busting URL)" "$(hdr "$base/plugins/themes/worj/assets/css/base.css?check=$(date +%s)")" "max-age=3600"
 has "the static accessible 404 page answers a path our rules deny" "$(cu "$base/tools/install.php")" "<title>Page not found"
 
 # robots mode
