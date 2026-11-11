@@ -182,6 +182,34 @@ STUB_CUT=$((dump_n - 200)) WORJ_SSH="$tmp/ssh" "$tmp/pull-mut.sh" --env "$tmp/en
 yes "mutation: without the completion-line check the truncated dump is accepted (exit $rc)" test "$rc" = 0
 rm -f "$tmp/bk/FAILED"
 
+echo "=== test-smtp-shared.sh: one test message through the SMTP settings in config.inc.php (a fake SMTP server stands in for Hostinger)"
+SM() { WORJ_SSH="$tmp/ssh" "$root/scripts/test-smtp-shared.sh" "$@"; }
+cp "$cfg" "$tmp/cfg.smtp.keep"
+sed -i 's/^smtp_server = .*/smtp_server = 127.0.0.1/; s/^smtp_port = .*/smtp_port = 2525/; s/^smtp_auth = .*/smtp_auth = /' "$cfg"
+python3 -I "$root/scripts/lib/fake-smtp.py" 2525 "$tmp/smtp-capture.jsonl" & fake1=$!
+python3 -I "$root/scripts/lib/fake-smtp.py" 2526 "$tmp/smtp-capture2.jsonl" --reject-auth & fake2=$!
+sleep 1
+SM --env "$tmp/env" --to tester@example.invalid --check >"$tmp/smc.txt" 2>&1; rc=$?
+yes "smtp test --check sends nothing (exit $rc)" test "$rc" = 0 -a ! -e "$tmp/smtp-capture.jsonl"
+SM --env "$tmp/env" --to tester@example.invalid >"$tmp/sm1.txt" 2>&1; rc=$?
+yes "the test message is sent through the configured SMTP server (exit $rc)" test "$rc" = 0
+yes "...the output says OK and names no password" bash -c "grep -q '^OK:' '$tmp/sm1.txt' && ! grep -q 'smtp-secret' '$tmp/sm1.txt'"
+yes "the server saw the mailbox login from config.inc.php" bash -c "python3 -I -c \"import json; d=[json.loads(l) for l in open('$tmp/smtp-capture.jsonl')][-1]; assert d['user']=='editorial@example.invalid' and d['pass']=='smtp-secret-$$'\""
+yes "...and the message: from the mailbox, to the tester, with the test subject" bash -c "python3 -I -c \"import json; d=[json.loads(l) for l in open('$tmp/smtp-capture.jsonl')][-1]; assert 'editorial@example.invalid' in d['from'] and 'tester@example.invalid' in d['to'][0] and 'WORJ SMTP test' in d['data']\""
+sed -i 's/^smtp_port = .*/smtp_port = 2526/' "$cfg"
+SM --env "$tmp/env" --to tester@example.invalid >"$tmp/sm2.txt" 2>&1; rc=$?
+yes "a refused login fails with the server's reason (exit $rc)" bash -c "[ $rc != 0 ] && grep -q 'FAILED' '$tmp/sm2.txt'"
+yes "...and the password is not in the output, and the output does NOT say OK" bash -c "! grep -q 'smtp-secret' '$tmp/sm2.txt' && ! grep -q '^OK' '$tmp/sm2.txt' && grep -q '535' '$tmp/sm2.txt'"
+sed -i 's/^smtp_port = .*/smtp_port = 2599/' "$cfg"
+SM --env "$tmp/env" --to tester@example.invalid >"$tmp/sm3.txt" 2>&1; rc=$?
+yes "a server that is not there fails and says why (exit $rc)" bash -c "[ $rc != 0 ] && grep -q 'FAILED' '$tmp/sm3.txt' && grep -qi 'could not be established' '$tmp/sm3.txt' && ! grep -q '^OK' '$tmp/sm3.txt'"
+sed -i 's/^smtp_port = .*/smtp_port = 2525/; s/^default = smtp/default = log/' "$cfg"
+SM --env "$tmp/env" --to tester@example.invalid >"$tmp/sm4.txt" 2>&1; rc=$?
+yes "[email] default other than smtp is reported (PHP's own mail is capped at 100 a day on the host; exit $rc)" bash -c "[ $rc != 0 ] && grep -q 'not smtp' '$tmp/sm4.txt'"
+no "an address that is not a plain email address is refused" SM --env "$tmp/env" --to 'a b@x.invalid;rm'
+no "an env file readable by others is refused" SM --env "$tmp/env644" --to tester@example.invalid
+kill "$fake1" "$fake2" 2>/dev/null; cp "$tmp/cfg.smtp.keep" "$cfg"
+
 echo "=== seed-shared.sh --check (the REST part needs Playwright and a real https site: NOT run here)"
 S() { WORJ_SSH="$tmp/ssh" "$root/scripts/seed-shared.sh" "$@"; }
 S --env "$tmp/env" --check --with-sample-issue >"$tmp/seed.txt" 2>&1; rc=$?
