@@ -40,6 +40,9 @@ chmod +x "$tmp/ssh"
 # the real host disables shell_exec and shows no errors: the OJS installer (stty in backticks) dies silently there
 mkdir -p "$tmp/bin"; realphp="$(command -v php)"
 printf '#!/usr/bin/env bash\nexec %s -d display_errors=0 -d disable_functions=shell_exec "$@"\n' "$realphp" >"$tmp/bin/php"; chmod +x "$tmp/bin/php"
+# the host's mysqldump could not open a defaults file given as /dev/fd/N (process substitution): a stand-in that refuses it too
+realdump="$(command -v mysqldump)"
+printf '#!/usr/bin/env bash\ncase "$*" in *--defaults-extra-file=/dev/fd/*) echo "Could not open required defaults file" >&2; exit 2 ;; esac\nexec %s "$@"\n' "$realdump" >"$tmp/bin/mysqldump"; chmod +x "$tmp/bin/mysqldump"
 export PATH="$tmp/bin:$PATH"
 H=journal.example.org
 R="$tmp/home/domains/$H"; mkdir -p "$R/public_html"
@@ -165,6 +168,7 @@ gzip -dc "$tmp/bkx/db.sql.gz" | mariadb "${dbn}_restore"
 yes "the dump RESTORES into a scratch database (administrator row back)" test "$(mariadb -N "${dbn}_restore" -e "select count(*) from users where username='worjadmin'")" = 1
 mariadb -e "DROP DATABASE \`${dbn}_restore\`"
 yes "rclone copied the bundle with the same size" test "$(stat -c %s "$tmp/rcl/$(basename "$bundle")")" = "$(stat -c %s "$bundle")"
+yes "no temporary credentials file is left on the host after the dump" bash -c "! ls \"\$HOME\"/.worj-dump.* >/dev/null 2>&1"
 yes "last-success is written and no FAILED marker" test -f "$tmp/bk/last-success" -a ! -e "$tmp/bk/FAILED"
 sleep 1; BK --env "$tmp/envbk" --no-upload >/dev/null 2>&1; sleep 1; BK --env "$tmp/envbk" --no-upload >/dev/null 2>&1
 yes "retention keeps only BACKUP_KEEP=2 bundles" test "$(find "$tmp/bk" -maxdepth 1 -name 'worj-*.tar.age' | wc -l)" = 2
