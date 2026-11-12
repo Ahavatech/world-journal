@@ -2,7 +2,7 @@
 # Put the journal and its PLACEHOLDER content on the not-yet-public test site, from YOUR machine, after
 # scripts/install-shared.sh. This is what lets you see the site structured as it will launch, with placeholders.
 #
-#   scripts/seed-shared.sh [--env FILE] [--check] [--with-sample-issue]
+#   scripts/seed-shared.sh [--env FILE] [--check] [--with-sample-issue] [--no-client-content]
 #
 # What it does (each part is create-only: it never overwrites text a person has edited):
 #   1. refuses unless https://HOST is still CLOSED to crawlers (robots.txt Disallow: / and X-Robots-Tag: noindex)
@@ -11,19 +11,22 @@
 #   3. copies scripts/import-pages.php and ojs/content/ to $REMOTE_ROOT/worj-ops (ABOVE the web root) and creates the
 #      placeholder custom pages with php over ssh
 #   4. --with-sample-issue: also imports the 3 fake sample articles (scripts/sample-issue.py), clearly marked fake
+# By default the CLIENT'S OWN TEXT (ojs/client-content, received 2026-11-11) replaces the placeholder text where the client supplied some;
+# every such page keeps a pending banner naming what is unconfirmed. --no-client-content seeds placeholders only.
 # It logs in with the initial administrator password from the env file, so run it BEFORE `install-shared.sh --finish`.
 # Needs here: node with playwright (the Claude sandbox has it; otherwise npm i playwright), python3, rsync, ssh.
 # None of this content may stay at launch: `make check-placeholders-url` must be empty then (docs/LAUNCH-GATES.md).
 # UNVERIFIED (not run on the host).
 set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-envfile="$root/.env.shared"; check=0; sample=0
+envfile="$root/.env.shared"; check=0; sample=0; client=1
 while [ $# -gt 0 ]; do
   case "$1" in
     --env) envfile="${2:-}"; shift 2 ;;
     --check) check=1; shift ;;
     --with-sample-issue) sample=1; shift ;;
-    *) echo "usage: $0 [--env FILE] [--check] [--with-sample-issue]" >&2; exit 2 ;;
+    --no-client-content) client=0; shift ;;
+    *) echo "usage: $0 [--env FILE] [--check] [--with-sample-issue] [--no-client-content]" >&2; exit 2 ;;
   esac
 done
 die() { echo "FAIL  $*" >&2; exit 1; }
@@ -55,7 +58,7 @@ if [ "$check" = 1 ]; then
   chg "check that https://$HOST is closed to crawlers, then create the journal worj, the theme, the announcements and the placeholder texts"
 else
   command -v node >/dev/null || die "node is needed here (Playwright drives the admin interface)"
-  seed_node() { WORJ_TARGET=remote WORJ_URL="https://$HOST" WORJ_ADMIN_USER="$ADMIN_USERNAME" WORJ_ADMIN_PASSWORD="$ADMIN_PASSWORD" node "$root/scripts/sandbox-seed.js"; }
+  seed_node() { WORJ_CLIENT_CONTENT="$client" WORJ_TARGET=remote WORJ_URL="https://$HOST" WORJ_ADMIN_USER="$ADMIN_USERNAME" WORJ_ADMIN_PASSWORD="$ADMIN_PASSWORD" node "$root/scripts/sandbox-seed.js"; }
 fi
 if [ "$check" = 1 ]; then
   chg "copy scripts/import-pages.php and ojs/content/ to $ops, enable the Make a Submission block, create the placeholder pages there (create-only), then a second pass that sets the sidebar and the Awards card"
@@ -67,7 +70,8 @@ else
   remote "mkdir -p $(printf '%q' "$ops/scripts") $(printf '%q' "$ops/ojs")"
   rsync -a -e "$rsh" "$root/scripts/import-pages.php" "$SSH_TARGET:$ops/scripts/"
   rsync -a --delete -e "$rsh" "$root/ojs/content/" "$SSH_TARGET:$ops/ojs/content/"
-  remote "php $(printf '%q' "$ops/scripts/import-pages.php") --journal=worj --ojs=$(printf '%q' "$webroot")" | tail -3
+  rsync -a --delete --exclude=source-v1.txt -e "$rsh" "$root/ojs/client-content/" "$SSH_TARGET:$ops/ojs/client-content/"
+  remote "php $(printf '%q' "$ops/scripts/import-pages.php") --journal=worj --ojs=$(printf '%q' "$webroot")$([ "$client" = 1 ] && printf ' --client-content')" | tail -3
   seed_node | tee "$tmp/seed2.txt" || die "the second seeding pass failed"
   ! grep -q '^SIDEBAR_PENDING' "$tmp/seed2.txt" || die "the sidebar block is still not available after enabling it"
 fi

@@ -21,6 +21,7 @@ const root = path.resolve(__dirname, '..');
 const args = process.argv.slice(2);
 const dryRun = args.includes('--check');
 const force = args.includes('--force-sandbox');
+const clientContent = args.includes('--client-content');
 const target = require('./lib/target');
 
 const t = target.load();
@@ -29,7 +30,14 @@ const base = t.base;
 const { chromium } = require('playwright');
 const { guarded, assertId } = require('./lib/sandbox-guard');
 const manifest = JSON.parse(fs.readFileSync(path.join(root, 'ojs/content/pages.json'), 'utf8'));
-const BANNER = '[PLACEHOLDER: replace with client-approved text]';
+// a text is still a placeholder (safe to refresh) while it carries the generic banner or the pending banner of the client's own text
+const isPlaceholderHtml = (t) => /\[PLACEHOLDER: (replace with client-approved text|client text)/.test(t);
+// with --client-content the client's text (ojs/client-content, received 2026-11-11) replaces the placeholder text where the client supplied some
+const overlay = {};
+if (clientContent) {
+  const cmap = JSON.parse(fs.readFileSync(path.join(root, 'ojs/client-content/map.json'), 'utf8'));
+  for (const p of cmap.pages) overlay[p.id] = p.file;
+}
 
 const isPlaceholderValue = (v) => /\[PLACEHOLDER|\.invalid/i.test(v) || /^Placeholder /.test(v);
 
@@ -63,7 +71,7 @@ async function main() {
     const existing = (raw && typeof raw === 'object' ? raw[locale] : raw) || '';
     let action;
     if (!existing) action = 'write';
-    else if (isHtml ? !existing.includes(BANNER) : !isPlaceholderValue(existing)) action = 'edited';
+    else if (isHtml ? !isPlaceholderHtml(existing) : !isPlaceholderValue(existing)) action = 'edited';
     else action = force ? 'write' : 'keep';
     if (action === 'edited') { console.log(`leave   ${label}  (edited by a human)`); counts.edited++; return false; }
     if (action === 'keep') { console.log(`skip    ${label}  (exists; create-only)`); counts.kept++; return false; }
@@ -83,8 +91,9 @@ async function main() {
   };
 
   for (const p of manifest.pages.filter((x) => x.mechanism === 'setting')) {
-    const html = fs.readFileSync(path.join(root, 'ojs/content', p.file), 'utf8');
-    if (!html.includes(BANNER)) { console.error(`ERROR: ${p.file} has no placeholder banner`); process.exit(2); }
+    const src = overlay[p.id] ? path.join(root, 'ojs/client-content', overlay[p.id]) : path.join(root, 'ojs/content', p.file);
+    const html = fs.readFileSync(src, 'utf8');
+    if (!isPlaceholderHtml(html)) { console.error(`ERROR: ${path.relative(root, src)} has no placeholder banner`); process.exit(2); }
     await apply(`${p.setting}  (${p.url})`, p.setting, html, true, p.flags || {});
   }
   for (const [name, value] of Object.entries(manifest.contact.settings)) {
