@@ -51,7 +51,7 @@ yes "no submission is left" test "$(q "select count(*) from submissions")" = 0
 home="$(page "")"
 yes "the placeholder announcements are gone from the home page" bash -c "! grep -qF 'Sample announcement' <<<'$(printf '%s' "$home" | tr -d "'")'"
 for p in archiving awards-guidelines awards-categories plagiarism-similarity awards awards-winners; do yes "/$p is hidden (404)" test "$(code "$p")" = 404; done
-yes "the Editorial Team link is out of the menus" bash -c "! grep -qF 'editorialMasthead' <<<'$(printf '%s' "$home" | tr -d "'")'"
+yes "the Editorial Team stays in the menus (the client supplied it; --hide-editorial-team would remove it)" has "$home" "editorialMasthead"
 yes "the Information block is out of the sidebar" bash -c "! grep -qF 'block_information' <<<'$(printf '%s' "$home" | tr -d "'")'"
 yes "the Awards card and its placeholder are off the home page" bash -c "! grep -qF 'awards call-out' <<<'$(printf '%s' "$home" | tr -d "'")'"
 yes "the home page summary is the client's first About paragraph" has "$home" "international, open-access, peer-reviewed, multidisciplinary scientific journal"
@@ -61,20 +61,29 @@ yes "the Call for Reviewers announcement is held (not on the site)" bash -c "! (
 yes "the client's pages that were not held are still there with their banner (/peer-review)" has "$(page peer-review)" "client text received"
 yes "no credential in the output" bash -c "! grep -qiE 'password|secret' '$tmp/apply.txt'"
 
+echo "=== the licence and the ISSN decision"
+LP --licence-from-document --launch-without-issn --apply >"$tmp/li.txt" 2>&1; rc=$?
+yes "applies (exit $rc)" test "$rc" = 0
+h2="$(page "")"
+yes "the footer now links to the CC BY-NC 4.0 licence (no licence placeholder)" bash -c "grep -qF 'creativecommons.org/licenses/by-nc/4.0/' <<<'$(printf '%s' "$h2" | tr -d "'")' && ! grep -qF 'PLACEHOLDER: licence' <<<'$(printf '%s' "$h2" | tr -d "'")'"
+yes "the ISSN line is left out (launch without an ISSN)" bash -c "! grep -qF 'ISSN, pending' <<<'$(printf '%s' "$h2" | tr -d "'")'"
+LP --licence-from-document --launch-without-issn --apply >"$tmp/li2.txt" 2>&1
+yes "running it again changes nothing" bash -c "! grep -q '^DONE:' '$tmp/li2.txt'"
+
 echo "=== running it again is harmless"
 LP --minimal --apply >"$tmp/again.txt" 2>&1; rc=$?
 yes "the second run exits 0 and does nothing new (exit $rc)" bash -c "[ $rc = 0 ] && ! grep -q '^DONE:' '$tmp/again.txt'"
 
 echo "=== approve: only what the client confirmed, and never a page with a marked blank"
-LP --approve about,copyright-licensing >"$tmp/ap0.txt" 2>&1; rc=$?
-yes "without --drop-blanks the About page is refused (it has a Publisher blank) and so is the licence page (exit $rc)" bash -c "[ $rc = 1 ] && grep -q 'FAIL  about still has a marked blank' '$tmp/ap0.txt' && grep -q 'FAIL  copyright-licensing still has a marked blank' '$tmp/ap0.txt'"
-LP --approve about,peer-review,disclaimer --drop-blanks --apply >"$tmp/ap1.txt" 2>&1; rc=$?
-yes "with --drop-blanks About, Peer Review and Disclaimer are confirmed (exit $rc)" test "$rc" = 0
+LP --approve about >"$tmp/ap0.txt" 2>&1; rc=$?
+yes "without --drop-blanks the About page is refused (it has a Publisher blank) (exit $rc)" bash -c "[ $rc = 1 ] && grep -q 'FAIL  about still has a marked blank' '$tmp/ap0.txt'"
+LP --approve about,peer-review,disclaimer,editorial-team,copyright-licensing,privacy --drop-blanks --apply >"$tmp/ap1.txt" 2>&1; rc=$?
+yes "with --drop-blanks About, Peer Review, Disclaimer, Editorial Team, Copyright and Privacy are confirmed (exit $rc)" test "$rc" = 0
+yes "the Editorial Team and the licence page have no banner left, the licence and the privacy contact stay" bash -c "! grep -qF 'client text received' <<<'$(printf '%s' "$(page about/editorialMasthead)$(page copyright-licensing)$(page about/privacy)" | tr -d "'")' && grep -qF 'CC BY-NC 4.0' <<<'$(printf '%s' "$(page copyright-licensing)" | tr -d "'")' && grep -qF 'privacy@worldopenresearchjournal.com' <<<'$(printf '%s' "$(page about/privacy)" | tr -d "'")'"
 a="$(page about)"
 yes "/about: the banner and the Publisher blank are gone, the client's text stays" bash -c "! grep -qF 'client text received' <<<'$(printf '%s' "$a" | tr -d "'")' && ! grep -qF 'publisher name and address' <<<'$(printf '%s' "$a" | tr -d "'")' && grep -qF 'advancement of knowledge' <<<'$(printf '%s' "$a" | tr -d "'")'"
 yes "/peer-review and /disclaimer: no banner" bash -c "! grep -qF 'client text received' <<<'$(printf '%s' "$(page peer-review)$(page disclaimer)" | tr -d "'")'"
 yes "/open-access, not confirmed, still carries its banner" has "$(page open-access)" "client text received"
-yes "the licence page was refused and still has its banner and its blank" bash -c "p=\"\$(curl -s --noproxy '*' $base/worj/copyright-licensing)\"; grep -qF 'client text received' <<<\"\$p\" && grep -qF 'PLACEHOLDER: licence name' <<<\"\$p\""
 LP --approve about --apply >"$tmp/ap2.txt" 2>&1
 yes "approving an already confirmed page says so and changes nothing" grep -q 'skip  about has no pending banner' "$tmp/ap2.txt"
 

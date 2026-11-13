@@ -8,7 +8,8 @@ What it guarantees (exit 1 and a line per problem otherwise):
   - every file starts with ONE pending banner, `[PLACEHOLDER: client text received 2026-11-11, pending confirmation: ...]`, so the
     launch gate (scripts/check-placeholders.sh) stays red until a person resolves it
   - NOTHING IS INVENTED: every paragraph, list item and heading of every file is a passage of source-v1.txt (the client's text as
-    sent), apart from the banner, text inside `<span class="worj-ph">` (a marked blank) and the few headings of our own listed in
+    sent), apart from the banner, text inside `<span class="worj-ph">` (a marked blank), text inside `<span class="worj-add">`
+    (which must be a passage of the addendum, the recorded decisions of 2026-11-13) and the few headings of our own listed in
     OUR_HEADINGS. Spelling and wording are the client's: this checks that we did not add or change a sentence
   - no email address (except one of the journal's own aliases inside a marked blank), no REDACTED marker, no example host in any file
 """
@@ -34,13 +35,19 @@ class Blocks(HTMLParser):
 
     def __init__(self):
         super().__init__()
-        self.blocks, self.cur, self.depth_skip, self.in_block, self.skip_banner = [], [], 0, None, False
+        self.blocks, self.cur, self.depth_skip, self.in_block, self.skip_banner, self.add_depth = [], [], 0, None, False, 0
 
     def handle_starttag(self, tag, attrs):
         a = dict(attrs)
         cls = a.get("class", "")
         if tag in ("p", "li", "h1", "h2", "h3", "h4") and self.in_block is None:
             self.in_block, self.cur, self.skip_banner = tag, [], "worj-placeholder" in cls
+        if tag == "span" and "worj-add" in cls and self.in_block and not self.depth_skip:
+            self.add_depth += 1
+            if self.add_depth == 1:
+                self.cur.append("\x01")  # text from the addendum: checked against the addendum, not the source
+        elif tag == "span" and self.add_depth:
+            self.add_depth += 1
         if tag == "span" and "worj-ph" in cls:
             if self.in_block and not self.depth_skip:
                 self.cur.append("\x00")  # a marked blank splits the block: each part must be a passage of the source
@@ -49,7 +56,11 @@ class Blocks(HTMLParser):
             self.depth_skip += 1
 
     def handle_endtag(self, tag):
-        if tag == "span" and self.depth_skip:
+        if tag == "span" and self.add_depth:
+            self.add_depth -= 1
+            if self.add_depth == 0:
+                self.cur.append("\x02")
+        elif tag == "span" and self.depth_skip:
             self.depth_skip -= 1
         if tag == self.in_block:
             text = "".join(self.cur)
@@ -75,6 +86,11 @@ def main():
     src = open(os.path.join(d, cmap["source"]), encoding="utf-8").read()
     src = src.split("=" * 20, 1)[1] if "=" * 20 in src else src
     src_n = norm(src)
+    add_text = ""
+    if cmap.get("addendum"):
+        add_text = open(os.path.join(d, cmap["addendum"]), encoding="utf-8").read()
+        add_text = add_text.split("=" * 20, 1)[1] if "=" * 20 in add_text else add_text
+    add_n = norm(add_text)
     files, seen = [], set()
     for p in cmap["pages"]:
         if p["id"] in seen:
@@ -99,12 +115,12 @@ def main():
             problems.append(f"{f}: the first line is not the pending banner")
         if text.count("[PLACEHOLDER: client text") != 1:
             problems.append(f"{f}: there must be exactly one pending banner")
-        # an email address is allowed only inside a marked blank (`worj-ph`) and only as one of the journal's own aliases
-        outside = re.sub(r'<span class="worj-ph">.*?</span>', "", text, flags=re.S)
-        if re.search(r"[\w.+-]+@[\w-]+\.[\w.-]+|REDACTED|example\.(org|invalid)", outside):
+        # an email address is allowed only inside a marked blank or an addendum span (`worj-ph`, `worj-add`) and only as one of the journal's own aliases
+        outside = re.sub(r'<span class="worj-(?:ph|add)">.*?</span>', "", text, flags=re.S)
+        if re.search(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+|REDACTED|example\.(org|invalid)", outside):
             problems.append(f"{f}: an email address, a REDACTED marker or an example host")
-        for span in re.findall(r'<span class="worj-ph">(.*?)</span>', text, flags=re.S):
-            for addr in re.findall(r"[\w.+-]+@[\w-]+\.[\w.-]+", span):
+        for span in re.findall(r'<span class="worj-(?:ph|add)">(.*?)</span>', text, flags=re.S):
+            for addr in re.findall(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+", span):
                 if not OWN_ALIAS.match(addr):
                     problems.append(f"{f}: {addr} is not one of the journal's own addresses")
         pr = Blocks()
@@ -113,9 +129,17 @@ def main():
             checked += 1
             if tag.startswith("h") and norm(t) in OUR_HEADINGS:
                 continue
-            for part in t.split("\x00"):
-                if norm(part) and norm(part) not in src_n:
-                    problems.append(f"{f}: not a passage of the client's text: {part.strip()[:90]!r}")
+            # text between \x01 and \x02 comes from the addendum; the rest (split at marked blanks) from the client's document
+            pieces = re.split(r"(\x01.*?\x02)", t, flags=re.S)
+            for piece in pieces:
+                if piece.startswith("\x01"):
+                    inner = piece[1:-1]
+                    if norm(inner) and norm(inner) not in add_n:
+                        problems.append(f"{f}: not a passage of the addendum: {inner.strip()[:90]!r}")
+                    continue
+                for part in piece.split("\x00"):
+                    if norm(part) and norm(part) not in src_n:
+                        problems.append(f"{f}: not a passage of the client's text: {part.strip()[:90]!r}")
     for p in problems:
         print("FAIL  " + p)
     print(f"client content: {len(files)} files, {checked} text blocks checked against the source, {len(problems)} problem(s)")

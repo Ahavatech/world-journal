@@ -52,12 +52,15 @@ yes "/open-access: the access and APC policy" has "$(page open-access)" "Access 
 yes "/peer-review: the client's policy" has "$(page peer-review)" "Initial Editorial Screening"
 yes "/publication-ethics: the client's policy" has "$(page publication-ethics)" "Similarity Threshold"
 c="$(page copyright-licensing)"
-yes "/copyright-licensing: the client's terms with the blank licence left as a placeholder" bash -c "grep -qF 'Under this licence' <<<'$(printf '%s' "$c" | tr -d "'")' && grep -qF 'PLACEHOLDER: licence name' <<<'$(printf '%s' "$c" | tr -d "'")'"
+yes "/copyright-licensing: the client's terms with the licence the document's own terms describe (CC BY-NC 4.0)" bash -c "grep -qF 'Under this licence' <<<'$(printf '%s' "$c" | tr -d "'")' && grep -qF 'Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)' <<<'$(printf '%s' "$c" | tr -d "'")' && grep -qF 'creativecommons.org/licenses/by-nc/4.0/' <<<'$(printf '%s' "$c" | tr -d "'")'"
 yes "/awards: the client's criteria" has "$(page awards)" "Recognizing Excellence. Advancing Knowledge. Inspiring Innovation."
 w="$(page awards-winners)"
 yes "/awards-winners: no 'have been recognized' claim, a placeholder instead" bash -c "! grep -qF 'have been recognized' <<<'$(printf '%s' "$w" | tr -d "'")' && grep -qF 'PLACEHOLDER: names, affiliations' <<<'$(printf '%s' "$w" | tr -d "'")'"
 yes "the pages the client did not supply stay placeholders (/archiving)" has "$(page archiving)" "$PH"
-yes "...and the editorial team (no names, no consent)" bash -c "page_out=\"\$(curl -s --noproxy '*' '$base/worj/about/editorialMasthead')\"; grep -qF '$PH' <<<\"\$page_out\" && ! grep -qiE 'Paul John|Aramide|Kaushik' <<<\"\$page_out\""
+et="$(page about/editorialMasthead)"
+yes "/about/editorialMasthead: Prof. Paul John as Editor-in-Chief, Dr. Dan Williams as Assistant Editor" bash -c "grep -qF 'Prof. Paul John' <<<'$(printf '%s' "$et" | tr -d "'")' && grep -qF 'Assistant Editor' <<<'$(printf '%s' "$et" | tr -d "'")' && grep -qF 'Editor-in-Chief' <<<'$(printf '%s' "$et" | tr -d "'")'"
+yes "...the reviewers as the document lists them, with no email address" bash -c "grep -qF 'Oluwatosin Oladayo Aramide' <<<'$(printf '%s' "$et" | tr -d "'")' && ! grep -qiE 'gmail|nayangoel' <<<'$(printf '%s' "$et" | tr -d "'")'"
+yes "...carrying its pending banner" has "$et" "client text received"
 yes "...and the contact page keeps its placeholder" has "$(page about/contact)" "PLACEHOLDER: contact"
 yes "the client's announcement exists" test "$(ann | grep -o '"title":{"en":"Call for Reviewers"' | wc -l)" -ge 1
 

@@ -4,6 +4,14 @@ Source: the client's document "World Open Research Journal Details" (version 1, 
 
 Send section 2 and section 3 to the client. Section 1 says what we will do with what is already here.
 
+## 0. Decisions given on 2026-11-13 (recorded in `ojs/client-content/addendum-2026-11-13.txt`)
+
+- **Editorial Team:** Prof. Paul John is **Editor-in-Chief** and Dr. Dan Williams is **Assistant Editor**. The reviewers are listed exactly as the document lists them (name, affiliation, area of interest); the one personal email address in the document is **left out** (no consent to publish it). The document gives no institution or country for the two editors, so none is shown.
+- **Phone number:** later. No phone number is published.
+- **Awards:** later. The awards pages and the awards card stay off.
+- **Everything else that was unclear:** the document is the source of truth. Nothing is added to it except what follows from its own text, listed in the addendum: the **licence** (the document's terms are those of CC BY-NC 4.0, https://creativecommons.org/licenses/by-nc/4.0/) and the **privacy contact line** (`privacy@`). Items the document is silent on stay out: no publisher name, no ISSN (the footer's ISSN line is left out for a launch without one), no support contact other than the journal's own mailboxes.
+- **Still open, and the client should be told:** the licence is an inference from the document's terms (change it in one place if the client meant another); the publisher's name is not in the document; the document's Gmail support address is not shown, because every address the site shows or sends from is one of the journal's own.
+
 ## 1. What was received, and where each part goes
 
 **Loaded on the test site:** About, Aims and Scope, the privacy statement, the Author Guidelines, the Disclaimer, the Access and APC policy, the Peer Review policy, the Plagiarism and Publication Ethics policy, the Copyright and Licensing terms (licence name and address left as marked blanks), the Research Awards page and the "Call for Reviewers" announcement. **Not loaded** (so nothing is shown that needs consent or is blank): the Editorial Team and reviewers, the contact details, the award recipients, and the archiving policy (not supplied).

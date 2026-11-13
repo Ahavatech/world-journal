@@ -191,6 +191,19 @@ foreach (['awards_card_off' => ['showAwardsCard', 0, 'hide the Awards card on th
     }
 }
 
+// ---- 3b. the licence, where the document leaves its name blank (the addendum records the licence its own terms describe)
+if (!empty($o['licence_url'])) {
+    $cur = js($jid, '', 'licenseUrl');
+    if ($cur === null || $cur === '') {
+        $url = (string) $o['licence_url'];
+        act($apply, "set the journal licence to $url (the footer links to it)", function () use ($jid, $url) {
+            setjs($jid, '', 'licenseUrl', $url);
+        });
+    } else {
+        say('skip ', 'the journal already has a licence set: left alone');
+    }
+}
+
 // ---- 4. the home page summary and the contact name
 if (!empty($o['summary']) && isPlaceholder(js($jid, 'en', 'description'))) {
     $text = (string) $o['summary'];
