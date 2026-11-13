@@ -3,7 +3,7 @@ SHELL := /bin/bash
 THEME := ojs/plugins/themes/worj
 
 # Needs php-fpm8.3, mariadbd and nginx in this sandbox; not part of `make lint` (CI has no FPM or MariaDB).
-.PHONY: infra-test infra-test-nginx infra-test-backup infra-test-reset infra-test-chroot infra-test-day0 infra-test-htaccess infra-test-install infra-test-client
+.PHONY: infra-test infra-test-nginx infra-test-backup infra-test-reset infra-test-chroot infra-test-day0 infra-test-htaccess infra-test-install infra-test-client infra-test-email
 infra-test:
 	scripts/test-infra-config.sh
 	scripts/test-provision-preflight.sh | tail -1
@@ -43,6 +43,11 @@ infra-test-install:
 # Needs the sandbox (make sandbox-up sandbox-seed) and Playwright. The text-only checks run in `make lint`.
 infra-test-client:
 	scripts/test-client-content-sandbox.sh
+
+# What OJS really sends (a password-reset email read back from a fake SMTP server): From is the mailbox, the contact address only in
+# Reply-To. Needs the sandbox (make sandbox-up sandbox-seed).
+infra-test-email:
+	scripts/test-email-sender-sandbox.sh
 
 .PHONY: setup lint eval check-placeholders sandbox-up sandbox-down sandbox-seed check-citation check-pdf check-discovery check-placeholders-url
 

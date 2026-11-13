@@ -10,7 +10,7 @@ What it guarantees (exit 1 and a line per problem otherwise):
   - NOTHING IS INVENTED: every paragraph, list item and heading of every file is a passage of source-v1.txt (the client's text as
     sent), apart from the banner, text inside `<span class="worj-ph">` (a marked blank) and the few headings of our own listed in
     OUR_HEADINGS. Spelling and wording are the client's: this checks that we did not add or change a sentence
-  - no email address, no REDACTED marker, and no example host in any file
+  - no email address (except one of the journal's own aliases inside a marked blank), no REDACTED marker, no example host in any file
 """
 import argparse
 import json
@@ -19,6 +19,7 @@ import re
 import sys
 from html.parser import HTMLParser
 
+OWN_ALIAS = re.compile(r"^(editorial|support|privacy|doi|admin)@worldopenresearchjournal\.com$")
 OUR_HEADINGS = {"publisher"}  # headings we add ourselves (the publisher is blank in the document and stays a placeholder)
 BANNER = re.compile(r'^<p class="worj-placeholder">\[PLACEHOLDER: client text received 2026-11-11, pending confirmation: [^\]<]+\]</p>$')
 
@@ -98,8 +99,14 @@ def main():
             problems.append(f"{f}: the first line is not the pending banner")
         if text.count("[PLACEHOLDER: client text") != 1:
             problems.append(f"{f}: there must be exactly one pending banner")
-        if re.search(r"[\w.+-]+@[\w-]+\.[\w.-]+|REDACTED|example\.(org|invalid)", text):
+        # an email address is allowed only inside a marked blank (`worj-ph`) and only as one of the journal's own aliases
+        outside = re.sub(r'<span class="worj-ph">.*?</span>', "", text, flags=re.S)
+        if re.search(r"[\w.+-]+@[\w-]+\.[\w.-]+|REDACTED|example\.(org|invalid)", outside):
             problems.append(f"{f}: an email address, a REDACTED marker or an example host")
+        for span in re.findall(r'<span class="worj-ph">(.*?)</span>', text, flags=re.S):
+            for addr in re.findall(r"[\w.+-]+@[\w-]+\.[\w.-]+", span):
+                if not OWN_ALIAS.match(addr):
+                    problems.append(f"{f}: {addr} is not one of the journal's own addresses")
         pr = Blocks()
         pr.feed(text)
         for tag, t in pr.blocks:
