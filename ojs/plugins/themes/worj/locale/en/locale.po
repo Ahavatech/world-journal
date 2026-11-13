@@ -47,3 +47,12 @@ msgstr "Shows a Research Awards call-out on the homepage. Turn this on only afte
 
 msgid "plugins.themes.worj.option.showAwardsCard.option"
 msgstr "Show the Research Awards card on the homepage."
+
+msgid "plugins.themes.worj.option.omitIssnLine.label"
+msgstr "ISSN line in the footer"
+
+msgid "plugins.themes.worj.option.omitIssnLine.description"
+msgstr "While the journal has no ISSN the footer shows a visible placeholder. Turn this on only for a journal that launches without an ISSN: the line is then left out until one is entered in the journal settings."
+
+msgid "plugins.themes.worj.option.omitIssnLine.option"
+msgstr "Leave the ISSN line out of the footer while there is no ISSN."

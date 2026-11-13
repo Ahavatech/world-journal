@@ -37,14 +37,16 @@
 						<span class="worj-placeholder">[PLACEHOLDER: publisher name]</span>
 					{/if}
 				</p>
-				<p>
-					{if $currentContext->getData('onlineIssn') || $currentContext->getData('printIssn')}
+				{if $currentContext->getData('onlineIssn') || $currentContext->getData('printIssn')}
+					<p>
 						{if $currentContext->getData('onlineIssn')}eISSN {$currentContext->getData('onlineIssn')|escape}{/if}
 						{if $currentContext->getData('printIssn')}ISSN {$currentContext->getData('printIssn')|escape}{/if}
-					{else}
+					</p>
+				{elseif !($activeTheme && $activeTheme->getOption('omitIssnLine'))}
+					<p>
 						<span class="worj-placeholder">[PLACEHOLDER: ISSN, pending]</span>
-					{/if}
-				</p>
+					</p>
+				{/if}
 				<p>
 					{if $currentContext->getData('licenseUrl')}
 						<a href="{$currentContext->getData('licenseUrl')|escape}" rel="license">{translate key="submission.license"}</a>
