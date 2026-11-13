@@ -4,7 +4,7 @@
 #
 #   scripts/launch-prep-shared.sh [--env FILE] [--apply] [--minimal]
 #        [--delete-sample] [--hide-unsupplied] [--hide-editorial-team] [--summary-from-about] [--contact-office] [--launch-without-issn]
-#        [--licence-from-document]
+#        [--licence-from-document] [--launch-without-publisher] [--drop-default-checklist]
 #        [--approve ID,ID...] [--hold ID,ID...] [--drop-blanks] [--local-ojs DIR]
 #
 #   --delete-sample          the 3 placeholder announcements, the sample issue and its 3 fake articles (matched by their exact fake titles)
@@ -18,7 +18,9 @@
 #   --approve IDS            the client CONFIRMED these pages: take the pending banner off (refused while a marked blank is left)
 #   --hold IDS               the client has NOT confirmed these: hide them until they do
 #   --drop-blanks            with --approve: remove a paragraph that is only a marked blank (and the heading before it)
-#   --minimal                --delete-sample --hide-unsupplied --summary-from-about --contact-office and --hold awards,awards-winners,announcement
+#   --launch-without-publisher  the footer leaves the publisher line out while the journal has no publisher name (theme option omitPublisherLine)
+#   --drop-default-checklist OJS's shipped submission checklist (not the client's text) is emptied while it is still the shipped wording
+#   --minimal                --delete-sample --hide-unsupplied --drop-default-checklist --summary-from-about --contact-office and --hold awards,awards-winners,announcement
 #   --local-ojs DIR          run against an OJS tree on this machine instead of the host (tests)
 # Client page ids: about editorial-team aims-and-scope privacy author-guidelines disclaimer open-access peer-review publication-ethics copyright-licensing
 #   awards awards-winners announcement.
@@ -27,12 +29,12 @@
 set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 envfile="$root/.env.shared"; apply=0; local_ojs=""
-delete_sample=0; hide_unsupplied=0; hide_team=0; licence=0; summary=0; contact=0; noissn=0; drop=0; approve=""; hold=""
+delete_sample=0; hide_unsupplied=0; hide_team=0; licence=0; nopub=0; dropcl=0; summary=0; contact=0; noissn=0; drop=0; approve=""; hold=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --env) envfile="${2:-}"; shift 2 ;;
     --apply) apply=1; shift ;;
-    --minimal) delete_sample=1; hide_unsupplied=1; summary=1; contact=1; hold="${hold:+$hold,}awards,awards-winners,announcement"; shift ;;
+    --minimal) delete_sample=1; hide_unsupplied=1; dropcl=1; summary=1; contact=1; hold="${hold:+$hold,}awards,awards-winners,announcement"; shift ;;
     --delete-sample) delete_sample=1; shift ;;
     --hide-unsupplied) hide_unsupplied=1; shift ;;
     --hide-editorial-team) hide_team=1; shift ;;
@@ -40,6 +42,8 @@ while [ $# -gt 0 ]; do
     --summary-from-about) summary=1; shift ;;
     --contact-office) contact=1; shift ;;
     --launch-without-issn) noissn=1; shift ;;
+    --launch-without-publisher) nopub=1; shift ;;
+    --drop-default-checklist) dropcl=1; shift ;;
     --approve) approve="${2:-}"; shift 2 ;;
     --hold) hold="${hold:+$hold,}${2:-}"; shift 2 ;;
     --drop-blanks) drop=1; shift ;;
@@ -51,11 +55,11 @@ die() { echo "FAIL  $*" >&2; exit 1; }
 ids_ok() { local l="$1" i; [ -z "$l" ] && return 0; for i in ${l//,/ }; do case "$i" in about|editorial-team|aims-and-scope|privacy|author-guidelines|disclaimer|open-access|peer-review|publication-ethics|copyright-licensing|awards|awards-winners|announcement) ;; *) die "'$i' is not one of the client's pages"; esac; done; }
 ids_ok "$approve"; ids_ok "$hold"
 for i in ${approve//,/ }; do case ",$hold," in *",$i,"*) die "'$i' is both approved and held" ;; esac; done
-[ "$delete_sample$hide_unsupplied$hide_team$licence$summary$contact$noissn" != "0000000" ] || [ -n "$approve$hold" ] || die "nothing to do: give --minimal, or any of the options (--help lists them)"
+[ "$delete_sample$hide_unsupplied$hide_team$licence$summary$contact$noissn$nopub$dropcl" != "000000000" ] || [ -n "$approve$hold" ] || die "nothing to do: give --minimal, or any of the options (--help lists them)"
 
-opts="$(python3 -I - "$root" "$apply" "$delete_sample" "$hide_unsupplied" "$summary" "$contact" "$noissn" "$drop" "$approve" "$hold" "$hide_team" "$licence" <<'PY'
+opts="$(python3 -I - "$root" "$apply" "$delete_sample" "$hide_unsupplied" "$summary" "$contact" "$noissn" "$drop" "$approve" "$hold" "$hide_team" "$licence" "$nopub" "$dropcl" <<'PY'
 import base64, html, json, re, sys
-root, apply, delete_sample, hide, summary, contact, noissn, drop, approve, hold, hide_team, licence = sys.argv[1:13]
+root, apply, delete_sample, hide, summary, contact, noissn, drop, approve, hold, hide_team, licence, nopub, dropcl = sys.argv[1:15]
 pages_json = json.load(open(f"{root}/ojs/content/pages.json"))["pages"]
 cmap = json.load(open(f"{root}/ojs/client-content/map.json"))
 by_id = {p["id"]: p for p in pages_json}
@@ -79,7 +83,8 @@ o = {
     "delete_sample": delete_sample == "1",
     "hide_pages": ["awards-guidelines", "awards-categories", "archiving", "plagiarism-similarity"] if hide == "1" else [],
     "hide_masthead": hide_team == "1", "hide_info": hide == "1", "awards_card_off": hide == "1",
-    "licence_url": licence_url,
+    "licence_url": licence_url, "omit_publisher": nopub == "1", "drop_default_checklist": dropcl == "1",
+    "default_wording": [l.strip() for l in open(f"{root}/scripts/ojs-default-wording.txt", encoding="utf-8") if l.strip() and not l.startswith("#")],
     "summary": ("<p>" + first + "</p>") if summary == "1" else "",
     "contact_office": contact == "1", "omit_issn": noissn == "1", "drop_blanks": drop == "1",
     "approve": [x for x in approve.split(",") if x], "hold": [x for x in hold.split(",") if x],

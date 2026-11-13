@@ -30,13 +30,15 @@
 		<div class="worj-footer__about">
 			{if $currentContext}
 				<p class="worj-footer__title">{$currentContext->getLocalizedData('name')|escape}</p>
-				<p>
-					{if $currentContext->getData('publisherInstitution')}
+				{if $currentContext->getData('publisherInstitution')}
+					<p>
 						{$currentContext->getData('publisherInstitution')|escape}
-					{else}
+					</p>
+				{elseif !($activeTheme && $activeTheme->getOption('omitPublisherLine'))}
+					<p>
 						<span class="worj-placeholder">[PLACEHOLDER: publisher name]</span>
-					{/if}
-				</p>
+					</p>
+				{/if}
 				{if $currentContext->getData('onlineIssn') || $currentContext->getData('printIssn')}
 					<p>
 						{if $currentContext->getData('onlineIssn')}eISSN {$currentContext->getData('onlineIssn')|escape}{/if}

@@ -10,7 +10,7 @@ source "$root/.env.sandbox"
 base="${SANDBOX_URL:-http://127.0.0.1:8082}"
 curl -s -o /dev/null -m 5 --noproxy '*' "$base/worj/" || { echo "sandbox not running (make sandbox-up sandbox-seed)"; exit 2; }
 q() { mariadb "$SANDBOX_DB_NAME" -e "$1"; }
-cleanup() { q "DELETE FROM plugin_settings WHERE plugin_name='worjthemeplugin' AND setting_name='omitIssnLine'; DELETE FROM journal_settings WHERE setting_name='onlineIssn' AND journal_id=1"; }
+cleanup() { q "DELETE FROM plugin_settings WHERE plugin_name='worjthemeplugin' AND setting_name IN ('omitIssnLine','omitPublisherLine'); DELETE FROM journal_settings WHERE setting_name IN ('onlineIssn','publisherInstitution') AND journal_id=1"; }
 trap cleanup EXIT
 fail=0; pass=0
 ok() { echo "PASS  $1"; pass=$((pass + 1)); }
@@ -29,5 +29,13 @@ q "INSERT INTO journal_settings (journal_id, locale, setting_name, setting_value
 yes "an entered ISSN is shown even with the option on" has "$(home)" "eISSN 1234-5679"
 q "DELETE FROM journal_settings WHERE setting_name='onlineIssn' AND journal_id=1; UPDATE plugin_settings SET setting_value='0' WHERE plugin_name='worjthemeplugin' AND setting_name='omitIssnLine'"
 yes "option off again: the placeholder is back" has "$(home)" "[PLACEHOLDER: ISSN, pending]"
+echo "=== the publisher line (same rule)"
+yes "default: no publisher name shows the visible placeholder" has "$(home)" "[PLACEHOLDER: publisher name]"
+q "INSERT INTO plugin_settings (plugin_name, context_id, setting_name, setting_value, setting_type) VALUES ('worjthemeplugin', 1, 'omitPublisherLine', '1', 'bool')"
+hp="$(home)"
+yes "option on: the publisher placeholder is gone" bash -c "! grep -qF '[PLACEHOLDER: publisher name]' <<<'$(printf '%s' "$hp" | tr -d "'")'"
+yes "...and the licence placeholder is untouched" has "$hp" "[PLACEHOLDER: licence"
+q "INSERT INTO journal_settings (journal_id, locale, setting_name, setting_value) VALUES (1, '', 'publisherInstitution', 'Example Press')"
+yes "an entered publisher name is shown even with the option on" has "$(home)" "Example Press"
 echo "$pass PASS, $fail FAIL"
 exit "$fail"

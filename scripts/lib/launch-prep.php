@@ -180,7 +180,7 @@ if (!empty($o['hide_info'])) {
 }
 
 // ---- 3. theme options
-foreach (['awards_card_off' => ['showAwardsCard', 0, 'hide the Awards card on the home page'], 'omit_issn' => ['omitIssnLine', 1, 'leave the ISSN line out of the footer while there is no ISSN']] as $key => [$opt, $val, $what]) {
+foreach (['awards_card_off' => ['showAwardsCard', 0, 'hide the Awards card on the home page'], 'omit_issn' => ['omitIssnLine', 1, 'leave the ISSN line out of the footer while there is no ISSN'], 'omit_publisher' => ['omitPublisherLine', 1, 'leave the publisher line out of the footer while there is no publisher name']] as $key => [$opt, $val, $what]) {
     $current = DB::table('plugin_settings')->where(['plugin_name' => 'worjthemeplugin', 'context_id' => $jid, 'setting_name' => $opt])->value('setting_value');
     if (!empty($o[$key]) && (string) $current === (string) $val) {
         say('skip ', "theme option $opt is already $val");
@@ -201,6 +201,27 @@ if (!empty($o['licence_url'])) {
         });
     } else {
         say('skip ', 'the journal already has a licence set: left alone');
+    }
+}
+
+// ---- 3c. OJS's own default submission checklist (not the client's text): emptied while it is still the shipped wording
+if (!empty($o['drop_default_checklist'])) {
+    $list = js($jid, 'en', 'submissionChecklist');
+    if ($list !== null && $list !== '') {
+        $plain = strtolower(html_entity_decode(strip_tags($list)));
+        $hits = 0;
+        foreach ($o['default_wording'] ?? [] as $frag) {
+            if ($frag !== '' && strpos($plain, $frag) !== false) {
+                $hits++;
+            }
+        }
+        if ($hits >= 3) {
+            act($apply, "empty OJS's default submission checklist ($hits shipped phrases found; the client has not supplied one)", function () use ($jid) {
+                setjs($jid, 'en', 'submissionChecklist', '');
+            });
+        } else {
+            say('skip ', 'the submission checklist is not the shipped one: left alone');
+        }
     }
 }
 
