@@ -54,5 +54,14 @@ msgstr "ISSN line in the footer"
 msgid "plugins.themes.worj.option.omitIssnLine.description"
 msgstr "While the journal has no ISSN the footer shows a visible placeholder. Turn this on only for a journal that launches without an ISSN: the line is then left out until one is entered in the journal settings."
 
+msgid "plugins.themes.worj.option.omitPublisherLine.label"
+msgstr "Publisher line in the footer"
+
+msgid "plugins.themes.worj.option.omitPublisherLine.description"
+msgstr "While the journal has no publisher name the footer shows a visible placeholder. Turn this on only for a journal whose publisher is not stated: the line is then left out until a name is entered in the journal settings."
+
+msgid "plugins.themes.worj.option.omitPublisherLine.option"
+msgstr "Leave the publisher line out of the footer while there is no publisher name."
+
 msgid "plugins.themes.worj.option.omitIssnLine.option"
 msgstr "Leave the ISSN line out of the footer while there is no ISSN."

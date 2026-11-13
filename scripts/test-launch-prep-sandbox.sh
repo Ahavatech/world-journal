@@ -61,13 +61,20 @@ yes "the Call for Reviewers announcement is held (not on the site)" bash -c "! (
 yes "the client's pages that were not held are still there with their banner (/peer-review)" has "$(page peer-review)" "client text received"
 yes "no credential in the output" bash -c "! grep -qiE 'password|secret' '$tmp/apply.txt'"
 
-echo "=== the licence and the ISSN decision"
-LP --licence-from-document --launch-without-issn --apply >"$tmp/li.txt" 2>&1; rc=$?
+echo "=== OJS's shipped submission checklist"
+yes "the Author Guidelines page no longer carries OJS's default checklist (--minimal emptied it)" bash -c "! grep -qiF 'has not been previously published, nor is it before another journal' <<<'$(printf '%s' "$(page about/submissions)" | tr -d "'")'"
+q "update journal_settings set setting_value='<ul><li>A checklist item the client wrote.</li></ul>' where setting_name='submissionChecklist'"
+LP --drop-default-checklist --apply >"$tmp/cl.txt" 2>&1
+yes "a checklist a person wrote is left alone" bash -c "grep -q 'skip  the submission checklist is not the shipped one' '$tmp/cl.txt' && [ \"\$(mariadb -N '$SANDBOX_DB_NAME' -e \"select setting_value from journal_settings where setting_name='submissionChecklist'\")\" = '<ul><li>A checklist item the client wrote.</li></ul>' ]"
+
+echo "=== the licence, the ISSN and the publisher decisions"
+LP --licence-from-document --launch-without-issn --launch-without-publisher --apply >"$tmp/li.txt" 2>&1; rc=$?
 yes "applies (exit $rc)" test "$rc" = 0
 h2="$(page "")"
 yes "the footer now links to the CC BY-NC 4.0 licence (no licence placeholder)" bash -c "grep -qF 'creativecommons.org/licenses/by-nc/4.0/' <<<'$(printf '%s' "$h2" | tr -d "'")' && ! grep -qF 'PLACEHOLDER: licence' <<<'$(printf '%s' "$h2" | tr -d "'")'"
 yes "the ISSN line is left out (launch without an ISSN)" bash -c "! grep -qF 'ISSN, pending' <<<'$(printf '%s' "$h2" | tr -d "'")'"
-LP --licence-from-document --launch-without-issn --apply >"$tmp/li2.txt" 2>&1
+yes "the publisher line is left out (no publisher name in the document)" bash -c "! grep -qF 'PLACEHOLDER: publisher name' <<<'$(printf '%s' "$h2" | tr -d "'")'"
+LP --licence-from-document --launch-without-issn --launch-without-publisher --apply >"$tmp/li2.txt" 2>&1
 yes "running it again changes nothing" bash -c "! grep -q '^DONE:' '$tmp/li2.txt'"
 
 echo "=== running it again is harmless"

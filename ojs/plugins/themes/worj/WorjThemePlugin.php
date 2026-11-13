@@ -80,6 +80,20 @@ class WorjThemePlugin extends \PKP\plugins\ThemePlugin
             ],
             'default' => false,
         ]);
+
+        // Same idea for the publisher line: off by default; a journal whose publisher is not stated turns it on and the
+        // line is left out until a publisher name is entered in the journal settings. Never prints an invented name.
+        $this->addOption('omitPublisherLine', 'FieldOptions', [
+            'label' => __('plugins.themes.worj.option.omitPublisherLine.label'),
+            'description' => __('plugins.themes.worj.option.omitPublisherLine.description'),
+            'options' => [
+                [
+                    'value' => true,
+                    'label' => __('plugins.themes.worj.option.omitPublisherLine.option'),
+                ],
+            ],
+            'default' => false,
+        ]);
     }
 
     /**
