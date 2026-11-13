@@ -66,7 +66,7 @@ ADMIN_PASSWORD=$ADMINPW
 SMTP_SERVER=smtp.example.invalid
 SMTP_PORT=465
 SMTP_AUTH=ssl
-SMTP_USERNAME=editorial@example.invalid
+SMTP_USERNAME=editorial@journal.example.org
 SMTP_PASSWORD=smtp-secret-$$
 ENV
   chmod 600 "$1"
@@ -196,6 +196,35 @@ out2="$(STUB_SOCKET_STDIN=1 "$tmp/ssh" x "cd '$R/public_html' && php" <"$root/sc
 yes "running it again changes nothing (idempotent)" bash -c "! grep -q '^enabled' <<<'$out2' && [ \"\$(mariadb -N '$dbn' -e \"select count(*) from plugin_settings where plugin_name='makesubmissionblockplugin'\")\" = 2 ]"
 mariadb "$dbn" -e "DELETE FROM plugin_settings WHERE plugin_name='makesubmissionblockplugin'; DELETE FROM journals WHERE path='worj'"
 
+echo "=== emails-shared.sh: every address the site uses is one of the journal's own"
+EM() { STUB_SOCKET_STDIN=1 WORJ_SSH="$tmp/ssh" "$root/scripts/emails-shared.sh" "$@" </dev/null; }
+mariadb "$dbn" -e "INSERT INTO journals (path, seq, primary_locale, enabled) VALUES ('worj', 1, 'en', 1)"
+EM --env "$tmp/env" >"$tmp/em0.txt" 2>&1; rc=$?
+yes "the audit FAILS while the site contact and the administrator still have the installer's outside address (exit $rc)" test "$rc" = 1
+yes "...naming them" bash -c "grep -q '^FAIL  site contactEmail' '$tmp/em0.txt' && grep -q '^FAIL  user worjadmin' '$tmp/em0.txt'"
+yes "...the mail sender in config.inc.php already passes (the template sets it)" bash -c "grep -q '^ok    config default_envelope_sender = editorial@journal.example.org' '$tmp/em0.txt' && grep -q '^ok    config force_dmarc_compliant_from = On' '$tmp/em0.txt'"
+EM --env "$tmp/env" --apply >"$tmp/em1.txt" 2>&1; rc=$?
+yes "--apply sets the addresses and the audit then passes (exit $rc)" test "$rc" = 0
+yes "...RESULT: PASS" grep -q '^RESULT: PASS' "$tmp/em1.txt"
+yes "the journal contact is editorial@, support is support@" bash -c "[ \"\$(mariadb -N '$dbn' -e \"select setting_value from journal_settings where setting_name='contactEmail'\")\" = editorial@journal.example.org ] && [ \"\$(mariadb -N '$dbn' -e \"select setting_value from journal_settings where setting_name='supportEmail'\")\" = support@journal.example.org ]"
+yes "the site contact and the administrator are admin@" bash -c "[ \"\$(mariadb -N '$dbn' -e \"select setting_value from site_settings where setting_name='contactEmail'\")\" = admin@journal.example.org ] && [ \"\$(mariadb -N '$dbn' -e \"select email from users where username='worjadmin'\")\" = admin@journal.example.org ]"
+yes "no password reached the output" bash -c "! grep -qE '$dbp|$ADMINPW|smtp-secret' '$tmp/em0.txt' '$tmp/em1.txt'"
+EM --env "$tmp/env" --apply >/dev/null 2>&1; rc=$?
+yes "--apply twice is harmless (exit $rc)" test "$rc" = 0
+sed -i 's/^force_dmarc_compliant_from = .*/force_dmarc_compliant_from = Off/' "$cfg"
+EM --env "$tmp/env" >"$tmp/em2.txt" 2>&1; rc=$?
+yes "the audit FAILS when an editor's own address could end up in the From header (exit $rc)" bash -c "[ $rc = 1 ] && grep -q '^FAIL  config force_dmarc_compliant_from' '$tmp/em2.txt'"
+sed -i 's/^force_dmarc_compliant_from = .*/force_dmarc_compliant_from = On/' "$cfg"
+sed -i 's/^default_envelope_sender = .*/default_envelope_sender = someone@gmail.com/' "$cfg"
+EM --env "$tmp/env" >"$tmp/em3.txt" 2>&1; rc=$?
+yes "the audit FAILS when the mail sender is an outside address (exit $rc)" bash -c "[ $rc = 1 ] && grep -q '^FAIL  config default_envelope_sender' '$tmp/em3.txt'"
+sed -i 's/^default_envelope_sender = .*/default_envelope_sender = editorial@journal.example.org/' "$cfg"
+mariadb "$dbn" -e "DELETE FROM journal_settings WHERE setting_name IN ('contactEmail','supportEmail'); DELETE FROM journals WHERE path='worj'; UPDATE users SET email='admin@example.invalid' WHERE username='worjadmin'"
+EM --env "$tmp/env" --apply >"$tmp/em4.txt" 2>&1; rc=$?
+yes "--apply with no journal says so and sets nothing (exit $rc)" bash -c "[ $rc != 0 ] && grep -q 'no journal exists yet' '$tmp/em4.txt'"
+no "an admin mailbox name with odd characters is refused" EM --env "$tmp/env" --admin-mailbox 'a b;x'
+mariadb "$dbn" -e "UPDATE users SET email='admin@example.invalid' WHERE username='worjadmin'"
+
 echo "=== count-issues.php (keeps the sample issue from being imported twice)"
 yes "an installed OJS with no issue prints 0" bash -c "[ \"\$(STUB_SOCKET_STDIN=1 '$tmp/ssh' x \"cd '$R/public_html' && php\" <'$root/scripts/lib/count-issues.php')\" = 0 ]"
 
@@ -211,8 +240,8 @@ yes "smtp test --check sends nothing (exit $rc)" test "$rc" = 0 -a ! -e "$tmp/sm
 SM --env "$tmp/env" --to tester@example.invalid >"$tmp/sm1.txt" 2>&1; rc=$?
 yes "the test message is sent through the configured SMTP server (exit $rc)" test "$rc" = 0
 yes "...the output says OK and names no password" bash -c "grep -q '^OK:' '$tmp/sm1.txt' && ! grep -q 'smtp-secret' '$tmp/sm1.txt'"
-yes "the server saw the mailbox login from config.inc.php" bash -c "python3 -I -c \"import json; d=[json.loads(l) for l in open('$tmp/smtp-capture.jsonl')][-1]; assert d['user']=='editorial@example.invalid' and d['pass']=='smtp-secret-$$'\""
-yes "...and the message: from the mailbox, to the tester, with the test subject" bash -c "python3 -I -c \"import json; d=[json.loads(l) for l in open('$tmp/smtp-capture.jsonl')][-1]; assert 'editorial@example.invalid' in d['from'] and 'tester@example.invalid' in d['to'][0] and 'WORJ SMTP test' in d['data']\""
+yes "the server saw the mailbox login from config.inc.php" bash -c "python3 -I -c \"import json; d=[json.loads(l) for l in open('$tmp/smtp-capture.jsonl')][-1]; assert d['user']=='editorial@journal.example.org' and d['pass']=='smtp-secret-$$'\""
+yes "...and the message: from the mailbox, to the tester, with the test subject" bash -c "python3 -I -c \"import json; d=[json.loads(l) for l in open('$tmp/smtp-capture.jsonl')][-1]; assert 'editorial@journal.example.org' in d['from'] and 'tester@example.invalid' in d['to'][0] and 'WORJ SMTP test' in d['data']\""
 sed -i 's/^smtp_port = .*/smtp_port = 2526/' "$cfg"
 SM --env "$tmp/env" --to tester@example.invalid >"$tmp/sm2.txt" 2>&1; rc=$?
 yes "a refused login fails with the server's reason (exit $rc)" bash -c "[ $rc != 0 ] && grep -q 'FAILED' '$tmp/sm2.txt'"
