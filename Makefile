@@ -3,7 +3,7 @@ SHELL := /bin/bash
 THEME := ojs/plugins/themes/worj
 
 # Needs php-fpm8.3, mariadbd and nginx in this sandbox; not part of `make lint` (CI has no FPM or MariaDB).
-.PHONY: infra-test infra-test-nginx infra-test-backup infra-test-reset infra-test-chroot infra-test-day0 infra-test-htaccess infra-test-install infra-test-client infra-test-email
+.PHONY: infra-test infra-test-nginx infra-test-backup infra-test-reset infra-test-chroot infra-test-day0 infra-test-htaccess infra-test-install infra-test-client infra-test-email infra-test-launch
 infra-test:
 	scripts/test-infra-config.sh
 	scripts/test-provision-preflight.sh | tail -1
@@ -48,6 +48,12 @@ infra-test-client:
 # Reply-To. Needs the sandbox (make sandbox-up sandbox-seed).
 infra-test-email:
 	scripts/test-email-sender-sandbox.sh
+
+# Launch preparation (delete sample content, hide pages with no client text, confirm or hold the client's pages) and the theme option that
+# leaves the ISSN line out, against the sandbox journal. The sandbox is snapshotted and restored. Needs the sandbox and Playwright.
+infra-test-launch:
+	scripts/test-theme-issn-option.sh
+	scripts/test-launch-prep-sandbox.sh
 
 .PHONY: setup lint eval check-placeholders sandbox-up sandbox-down sandbox-seed check-citation check-pdf check-discovery check-placeholders-url
 

@@ -232,6 +232,15 @@ yes "--apply with no journal says so and sets nothing (exit $rc)" bash -c "[ $rc
 no "an admin mailbox name with odd characters is refused" EM --env "$tmp/env" --admin-mailbox 'a b;x'
 mariadb "$dbn" -e "UPDATE users SET email='admin@example.invalid' WHERE username='worjadmin'"
 
+echo "=== launch-prep-shared.sh (the real run is in scripts/test-launch-prep-sandbox.sh)"
+LPS() { STUB_SOCKET_STDIN=1 WORJ_SSH="$tmp/ssh" "$root/scripts/launch-prep-shared.sh" "$@" </dev/null; }
+LPS --env "$tmp/env" --minimal >"$tmp/lp0.txt" 2>&1; rc=$?
+yes "against a site with no journal the dry run says so and exits 1 (exit $rc)" bash -c "[ $rc = 1 ] && grep -q \"FAILED: no journal 'worj' exists\" '$tmp/lp0.txt'"
+yes "...and says it is a dry run" grep -q '^DRY RUN' "$tmp/lp0.txt"
+no "no option at all is refused" LPS --env "$tmp/env"
+no "an unknown page id is refused" LPS --env "$tmp/env" --approve nonsense
+no "an env file readable by others is refused" LPS --env "$tmp/env644" --minimal
+
 echo "=== count-issues.php (keeps the sample issue from being imported twice)"
 yes "an installed OJS with no issue prints 0" bash -c "[ \"\$(STUB_SOCKET_STDIN=1 '$tmp/ssh' x \"cd '$R/public_html' && php\" <'$root/scripts/lib/count-issues.php')\" = 0 ]"
 

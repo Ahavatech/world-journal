@@ -65,6 +65,21 @@ class WorjThemePlugin extends \PKP\plugins\ThemePlugin
             ],
             'default' => false,
         ]);
+
+        // Off by default: while a journal has no ISSN the footer prints a visible placeholder (the launch gate
+        // must stay red). A journal that launches WITHOUT an ISSN turns this on and the ISSN line is left out
+        // until one is entered. Never prints an invented number.
+        $this->addOption('omitIssnLine', 'FieldOptions', [
+            'label' => __('plugins.themes.worj.option.omitIssnLine.label'),
+            'description' => __('plugins.themes.worj.option.omitIssnLine.description'),
+            'options' => [
+                [
+                    'value' => true,
+                    'label' => __('plugins.themes.worj.option.omitIssnLine.option'),
+                ],
+            ],
+            'default' => false,
+        ]);
     }
 
     /**
