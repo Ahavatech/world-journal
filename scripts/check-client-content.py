@@ -1,0 +1,118 @@
+#!/usr/bin/env python3
+"""Check the client's own text in ojs/client-content/ (received 2026-11-11) before it is loaded on the site.
+
+  python3 -I scripts/check-client-content.py [--dir ojs/client-content]
+
+What it guarantees (exit 1 and a line per problem otherwise):
+  - map.json lists files that exist, with unique ids, and every id (except the announcement) is a page in ojs/content/pages.json
+  - every file starts with ONE pending banner, `[PLACEHOLDER: client text received 2026-11-11, pending confirmation: ...]`, so the
+    launch gate (scripts/check-placeholders.sh) stays red until a person resolves it
+  - NOTHING IS INVENTED: every paragraph, list item and heading of every file is a passage of source-v1.txt (the client's text as
+    sent), apart from the banner, text inside `<span class="worj-ph">` (a marked blank) and the few headings of our own listed in
+    OUR_HEADINGS. Spelling and wording are the client's: this checks that we did not add or change a sentence
+  - no email address, no REDACTED marker, and no example host in any file
+"""
+import argparse
+import json
+import os
+import re
+import sys
+from html.parser import HTMLParser
+
+OUR_HEADINGS = {"publisher"}  # headings we add ourselves (the publisher is blank in the document and stays a placeholder)
+BANNER = re.compile(r'^<p class="worj-placeholder">\[PLACEHOLDER: client text received 2026-11-11, pending confirmation: [^\]<]+\]</p>$')
+
+
+def norm(t):
+    t = t.replace("’", "'").replace("‘", "'").replace("“", '"').replace("”", '"').replace("\xa0", " ")
+    return re.sub(r"\s+", " ", t).strip().lower()
+
+
+class Blocks(HTMLParser):
+    """Collect the text of p, li, h1-h4, skipping the banner paragraph and worj-ph spans."""
+
+    def __init__(self):
+        super().__init__()
+        self.blocks, self.cur, self.depth_skip, self.in_block, self.skip_banner = [], [], 0, None, False
+
+    def handle_starttag(self, tag, attrs):
+        a = dict(attrs)
+        cls = a.get("class", "")
+        if tag in ("p", "li", "h1", "h2", "h3", "h4") and self.in_block is None:
+            self.in_block, self.cur, self.skip_banner = tag, [], "worj-placeholder" in cls
+        if tag == "span" and "worj-ph" in cls:
+            if self.in_block and not self.depth_skip:
+                self.cur.append("\x00")  # a marked blank splits the block: each part must be a passage of the source
+            self.depth_skip += 1
+        elif self.depth_skip and tag == "span":
+            self.depth_skip += 1
+
+    def handle_endtag(self, tag):
+        if tag == "span" and self.depth_skip:
+            self.depth_skip -= 1
+        if tag == self.in_block:
+            text = "".join(self.cur)
+            if not self.skip_banner and norm(text):
+                self.blocks.append((tag, text))
+            self.in_block, self.cur = None, []
+
+    def handle_data(self, data):
+        if self.in_block and not self.depth_skip:
+            self.cur.append(data)
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--dir", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "ojs", "client-content"))
+    ap.add_argument("--pages-json", default=None)
+    a = ap.parse_args()
+    d = a.dir
+    pages_json = a.pages_json or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "ojs", "content", "pages.json")
+    problems = []
+    cmap = json.load(open(os.path.join(d, "map.json"), encoding="utf-8"))
+    known = {p["id"] for p in json.load(open(pages_json, encoding="utf-8"))["pages"]}
+    src = open(os.path.join(d, cmap["source"]), encoding="utf-8").read()
+    src = src.split("=" * 20, 1)[1] if "=" * 20 in src else src
+    src_n = norm(src)
+    files, seen = [], set()
+    for p in cmap["pages"]:
+        if p["id"] in seen:
+            problems.append(f"map.json: duplicate id {p['id']}")
+        seen.add(p["id"])
+        if p["id"] not in known:
+            problems.append(f"map.json: {p['id']} is not a page in ojs/content/pages.json")
+        files.append(p["file"])
+    files.append(cmap["announcement"]["file"])
+    short = cmap["announcement"]["short"]
+    if norm(short) not in src_n:
+        problems.append("map.json: the announcement's short text is not a passage of the source")
+    checked = 0
+    for f in files:
+        path = os.path.join(d, f)
+        if not os.path.isfile(path):
+            problems.append(f"{f}: file missing")
+            continue
+        text = open(path, encoding="utf-8").read()
+        lines = text.split("\n")
+        if not BANNER.match(lines[0]):
+            problems.append(f"{f}: the first line is not the pending banner")
+        if text.count("[PLACEHOLDER: client text") != 1:
+            problems.append(f"{f}: there must be exactly one pending banner")
+        if re.search(r"[\w.+-]+@[\w-]+\.[\w.-]+|REDACTED|example\.(org|invalid)", text):
+            problems.append(f"{f}: an email address, a REDACTED marker or an example host")
+        pr = Blocks()
+        pr.feed(text)
+        for tag, t in pr.blocks:
+            checked += 1
+            if tag.startswith("h") and norm(t) in OUR_HEADINGS:
+                continue
+            for part in t.split("\x00"):
+                if norm(part) and norm(part) not in src_n:
+                    problems.append(f"{f}: not a passage of the client's text: {part.strip()[:90]!r}")
+    for p in problems:
+        print("FAIL  " + p)
+    print(f"client content: {len(files)} files, {checked} text blocks checked against the source, {len(problems)} problem(s)")
+    return 1 if problems else 0
+
+
+sys.exit(main())

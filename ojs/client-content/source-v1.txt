@@ -1,0 +1,171 @@
+SOURCE TEXT FROM THE CLIENT, version 1, received 2026-11-11 (file "World_Open_Research_Journal_Details_1.docx").
+Text only, as sent: not edited, not corrected, not approved for publication. Spelling, wording and the gaps (for example the blank licence name
+and the blank Principal Contact) are the client's. One personal email address of a named person was replaced by a REDACTED marker.
+The original .docx stays with the developer and is not in git. See docs/CLIENT-CONTENT-REQUESTS.md for what is missing and what needs a decision.
+==========================================================================================================================================
+
+World Open Research Journal
+About the Journal
+World Open Research Journal (WORJ) is an international, open-access, peer-reviewed, multidisciplinary scientific journal published quarterly. The journal is dedicated to promoting the dissemination of original research articles, review papers, systematic reviews, case studies, and innovative scholarly contributions across diverse fields of science, technology, medicine, engineering, social sciences, management, education, and the humanities.
+WORJ provides a global academic platform for researchers, scientists, scholars, professionals, and practitioners to share innovative ideas, communicate scientific discoveries, address contemporary challenges, and contribute to the advancement of knowledge.
+The journal welcomes interdisciplinary and multidisciplinary research that explores emerging developments, innovative methodologies, practical applications, and transformative approaches to addressing global scientific, technological, social, and developmental challenges.
+Aims and Scope
+World Open Research Journal welcomes high-quality scholarly contributions in, but not limited to, the following areas:
+Artificial Intelligence and Computer Science
+Artificial Intelligence, Machine Learning and Deep Learning
+Data Science, Big Data and Predictive Analytics
+Cybersecurity, Software Engineering and Robotics
+Cloud Computing, IoT and Information Technology etc.
+
+Engineering and Physical Sciences
+Mathematics, Physics and Chemistry
+Civil, Mechanical and Electrical Engineering
+Computer, Chemical and Petroleum Engineering
+Energy Engineering, Renewable Energy and Power Technology etc.
+
+Medical, Health and Biomedical Sciences
+Medicine, Pharmacy and Nursing
+Dentistry and Oral Health
+Medical Laboratory and Biomedical Sciences
+Public Health, Epidemiology and Healthcare Technology
+Management, Business and Economics
+Business Administration and Entrepreneurship
+Accounting, Finance and Economics
+Marketing and Human Resource Management
+Public Administration and Organisational Management
+Finance, Banking and Investment
+Education and Educational Technology
+Educational Administration and Leadership
+Curriculum Development and Educational Psychology
+AI in Education and Digital Pedagogy
+E-learning, STEM Education and Instructional Technology
+Law, Governance and Public Policy
+International Law and Human Rights
+Corporate, Environmental and Technology Law
+Digital Governance and Cyber Law
+Public Policy and Institutional Development
+Digital Humanities and Emerging Technologies
+Human-Computer Interaction and UX Design
+Computational Linguistics and Digital Humanities
+AI Ethics and Philosophy of Technology
+Digital Communication, Archives and Storytelling
+Virtual Reality and Data Visualization
+Privacy Statement
+The names and email addresses entered in this journal site will be used exclusively for the stated purposes of this journal and will not be made available for any other purpose or to any other party.
+ANNOUNCEMENT:
+CALL FOR REVIEWERS
+Dear Professors and Doctors,
+We are pleased to invite qualified academics and researchers to join our team of reviewers across all subject areas covered by the journal.
+Interested scholars are kindly requested to submit their CVs, clearly indicating their academic qualifications, research interests, and areas of specialization, for our review and further communication.
+We look forward to welcoming you to our team of reviewers.
+Best regards,Editor-in-Chief
+
+Team
+Editorial Team Prof. Paul JohnDr. Dan Williams
+Peer reviewerOluwatosin Oladayo AramideNetApp Ireland Limited, Ireland—Network engineer(Network Layers and Storage)—MTS IV, IrelandArea of interest: Artificial Intelligence, Information Technology, Electrical Engineering, Communication Engineering, Telecommunications Engineering, Cybersecurity.
+(Dr.) Vichitra KaushikFaculty of PharmacyAl-Hawash Private University, Homs, Syria.
+Goutham Sunkara Full Affiliation: Broadcom Inc. - Staff R&D Software Engineer Country: USAArea of interest: Network/Cyber Security, AI/ML & SD-WAN
+Sirma AngelovaChief Assistant at the Department of Pediatric Dentistry, Medical University-Varna, Varna, Bulgaria.
+Nayan GoelUpgrade Inc. San Francisco, California, USA[REDACTED: a personal email address; the person must consent before it is published]
+
+JOURNAL POLICIES
+1. Disclaimer
+The views, opinions, and findings expressed in articles published in the World Open Research Journal are solely those of the respective authors and do not necessarily reflect the views, policies, or positions of the journal, its editorial board, or its affiliated institutions.
+The journal does not guarantee the absolute accuracy, completeness, or reliability of information presented in published articles. Authors are responsible for the accuracy and integrity of their contributions. The journal shall not be held responsible for errors, omissions, or consequences arising from the use of information contained in published works.
+2. Access and Article Processing Charge (APC) Policy
+The World Open Research Journal operates under an open-access publishing model. All accepted and published articles are made freely accessible to readers without subscription or payment requirements.
+An Article Processing Charge (APC) ranging from USD 50 to USD 100 may apply to accepted manuscripts, depending on the applicable publication category and editorial requirements. Authors will be informed of the applicable charges following manuscript acceptance.
+The APC supports the journal's editorial, production, and publication operations. Payment does not influence editorial decisions or guarantee manuscript acceptance.
+3. Peer Review Policy
+All manuscripts submitted to the World Open Research Journal undergo an established peer review process designed to maintain academic quality, research integrity, and scholarly relevance.
+The process consists of:
+Initial Editorial Screening: The editorial board evaluates each submission for relevance to the journal's scope, originality, quality, and compliance with submission guidelines.
+Double-Blind Peer Review: Manuscripts that pass the initial screening are sent to independent reviewers. The identities of both authors and reviewers are concealed throughout the review process.
+Editorial Decision: Based on reviewers' reports and recommendations, the editorial board makes the final decision to accept, request revisions, or reject a manuscript.
+The journal is committed to maintaining fairness, confidentiality, transparency, and academic integrity throughout the review process.
+4. Plagiarism and Publication Ethics Policy
+The World Open Research Journal maintains a strict policy against plagiarism and all forms of academic misconduct.
+Originality: Submitted manuscripts must represent original scholarly contributions and must not be simultaneously under consideration by another journal.
+Plagiarism Screening: All submissions may be examined using appropriate plagiarism detection software.
+Similarity Threshold: The journal generally accepts manuscripts with a similarity index of no more than 15%, subject to editorial assessment. Properly cited references, standard terminology, and commonly used expressions may be considered during the evaluation.
+Violations: Manuscripts found to contain plagiarism, data fabrication, falsification, or other forms of academic misconduct may be rejected or withdrawn from publication.
+Author Responsibility: Authors are responsible for ensuring that their manuscripts comply with accepted standards of academic integrity and publication ethics.
+5. Privacy Statement
+The World Open Research Journal respects and protects the privacy of its authors, reviewers, editors, and readers.
+Names, email addresses, institutional affiliations, and other personal information submitted through the journal's website or submission platform will be used exclusively for purposes directly related to journal operations, including manuscript processing, peer review, editorial communication, and publication activities.
+Such information will not be sold, shared, or disclosed to unrelated third parties without appropriate authorization, except where required by applicable laws or necessary for legitimate journal operations.
+The journal is committed to maintaining the confidentiality and security of all personal information entrusted to it.
+6. Copyright and Licensing Terms
+The World Open Research Journal adopts the—----------------------) licence for its published articles.
+Under this licence:
+Users may copy and redistribute published materials in any medium or format.
+Users may remix, transform, adapt, and build upon the published materials.
+Appropriate credit must be given to the original author(s), with proper acknowledgement of the source and licence.
+The material may not be used for commercial purposes without additional permission from the relevant rights holder.
+Any modifications or adaptations must be appropriately indicated.
+For complete licensing information, visit: —----------------------------------
+The journal encourages responsible scholarly sharing and the dissemination of research in accordance with the applicable licensing terms.
+
+GUIDELINES
+1. Manuscript Preparation
+Scope: Manuscripts must align with the Aims and Scope of the journal as outlined on its official website.
+Formatting: Authors must follow the journal's manuscript template. Submissions should be prepared using Times New Roman font, size 12, and submitted in Microsoft Word (.doc or .docx) format.
+Language: All manuscripts must be written in English and carefully proofread to ensure grammatical accuracy, clarity, and readability.
+2. Submission Process
+Online Submission: Manuscripts should be submitted through the journal's designated online submission system or official editorial email.
+Cover Letter: Each submission must be accompanied by a cover letter confirming the originality of the work, its significance, and its suitability for publication in the journal.
+3. Article Processing Charge (APC)
+Publication Fee: The World Open Research Journal charges an Article Processing Charge (APC) of USD 50-100 per accepted manuscript.
+Payment: Authors will be notified of the applicable APC only after their manuscripts have successfully passed the review process and received an acceptance decision.
+Purpose: The APC supports editorial and publication operations and the provision of open access to published articles.
+Non-Refundable Fee: All APC payments are non-refundable, subject to the journal's stated refund policy.
+4. Peer Review Process
+Review Model: All submitted manuscripts undergo a double-blind peer review process, ensuring that the identities of both authors and reviewers remain confidential throughout the review.
+Review Timeline: The journal aims to complete the initial round of peer review within 5–7 days of submission. However, the actual duration may vary depending on reviewer availability and the complexity of the manuscript.
+5. Copyright and Licensing
+Copyright Agreement: Upon acceptance, authors will be required to complete the journal's applicable copyright and publication agreement.
+Publication Rights: The agreement will specify the rights granted to the journal for publishing and distributing the accepted article.
+Open Access: Published articles will be made freely accessible to readers in accordance with the journal's licensing policy.
+6. Publication Ethics and Malpractice
+Originality: Submitted manuscripts must represent original scholarly work and must not be under consideration for publication by another journal.
+Plagiarism: All submissions may undergo plagiarism screening. Manuscripts containing unacceptable levels of plagiarism or other forms of academic misconduct may be rejected.
+Research Integrity: Authors are expected to comply with accepted standards of research ethics, proper citation, authorship, and responsible scholarly publication.
+7. Post-Publication Policy
+Open Access: Accepted and published articles will be made immediately accessible to readers.
+Corrections: Authors who identify errors in their published articles should promptly contact the editorial office. Requests for corrections will be assessed in accordance with the journal's publication policies.
+8. Refund Policy
+The Article Processing Charge (APC) is non-refundable and non-transferable once payment has been made.
+Authors are responsible for ensuring that their manuscripts meet the journal's scope, formatting requirements, and publication ethics standards before making payment.
+Refunds will not be issued for manuscript withdrawal, editorial decisions, processing delays, or dissatisfaction with publication outcomes. Any exceptional refund request will be reviewed in accordance with the journal's applicable policies.
+9. Research Awards and Recognition Criteria
+The World Open Research Journal may recognize outstanding research contributions through its research awards.
+Originality: Eligible research must demonstrate originality and contribute meaningful knowledge to its respective field.
+Research Quality: Submissions should demonstrate strong methodology, academic relevance, clarity, and scholarly significance.
+Outstanding Contribution: Award consideration will be based on the quality and overall merit of a manuscript compared with other eligible publications within the same volume.
+Selection Process: The journal's reviewers and editorial team will assess eligible manuscripts and determine those deserving of recognition.
+10. Manuscript Submission and Contact
+Authors are invited to submit their manuscripts through the journal's official online submission platform or editorial email.
+For submission enquiries, publication information, or further assistance, please contact the editorial office through the official communication channels provided on the journal's website.
+
+Research Awards
+The World Open Research Journal recognizes and celebrates outstanding scholarly contributions through its Research Awards. The initiative aims to encourage research excellence, innovation, originality, and meaningful contributions to knowledge across different academic disciplines.
+Research Awards and Recognition Criteria
+Award recipients are selected based on the following criteria:
+Originality: Research must demonstrate originality, innovation, and meaningful contributions to its respective field.
+Research Quality: Submissions should reflect sound research methodology, academic relevance, clarity, and scholarly excellence.
+Scholarly Impact: Consideration is given to the significance, relevance, and potential contribution of the research to academic knowledge and society.
+Outstanding Contribution: Award consideration is based on the overall quality and merit of eligible publications within the corresponding journal volume.
+Selection Process: The journal's reviewers and editorial team evaluate eligible research and determine the manuscripts deserving of recognition.
+List of Award Recipients
+The following researchers and scholars have been recognized for their outstanding research contributions and academic excellence through the World Open Research Journal Research Awards.
+Award Recipients
+[Names, affiliations, article titles, and award categories will be listed here.]
+The journal congratulates all recipients and appreciates their valuable contributions to research, innovation, and the advancement of knowledge.
+World Open Research JournalRecognizing Excellence. Advancing Knowledge. Inspiring Innovation.
+
+Contact
+Principal Contact
+
+Support Contact
+worldopenresearchjournal@gmail.com
+
