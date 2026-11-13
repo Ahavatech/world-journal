@@ -30,6 +30,12 @@ fresh
 sed -i 's/<span class="worj-ph">\[PLACEHOLDER: licence name\]<\/span>/<span class="worj-ph">[PLACEHOLDER: licence name]<\/span> <a href="mailto:x@y.org">x@y.org<\/a>/' "$tmp/cc/pages/copyright-licensing.html"
 no "an email address in a page is caught" C --dir "$tmp/cc"
 fresh
+sed -i 's/privacy@worldopenresearchjournal.com\]/privacy@gmail.com]/' "$tmp/cc/pages/privacy.html"
+no "an outside address even inside a marked blank is caught" C --dir "$tmp/cc"
+yes "...and named" grep -q "not one of the journal's own addresses" "$tmp/out.txt"
+fresh
+yes "the journal's own privacy alias inside a marked blank is accepted" grep -q 'privacy@worldopenresearchjournal.com' "$tmp/cc/pages/privacy.html"
+fresh
 python3 -I -c "
 import json,sys
 p='$tmp/cc/map.json'; d=json.load(open(p)); d['pages'].append({'id':'not-a-page','file':'pages/about.html'}); json.dump(d,open(p,'w'))"

@@ -209,6 +209,13 @@ yes "...RESULT: PASS" grep -q '^RESULT: PASS' "$tmp/em1.txt"
 yes "the journal contact is editorial@, support is support@" bash -c "[ \"\$(mariadb -N '$dbn' -e \"select setting_value from journal_settings where setting_name='contactEmail'\")\" = editorial@journal.example.org ] && [ \"\$(mariadb -N '$dbn' -e \"select setting_value from journal_settings where setting_name='supportEmail'\")\" = support@journal.example.org ]"
 yes "the site contact and the administrator are admin@" bash -c "[ \"\$(mariadb -N '$dbn' -e \"select setting_value from site_settings where setting_name='contactEmail'\")\" = admin@journal.example.org ] && [ \"\$(mariadb -N '$dbn' -e \"select email from users where username='worjadmin'\")\" = admin@journal.example.org ]"
 yes "no password reached the output" bash -c "! grep -qE '$dbp|$ADMINPW|smtp-secret' '$tmp/em0.txt' '$tmp/em1.txt'"
+yes "the audit says where editorial@, support@ and admin@ are used" bash -c "grep -q '^USED  editorial@journal.example.org: .*journal worj.contactEmail' '$tmp/em1.txt' && grep -q '^USED  support@journal.example.org: .*journal worj.supportEmail' '$tmp/em1.txt' && grep -q '^USED  admin@journal.example.org: .*site contactEmail' '$tmp/em1.txt'"
+yes "...and that privacy@ and doi@ are not used anywhere yet (a NOTE, not a failure)" bash -c "grep -q '^NOTE  privacy@journal.example.org: not used yet' '$tmp/em1.txt' && grep -q '^NOTE  doi@journal.example.org: not used yet' '$tmp/em1.txt'"
+yes "the technical support contact got a marked blank for its name, so OJS shows it on the contact page" test "$(mariadb -N "$dbn" -e "select setting_value from journal_settings where setting_name='supportName'")" = "[PLACEHOLDER: technical support contact name]"
+mariadb "$dbn" -e "INSERT INTO journal_settings (journal_id, locale, setting_name, setting_value) SELECT journal_id, 'en', 'privacyStatement', '<p>Questions: privacy@journal.example.org</p>' FROM journals WHERE path='worj'; INSERT INTO plugin_settings (plugin_name, context_id, setting_name, setting_value, setting_type) SELECT 'crossrefplugin', journal_id, 'depositorEmail', 'doi@journal.example.org', 'string' FROM journals WHERE path='worj'"
+EM --env "$tmp/env" >"$tmp/em1b.txt" 2>&1; rc=$?
+yes "once the privacy statement and the Crossref depositor email name them, the audit shows privacy@ and doi@ as used (exit $rc)" bash -c "[ $rc = 0 ] && grep -q '^USED  privacy@journal.example.org: the privacy statement' '$tmp/em1b.txt' && grep -q '^USED  doi@journal.example.org: the Crossref depositor email' '$tmp/em1b.txt'"
+mariadb "$dbn" -e "DELETE FROM plugin_settings WHERE plugin_name='crossrefplugin'"
 EM --env "$tmp/env" --apply >/dev/null 2>&1; rc=$?
 yes "--apply twice is harmless (exit $rc)" test "$rc" = 0
 sed -i 's/^force_dmarc_compliant_from = .*/force_dmarc_compliant_from = Off/' "$cfg"
@@ -219,7 +226,7 @@ sed -i 's/^default_envelope_sender = .*/default_envelope_sender = someone@gmail.
 EM --env "$tmp/env" >"$tmp/em3.txt" 2>&1; rc=$?
 yes "the audit FAILS when the mail sender is an outside address (exit $rc)" bash -c "[ $rc = 1 ] && grep -q '^FAIL  config default_envelope_sender' '$tmp/em3.txt'"
 sed -i 's/^default_envelope_sender = .*/default_envelope_sender = editorial@journal.example.org/' "$cfg"
-mariadb "$dbn" -e "DELETE FROM journal_settings WHERE setting_name IN ('contactEmail','supportEmail'); DELETE FROM journals WHERE path='worj'; UPDATE users SET email='admin@example.invalid' WHERE username='worjadmin'"
+mariadb "$dbn" -e "DELETE FROM journal_settings WHERE setting_name IN ('contactEmail','supportEmail','supportName','privacyStatement'); DELETE FROM journals WHERE path='worj'; UPDATE users SET email='admin@example.invalid' WHERE username='worjadmin'"
 EM --env "$tmp/env" --apply >"$tmp/em4.txt" 2>&1; rc=$?
 yes "--apply with no journal says so and sets nothing (exit $rc)" bash -c "[ $rc != 0 ] && grep -q 'no journal exists yet' '$tmp/em4.txt'"
 no "an admin mailbox name with odd characters is refused" EM --env "$tmp/env" --admin-mailbox 'a b;x'

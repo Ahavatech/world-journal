@@ -31,6 +31,16 @@ if ($mode === 'audit') {
     while ($row = $r->fetch_row()) {
         echo "user|{$row[0]}|{$row[1]}\n";
     }
+    // where the other aliases belong: the privacy statement (privacy@) and the Crossref depositor email (doi@)
+    $r = $m->query("SELECT j.path, s.setting_value FROM journal_settings s JOIN journals j ON j.journal_id = s.journal_id WHERE s.setting_name = 'privacyStatement'");
+    while ($row = $r->fetch_row()) {
+        preg_match_all('/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/', (string) $row[1], $found);
+        echo "text|{$row[0]}.privacyStatement|" . implode(',', array_unique($found[0])) . "\n";
+    }
+    $r = $m->query("SELECT plugin_name, setting_value FROM plugin_settings WHERE plugin_name LIKE 'crossref%' AND setting_name = 'depositorEmail'");
+    while ($row = $r->fetch_row()) {
+        echo "plugin|{$row[0]}.depositorEmail|{$row[1]}\n";
+    }
     $r = $m->query("SELECT COUNT(DISTINCT email) FROM authors WHERE email <> ''");
     echo 'authors|distinct addresses|' . (int) $r->fetch_row()[0] . "\n";
     exit(0);
@@ -68,6 +78,23 @@ if ($mode === 'apply') {
             $w->execute();
             $w->close();
             echo "set|journal $path $name|" . ($had ? $old : '(unset)') . " -> $val\n";
+        }
+    }
+    // OJS shows the technical support contact on the contact page only when it has a name: leave a marked blank where there is none
+    foreach ($journals as [$jid, $path]) {
+        $s = $m->prepare("SELECT COUNT(*) FROM journal_settings WHERE journal_id = ? AND locale = '' AND setting_name = 'supportName'");
+        $s->bind_param('i', $jid);
+        $s->execute();
+        $s->bind_result($has);
+        $s->fetch();
+        $s->close();
+        if (!$has) {
+            $blank = '[PLACEHOLDER: technical support contact name]';
+            $w = $m->prepare("INSERT INTO journal_settings (journal_id, locale, setting_name, setting_value) VALUES (?, '', 'supportName', ?)");
+            $w->bind_param('is', $jid, $blank);
+            $w->execute();
+            $w->close();
+            echo "set|journal $path supportName|$blank\n";
         }
     }
     // site contact (localized: change every existing row, or add an English one)
