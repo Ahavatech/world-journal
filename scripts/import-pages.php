@@ -17,7 +17,7 @@
  *   --check  print what would happen and change nothing
  *
  * Journal settings texts (about, privacy, ...) are handled by
- * scripts/sandbox-content.js; this script covers custom pages only.
+ * scripts/sandbox-content.js; this script covers custom pages, and with --only also a settings page by id.
  */
 
 $opts = getopt('', ['journal:', 'check', 'force-sandbox', 'client-content', 'ojs::', 'only::']);
@@ -44,6 +44,8 @@ require $ojsDir . '/tools/bootstrap.php';
 use APP\core\Application;
 use PKP\config\Config;
 use PKP\db\DAORegistry;
+use Illuminate\Support\Facades\DB;
+use PKP\core\PKPContainer;
 use PKP\navigationMenu\NavigationMenuItem;
 
 // --- guard: overwrite is for a local sandbox only
@@ -81,6 +83,29 @@ $dao = DAORegistry::getDAO('NavigationMenuItemDAO');
 
 $counts = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'edited' => 0];
 foreach ($manifest['pages'] as $page) {
+    // with --only, a page kept in a journal setting (about, privacy, author guidelines, editorial team) is handled too:
+    // written when empty, refreshed while it still carries its pending banner, never when a person has edited or approved it
+    if ($only !== null && $page['mechanism'] === 'setting' && in_array($page['id'], $only, true)) {
+        $fromClient = isset($overlay[$page['id']]);
+        $content = file_get_contents($root . ($fromClient ? '/ojs/client-content/' . $overlay[$page['id']] : '/ojs/content/' . $page['file']));
+        $key = ['journal_id' => $contextId, 'locale' => $locale, 'setting_name' => $page['setting']];
+        $stored = (string) DB::table('journal_settings')->where($key)->value('setting_value');
+        if ($stored === $content) {
+            echo "skip    {$page['setting']}  (already this text)\n";
+            $counts['skipped']++;
+        } elseif ($stored !== '' && !$isPlaceholder($stored)) {
+            echo "leave   {$page['setting']}  (edited or approved: the pending banner is gone)\n";
+            $counts['edited']++;
+        } else {
+            echo ($dryRun ? 'would write' : 'write') . "   {$page['setting']}  (" . ($stored === '' ? 'it was empty' : 'still pending') . ")\n";
+            if (!$dryRun) {
+                DB::table('journal_settings')->updateOrInsert($key, ['setting_value' => $content]);
+                PKPContainer::getInstance()['cache']->store()->flush();
+            }
+            $counts['updated']++;
+        }
+        continue;
+    }
     if ($page['mechanism'] !== 'custom-page' || ($only !== null && !in_array($page['id'], $only, true))) {
         continue;
     }

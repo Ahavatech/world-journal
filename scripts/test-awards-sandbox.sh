@@ -146,4 +146,17 @@ yes "the page carries the client's text and the nomination link" bash -c "mariad
 q "update navigation_menu_item_settings set setting_value=replace(setting_value,'[PLACEHOLDER: client text','[EDITED') where setting_name='content' and navigation_menu_item_id in (select navigation_menu_item_id from navigation_menu_items where path='awards')"
 yes "a page whose banner is gone (edited or approved) is left alone" bash -c "$PS --only awards --apply | grep -q 'leave'"
 yes "a page id that is not valid is refused" bash -c "! $PS --only 'bad id' 2>/dev/null"
+
+echo "=== a page kept in a journal setting (the Author Guidelines downloads block)"
+ag() { q "select setting_value from journal_settings where journal_id=1 and locale='en' and setting_name='authorGuidelines'"; }
+yes "the sandbox's author guidelines are still a placeholder" has "$(ag)" "[PLACEHOLDER"
+$PS --only author-guidelines --apply >/dev/null
+yes "the first apply writes the client text with the Downloads block" has "$(ag)" "Downloads for authors"
+q "update journal_settings set setting_value=replace(setting_value, '<h3><span class=\"worj-add\">Downloads for authors</span></h3>', '') where journal_id=1 and setting_name='authorGuidelines'"
+yes "after removing the block, the downloads are gone" bash -c "! mariadb -N $SANDBOX_DB_NAME -e \"select setting_value from journal_settings where journal_id=1 and setting_name='authorGuidelines'\" | grep -q 'Downloads for authors'"
+yes "a dry run says would write and changes nothing" bash -c "$PS --only author-guidelines | grep -q 'would write   authorGuidelines' && ! mariadb -N $SANDBOX_DB_NAME -e \"select setting_value from journal_settings where journal_id=1 and setting_name='authorGuidelines'\" | grep -q 'Downloads for authors'"
+yes "--apply restores the downloads block" bash -c "$PS --only author-guidelines --apply | grep -q 'write   authorGuidelines' && mariadb -N $SANDBOX_DB_NAME -e \"select setting_value from journal_settings where journal_id=1 and setting_name='authorGuidelines'\" | grep -q 'WORJ-Manuscript-Template.docx'"
+yes "running it again says it is already this text" bash -c "$PS --only author-guidelines --apply | grep -q 'already this text'"
+q "update journal_settings set setting_value=replace(setting_value, '[PLACEHOLDER: client text', '[EDITED') where journal_id=1 and setting_name='authorGuidelines'"
+yes "once the banner is gone (approved or edited) the text is left alone" bash -c "$PS --only author-guidelines --apply | grep -q 'leave   authorGuidelines'"
 echo; echo "$pass passed, $fail failed"; [ "$fail" = 0 ]
