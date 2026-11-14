@@ -331,6 +331,82 @@ foreach ($o['hold'] ?? [] as $id) {
         });
     }
 }
+// the menus last: whether Announcements has anything depends on what was deleted or held above
+$tidyMenus = function () use ($o, $jid, $apply): void {
+    if (empty($o['tidy_menus'])) {
+        return;
+    }
+    {
+    $menu = DB::table('navigation_menus')->where('context_id', $jid)->where('area_name', 'primary')->first();
+    if (!$menu) {
+        say('skip ', 'no primary menu');
+    } else {
+        $mid = (int) $menu->navigation_menu_id;
+        $items = DB::table('navigation_menu_items')->where('context_id', $jid)->get(['navigation_menu_item_id', 'type', 'path']);
+        $find = function (string $type, ?string $path = null) use ($items) {
+            foreach ($items as $it) {
+                if ($it->type === $type && ($path === null || $it->path === $path)) {
+                    return (int) $it->navigation_menu_item_id;
+                }
+            }
+            return null;
+        };
+        $aboutTop = DB::table('navigation_menu_item_assignments as a')->join('navigation_menu_items as i', 'i.navigation_menu_item_id', '=', 'a.navigation_menu_item_id')
+            ->where('a.navigation_menu_id', $mid)->where('i.type', 'NMI_TYPE_ABOUT')->whereNull('a.parent_id')->value('a.navigation_menu_item_id');
+        if (!$aboutTop) {
+            say('skip ', 'no About entry in the primary menu: menus left alone');
+        } else {
+            $aboutTop = (int) $aboutTop;
+            $wanted = [
+                ['NMI_TYPE_ABOUT', null], ['NMI_TYPE_CUSTOM', 'aims-and-scope'], ['NMI_TYPE_MASTHEAD', null], ['NMI_TYPE_SUBMISSIONS', null],
+                ['NMI_TYPE_CUSTOM', 'peer-review'], ['NMI_TYPE_CUSTOM', 'publication-ethics'], ['NMI_TYPE_CUSTOM', 'open-access'],
+                ['NMI_TYPE_CUSTOM', 'copyright-licensing'], ['NMI_TYPE_PRIVACY', null], ['NMI_TYPE_CUSTOM', 'disclaimer'], ['NMI_TYPE_CONTACT', null],
+            ];
+            $seq = 0;
+            foreach ($wanted as [$type, $path]) {
+                // the top About entry has the same type as the first child: the child is the one with a parent
+                $id = null;
+                if ($type === 'NMI_TYPE_ABOUT') {
+                    $id = DB::table('navigation_menu_item_assignments')->where('navigation_menu_id', $mid)->where('parent_id', $aboutTop)->whereIn('navigation_menu_item_id', DB::table('navigation_menu_items')->where('type', 'NMI_TYPE_ABOUT')->pluck('navigation_menu_item_id'))->value('navigation_menu_item_id');
+                } else {
+                    $id = $find($type, $path);
+                }
+                if (!$id) {
+                    continue;
+                }
+                $here = DB::table('navigation_menu_item_assignments')->where(['navigation_menu_id' => $mid, 'navigation_menu_item_id' => $id])->first();
+                $at = $seq++;
+                if ($here && (int) $here->parent_id === $aboutTop && (int) $here->seq === $at) {
+                    continue;
+                }
+                $label = $path ?? $type;
+                act($apply, "menu: $label under About, position " . ($at + 1), function () use ($mid, $id, $aboutTop, $at) {
+                    DB::table('navigation_menu_item_assignments')->updateOrInsert(['navigation_menu_id' => $mid, 'navigation_menu_item_id' => $id], ['parent_id' => $aboutTop, 'seq' => $at]);
+                });
+            }
+        }
+        $mast = $find('NMI_TYPE_MASTHEAD');
+        if ($mast) {
+            $title = DB::table('navigation_menu_item_settings')->where(['navigation_menu_item_id' => $mast, 'setting_name' => 'title', 'locale' => 'en'])->value('setting_value');
+            if ($title !== 'Editorial Team') {
+                act($apply, 'menu: label the editorial masthead "Editorial Team"', function () use ($mast) {
+                    DB::table('navigation_menu_item_settings')->updateOrInsert(['navigation_menu_item_id' => $mast, 'setting_name' => 'title', 'locale' => 'en'], ['setting_value' => 'Editorial Team', 'setting_type' => 'string']);
+                });
+            }
+        }
+        $ann = $find('NMI_TYPE_ANNOUNCEMENTS');
+        if ($ann && !DB::table('announcements')->where('assoc_id', $jid)->exists()
+            && DB::table('navigation_menu_item_assignments')->where(['navigation_menu_id' => $mid, 'navigation_menu_item_id' => $ann])->exists()) {
+            act($apply, 'menu: take the empty Announcements entry out (add it back when the first announcement exists)', function () use ($mid, $ann) {
+                DB::table('navigation_menu_item_assignments')->where(['navigation_menu_id' => $mid, 'navigation_menu_item_id' => $ann])->delete();
+            });
+        }
+    }
+    }
+};
+
+$tidyMenus();
+
 // what was written must show up at once: OJS caches rendered menus and templates
 if ($apply) {
     PKPContainer::getInstance()['cache']->store()->flush();
