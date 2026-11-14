@@ -43,6 +43,7 @@ display_errors = Off
 [email]
 default = smtp
 smtp_username = editorial@journal.example.org
+require_validation = On
 default_envelope_sender = editorial@journal.example.org
 force_default_envelope_sender = On
 force_dmarc_compliant_from = On
@@ -70,6 +71,7 @@ mutate "allowed_hosts rewritten to [\"\"] (installer state)" "s/^allowed_hosts =
 mutate "OAI repository_id still the shipped PKP value" 's/^repository_id = .*/repository_id = ojs.pkp.sfu.ca/' "oai.repository_id"
 mutate "OAI repository_id is another host" 's/^repository_id = .*/repository_id = other.example/' "oai.repository_id"
 mutate "OAI repository_id empty" 's/^repository_id = .*/repository_id =/' "oai.repository_id"
+mutate "email validation switched off (registration would send no email)" 's/^require_validation = .*/require_validation = Off/' "email.require_validation"
 mutate "mail sent from any user's own address (force_default_envelope_sender Off)" 's/^force_default_envelope_sender = .*/force_default_envelope_sender = Off/' "email.force_default_envelope_sender"
 mutate "the default sender is not the mailbox the SMTP login belongs to" 's/^default_envelope_sender = .*/default_envelope_sender = someone@gmail.com/' "email.default_envelope_sender"
 mutate "no default sender at all" 's/^default_envelope_sender = .*/default_envelope_sender =/' "email.default_envelope_sender"

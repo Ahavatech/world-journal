@@ -17,6 +17,7 @@ cp "$cfg" "$tmp/config.keep"
 old_contact="$(mariadb -N "$SANDBOX_DB_NAME" -e "select setting_value from journal_settings where setting_name='contactEmail' limit 1")"
 old_site="$(mariadb -N "$SANDBOX_DB_NAME" -e "select setting_value from site_settings where setting_name='contactEmail' limit 1")"
 cleanup() {
+  mariadb "$SANDBOX_DB_NAME" -e "DELETE FROM users WHERE username LIKE 'regtest_%'" 2>/dev/null
   [ -z "${fake:-}" ] || kill "$fake" 2>/dev/null
   cp "$tmp/config.keep" "$cfg"
   mariadb "$SANDBOX_DB_NAME" -e "update journal_settings set setting_value='$old_contact' where setting_name='contactEmail'; update site_settings set setting_value='$old_site' where setting_name='contactEmail'"
@@ -54,6 +55,7 @@ print(json.dumps({'envelope':d['from'],'to':d['to'],'from':hs.get('from',''),'re
 # has JSON-LINE FIELD SUBSTRING / lacks JSON-LINE FIELD SUBSTRING (the message is passed in the environment, never through shell quoting)
 has() { M="$1" python3 -I -c "import json,os,sys; v=json.loads(os.environ['M']).get(sys.argv[1],''); v=' '.join(v) if isinstance(v,list) else v; sys.exit(0 if sys.argv[2] in v else 1)" "$2" "$3"; }
 lacks() { ! has "$1" "$2" "$3"; }
+ph() { grep -qF -- "$2" <<<"$1"; }  # text contains a string
 
 echo "=== the settings from the template: On / On"
 reset_mail On On
@@ -73,6 +75,24 @@ reset_mail On Off
 m3="$(show 2>/dev/null)"
 yes "with only the envelope forced the From is still the outside address (the DMARC setting is what moves it)" has "$m3" from outside.person@gmail.com
 yes "...while the envelope sender is the mailbox" has "$m3" envelope "$MAILBOX"
+
+echo "=== registration with email validation on (the journal's setting): the page and the message tell people to check spam"
+printf 'email.require_validation=On\nemail.default_envelope_sender=%s\nemail.force_default_envelope_sender=On\nemail.force_dmarc_compliant_from=On\n' "$MAILBOX" | python3 -I "$root/scripts/set-ojs-config.py" "$cfg" >/dev/null
+rm -f "$tmp/cap.jsonl"
+form="$(curl -s --noproxy '*' -c "$tmp/jar2" -b "$tmp/jar2" "$base/worj/user/register")"
+yes "the registration page tells people the email may land in spam (before they register)" ph "$form" "may land in your spam folder"
+tok="$(grep -o 'name="csrfToken" value="[^"]*"' <<<"$form" | head -1 | sed 's/.*value="//;s/"//')"
+user="regtest_$$"
+reply="$(curl -s --noproxy '*' -c "$tmp/jar2" -b "$tmp/jar2" -d "csrfToken=$tok" -d givenName=Reg -d familyName=Tester -d affiliation=Test -d country=GB --data-urlencode "email=$user@example.invalid" -d "username=$user" -d "password=Correct-Horse-9xQ" -d "password2=Correct-Horse-9xQ" -d privacyConsent=1 "$base/worj/user/register")"
+yes "after registering OJS itself says to check the spam folder" ph "$reply" "spam folder"
+for _ in 1 2 3 4 5; do [ -s "$tmp/cap.jsonl" ] && break; (cd "$core" && php lib/pkp/tools/jobs.php run >/dev/null 2>&1); sleep 1; done
+yes "a validation email was sent" test -s "$tmp/cap.jsonl"
+mv2="$(show 2>/dev/null)"
+yes "...to the person who registered" has "$mv2" to "$user@example.invalid"
+yes "...with the From being the mailbox (not an outside address)" has "$mv2" from "$MAILBOX"
+yes "...and the envelope sender the mailbox" has "$mv2" envelope "$MAILBOX"
+yes "...and a subject about validating the account" bash -c "python3 -I -c \"import json,sys; d=json.loads(sys.argv[1]); sys.exit(0 if 'alidat' in d.get('subject','') else 1)\" '$mv2'"
+yes "the new account cannot log in until the link is clicked" bash -c "[ \"\$(mariadb -N '$SANDBOX_DB_NAME' -e \"select disabled from users where username='$user'\")\" = 1 ]"
 
 echo "$pass PASS, $fail FAIL"
 exit "$fail"

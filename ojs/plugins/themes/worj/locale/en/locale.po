@@ -39,6 +39,9 @@ msgstr "Research Awards"
 msgid "plugins.themes.worj.awardsLink"
 msgstr "About the awards"
 
+msgid "plugins.themes.worj.register.validationNote"
+msgstr "After you register we send you an email with a link to confirm your address, and you can log in once you have clicked it. The email can take a few minutes and may land in your spam folder: please check there if you do not see it."
+
 msgid "plugins.themes.worj.option.showAwardsCard.label"
 msgstr "Research Awards card"
 

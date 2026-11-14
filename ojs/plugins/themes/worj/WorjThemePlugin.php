@@ -41,6 +41,12 @@ class WorjThemePlugin extends \PKP\plugins\ThemePlugin
         }
         $this->removeStyle('swiper');
 
+        // The registration page tells people to look in their spam folder when email validation is on.
+        \PKP\plugins\Hook::add('TemplateManager::display', function ($hookName, $args) {
+            $args[0]->assign('worjRequireValidation', (bool) \PKP\config\Config::getVar('email', 'require_validation'));
+            return \PKP\plugins\Hook::CONTINUE;
+        });
+
         $this->addScript('worj-nav', 'assets/js/nav.js');
         $this->addScript('worj-forms', 'assets/js/forms.js');
 

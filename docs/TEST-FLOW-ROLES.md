@@ -42,7 +42,7 @@ The real **administrator** account (the site administrator) is the tenth. Roles 
 
 | # | Do | Expected | Result |
 |---|---|---|---|
-| 2.1 | Register `test-author` at `/worj/user/register` (tick the privacy consent, the Author role). | Account created; the welcome email arrives from `editorial@`. | |
+| 2.1 | Register `test-author` at `/worj/user/register` (tick the privacy consent, the Author role). The page says the confirmation email may land in spam. | Registration completes with a message to check your email and spam folder; the "Validate Your Account" email arrives from `editorial@`; the account can log in only after the link is clicked. | |
 | 2.2 | Log in, go to **New Submission**. Choose the section, tick the checklist or confirmation boxes shown, *Begin*. | The five steps open: Details, Upload Files, Contributors, For the Editors, Review. | |
 | 2.3 | Details: title, abstract (required), keywords. Upload: add the PDF as *Article Text*. Contributors: check the author, add a co-author. | Each step saves and continues. | |
 | 2.4 | Review page, then **Submit**. | A confirmation; the author's confirmation email arrives. The editor side gets a "needs an editor" notice. | |

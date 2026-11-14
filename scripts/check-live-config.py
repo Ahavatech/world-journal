@@ -112,6 +112,8 @@ def main():
     check("schedule.task_runner", not on("schedule.task_runner"), "must be Off: scheduled tasks run from cron (a quiet site misses tasks otherwise)")
     check("queues.process_jobs_at_task_scheduler", on("queues.process_jobs_at_task_scheduler"), "must be On: queued emails are processed by the cron scheduler")
     if bare(cfg.get("email.default", "")) == "smtp":
+        check("email.require_validation", on("email.require_validation"),
+              "must be On: new accounts confirm their address (decision of 2026-11-14); only switch it off if mail is broken")
         check("email.force_default_envelope_sender", on("email.force_default_envelope_sender"),
               "must be On: every message leaves from the mailbox, never from an outside address")
         sender = bare(cfg.get("email.default_envelope_sender", ""))

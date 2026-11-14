@@ -52,6 +52,15 @@ home="$(page "")"
 yes "the placeholder announcements are gone from the home page" bash -c "! grep -qF 'Sample announcement' <<<'$(printf '%s' "$home" | tr -d "'")'"
 for p in archiving awards-guidelines awards-categories plagiarism-similarity awards awards-winners; do yes "/$p is hidden (404)" test "$(code "$p")" = 404; done
 yes "the Editorial Team stays in the menus (the client supplied it; --hide-editorial-team would remove it)" has "$home" "editorialMasthead"
+for pth in aims-and-scope peer-review publication-ethics open-access copyright-licensing disclaimer; do yes "the menu links to /$pth (it was in no menu before)" has "$home" "/worj/$pth"; done
+yes "the editorial masthead is labelled Editorial Team, not Editorial Masthead" bash -c "grep -qF 'Editorial Team' <<<'$(printf '%s' "$home" | tr -d "'")' && ! grep -qF 'Editorial Masthead' <<<'$(printf '%s' "$home" | tr -d "'")'"
+yes "the empty Announcements entry is out of the menu" bash -c "! grep -qE 'href=\"[^\"]*/worj/announcement\"' <<<'$(printf '%s' "$home" | tr -d "'")'"
+yes "the About submenu order is About, Aims and Scope, Editorial Team, Submissions, Peer Review (read from the page)" env HOME_HTML="$home" python3 -I -c "
+import os,sys
+h=os.environ['HOME_HTML']
+order=['/worj/about\"','/worj/aims-and-scope\"','/worj/about/editorialMasthead\"','/worj/about/submissions\"','/worj/peer-review\"']
+pos=[h.find(o) for o in order]
+sys.exit(0 if all(p>=0 for p in pos) and pos==sorted(pos) else 1)"
 yes "the Information block is out of the sidebar" bash -c "! grep -qF 'block_information' <<<'$(printf '%s' "$home" | tr -d "'")'"
 yes "the Awards card and its placeholder are off the home page" bash -c "! grep -qF 'awards call-out' <<<'$(printf '%s' "$home" | tr -d "'")'"
 yes "the home page summary is the client's first About paragraph" has "$home" "international, open-access, peer-reviewed, multidisciplinary scientific journal"
@@ -66,6 +75,16 @@ yes "the Author Guidelines page no longer carries OJS's default checklist (--min
 q "update journal_settings set setting_value='<ul><li>A checklist item the client wrote.</li></ul>' where setting_name='submissionChecklist'"
 LP --drop-default-checklist --apply >"$tmp/cl.txt" 2>&1
 yes "a checklist a person wrote is left alone" bash -c "grep -q 'skip  the submission checklist is not the shipped one' '$tmp/cl.txt' && [ \"\$(mariadb -N '$SANDBOX_DB_NAME' -e \"select setting_value from journal_settings where setting_name='submissionChecklist'\")\" = '<ul><li>A checklist item the client wrote.</li></ul>' ]"
+
+echo "=== submissions open or closed"
+q "update journal_settings set setting_value='1' where setting_name='disableSubmissions'"
+LP --open-submissions --apply >"$tmp/os.txt" 2>&1
+yes "--open-submissions turns Disable Submissions off" bash -c "grep -q '^DONE:  open submissions' '$tmp/os.txt' && [ \"\$(mariadb -N '$SANDBOX_DB_NAME' -e \"select setting_value from journal_settings where setting_name='disableSubmissions'\")\" = 0 ]"
+LP --open-submissions --apply >"$tmp/os2.txt" 2>&1
+yes "...and running it again changes nothing" grep -q 'skip  submissions are already open' "$tmp/os2.txt"
+LP --close-submissions --apply >/dev/null 2>&1
+yes "--close-submissions turns it on" test "$(q "select setting_value from journal_settings where setting_name='disableSubmissions'")" = 1
+LP --open-submissions --apply >/dev/null 2>&1
 
 echo "=== the licence, the ISSN and the publisher decisions"
 LP --licence-from-document --launch-without-issn --launch-without-publisher --apply >"$tmp/li.txt" 2>&1; rc=$?
