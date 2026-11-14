@@ -1,6 +1,6 @@
 // Builds the Word templates the journal offers: manuscript, cover letter, copyright and publication agreement (ojs/client-content/downloads/),
 // and the award certificate (ojs/client-content/internal/, not published). Run: NODE_PATH=$(npm root -g) node scripts/lib/make-downloads.js
-// Nothing here states a fact the client has not given: unknown names are blank lines to fill in; the agreement is marked as a draft for legal review.
+// Nothing here states a fact the client has not given: unknown names are blank lines to fill in; the agreement was approved by the client on 2026-11-14 and keeps two blanks for the journal (publisher's legal name, governing law).
 const fs = require('fs');
 const path = require('path');
 const d = require('docx');
@@ -83,7 +83,6 @@ const cl2 = (n, t, b) => [head(`${n}. ${t}`), para(b)];
 const ag = [
   new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 60 }, children: [run('COPYRIGHT AND PUBLICATION AGREEMENT', { bold: true, size: 28 })] }),
   new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 200 }, children: [run(JOURNAL, { size: 24 })] }),
-  note('DRAFT FOR THE JOURNAL\'S OWN LEGAL REVIEW. This agreement is a template that follows what the journal has told us: the author keeps copyright and gives the journal a non-exclusive licence to publish. It has not been reviewed by a lawyer and it is not legal advice. The journal should have it checked, fill in the blanks (the publisher\'s legal name and the governing law), and confirm the licence in clause 3 before it is used. Delete this box when it is final.'),
   para('This agreement is made between the author or authors named below ("the Author") and [legal name of the publisher of the ' + JOURNAL + '] ("the Journal"), about the article described below ("the Article").'),
   blank('Title of the Article'), blank('Name of the corresponding author'), blank('Names of all authors'), blank('Submission number (if known)'),
   ...cl2(1, 'The Author\'s promises', 'The Author confirms that the Article is original and has not been published elsewhere or submitted elsewhere at the same time; that all the authors have approved it and agree to this agreement; that it does not infringe any copyright or other right of any other person; that any material of other people in it (such as figures, tables or long quotations) is used with permission, which the Author will supply on request; and that the research was carried out in line with the ethical standards that apply to it, as stated in the Article.'),
@@ -97,7 +96,7 @@ const ag = [
   para('By signing, the corresponding author confirms that they have the authority to sign for all the authors of the Article.'),
   blank('Signature'), blank('Printed name'), blank('Date'),
 ];
-const agreement = new Document({ creator: JOURNAL, title: 'Copyright and publication agreement (draft)', styles, sections: [{ properties: { page }, footers: footer('copyright and publication agreement (draft for legal review)'), children: ag }] });
+const agreement = new Document({ creator: JOURNAL, title: 'Copyright and publication agreement', styles, sections: [{ properties: { page }, footers: footer('copyright and publication agreement'), children: ag }] });
 
 // ---------------- certificate (A4 landscape) ----------------
 const logo = fs.readFileSync(path.join(root, 'ojs/plugins/themes/worj/assets/img/logo-lockup.jpg'));
@@ -125,6 +124,6 @@ const cert = new Document({ creator: JOURNAL, title: 'Research Award certificate
 Promise.all([
   out('ojs/client-content/downloads', 'WORJ-Manuscript-Template.docx', manuscript),
   out('ojs/client-content/downloads', 'WORJ-Cover-Letter-Template.docx', cover),
-  out('ojs/client-content/downloads', 'WORJ-Copyright-and-Publication-Agreement-DRAFT.docx', agreement),
+  out('ojs/client-content/downloads', 'WORJ-Copyright-and-Publication-Agreement.docx', agreement),
   out('ojs/client-content/internal', 'WORJ-Award-Certificate-Template.docx', cert),
 ]);

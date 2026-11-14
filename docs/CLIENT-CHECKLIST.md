@@ -62,7 +62,7 @@ Nothing here may be invented by the developer. Items marked **blocks launch** ca
 | # | Decision | Notes | Blocks launch? | Answer, date, name |
 |---|---|---|---|---|
 | D9 | Do article pages need **first and last page numbers**? | An article with no page range currently fails the citation check | Yes | |
-| D10 | Which **licence and copyright terms** | One of the Creative Commons 4.0 options or your own terms | Yes | |
+| D10 | Which **licence and copyright terms** | One of the Creative Commons 4.0 options or your own terms | Yes | **Decided 2026-11-14:** CC BY-NC 4.0, author keeps copyright with a non-exclusive licence to the journal. |
 | D11 | The journal's **time zone** | The site is set to `Europe/London` for now | Yes | |
 | D12 | Import real users, or let people register themselves? | Never import real addresses before email works and every template has been read and approved | Yes | |
 

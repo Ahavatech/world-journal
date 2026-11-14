@@ -33,3 +33,15 @@ What was applied (these lines are checked as passages for worj-add spans):
   Manuscript template (Word)
   Cover letter template (Word)
   Copyright and publication agreement (Word, draft for review)
+
+==========================================================================================================================================
+ADDENDUM 3 (2026-11-14), recorded as given by the person relaying the client (a chat message):
+  "License is a go keep what is there"
+  "Policy pages approved"
+  "Copyright agreement approved"
+
+What was applied:
+  Licence: confirmed by the client, Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0). It is no longer an inference.
+  The policy pages are approved; the pending banners come off with scripts/launch-prep-shared.sh --approve.
+  The copyright and publication agreement is approved. Its draft box and the word DRAFT are gone. The publisher's legal name and the governing law are still blanks in it, because the client has not given them.
+  Downloads: Copyright and publication agreement (Word)

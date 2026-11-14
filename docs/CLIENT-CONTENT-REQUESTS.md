@@ -10,7 +10,8 @@ Send section 2 and section 3 to the client. Section 1 says what we will do with 
 - **Phone number:** later. No phone number is published.
 - **Awards:** later. The awards pages and the awards card stay off.
 - **Everything else that was unclear:** the document is the source of truth. Nothing is added to it except what follows from its own text, listed in the addendum: the **licence** (the document's terms are those of CC BY-NC 4.0, https://creativecommons.org/licenses/by-nc/4.0/) and the **privacy contact line** (`privacy@`). Items the document is silent on stay out: no publisher name, no ISSN (the footer's ISSN line is left out for a launch without one), no support contact other than the journal's own mailboxes.
-- **Still open, and the client should be told:** the licence is an inference from the document's terms (change it in one place if the client meant another); the publisher's name is not in the document; the document's Gmail support address is not shown, because every address the site shows or sends from is one of the journal's own.
+- **Resolved 2026-11-14:** the client confirmed the licence (CC BY-NC 4.0, "keep what is there"), approved the policy pages and approved the copyright and publication agreement (Addendum 3). Still open: the publisher's name, and the two blanks in the agreement (publisher's legal name, governing law).
+- **Was open (now resolved, see above):** the licence is an inference from the document's terms (change it in one place if the client meant another); the publisher's name is not in the document; the document's Gmail support address is not shown, because every address the site shows or sends from is one of the journal's own.
 
 ## 1. What was received, and where each part goes
 
