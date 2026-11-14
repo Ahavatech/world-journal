@@ -44,6 +44,15 @@ class WorjThemePlugin extends \PKP\plugins\ThemePlugin
         // The registration page tells people to look in their spam folder when email validation is on.
         \PKP\plugins\Hook::add('TemplateManager::display', function ($hookName, $args) {
             $args[0]->assign('worjRequireValidation', (bool) \PKP\config\Config::getVar('email', 'require_validation'));
+            // A welcome box with the first-login steps, for people who signed in within their first 14 days. No state is stored.
+            $user = \APP\core\Application::get()->getRequest()->getUser();
+            $welcome = '';
+            if ($user && $user->getDateRegistered() && strtotime($user->getDateRegistered()) > time() - 14 * 86400) {
+                $context = \APP\core\Application::get()->getRequest()->getContext();
+                $editorial = $context && $user->hasRole([\PKP\security\Role::ROLE_ID_MANAGER, \PKP\security\Role::ROLE_ID_SUB_EDITOR], $context->getId());
+                $welcome = $editorial ? 'editorial' : 'member';
+            }
+            $args[0]->assign('worjWelcome', $welcome);
             return \PKP\plugins\Hook::CONTINUE;
         });
 

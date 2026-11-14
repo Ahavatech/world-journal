@@ -68,3 +68,21 @@ msgstr "Leave the publisher line out of the footer while there is no publisher n
 
 msgid "plugins.themes.worj.option.omitIssnLine.option"
 msgstr "Leave the ISSN line out of the footer while there is no ISSN."
+
+msgid "plugins.themes.worj.welcome.title"
+msgstr "Welcome. Four quick steps for your first visit"
+
+msgid "plugins.themes.worj.welcome.password"
+msgstr "Use a long password that only you know. If you were given a temporary password, change it now: click your name (top right), then Edit Profile, then Password."
+
+msgid "plugins.themes.worj.welcome.profile"
+msgstr "Check your name, email address and affiliation in Edit Profile. Authors and reviewers are listed and contacted from these."
+
+msgid "plugins.themes.worj.welcome.spam"
+msgstr "The journal sends email from editorial@worldopenresearchjournal.com. If a message does not arrive within a few minutes, look in your spam folder and mark it as not spam."
+
+msgid "plugins.themes.worj.welcome.editorial"
+msgstr "Editors: your dashboard lists the submissions you manage. Open one to assign reviewers and record decisions."
+
+msgid "plugins.themes.worj.welcome.dashboard"
+msgstr "Open my dashboard"
