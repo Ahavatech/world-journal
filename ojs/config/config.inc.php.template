@@ -368,12 +368,14 @@ smtp_password = @@SMTP_PASSWORD@@
 ; allow_envelope_sender = Off
 
 ; Default envelope sender to use if none is specified elsewhere
-; default_envelope_sender = my_address@my_host.com
+; WORJ: every message leaves from the mailbox the SMTP login belongs to (the host refuses or rewrites other senders)
+default_envelope_sender = @@SMTP_USERNAME@@
 
 ; Force the default envelope sender (if present)
 ; This is useful if setting up a site-wide no-reply address
 ; The reply-to field will be set with the reply-to or from address.
-; force_default_envelope_sender = Off
+; WORJ: the envelope sender is always the mailbox, never a user's own address
+force_default_envelope_sender = On
 
 ; Force a DMARC compliant from header (RFC5322.From)
 ; If any of your users have email addresses in domains not under your control
@@ -383,17 +385,20 @@ smtp_password = @@SMTP_PASSWORD@@
 ; from field wil be rewritten with the default_envelope_sender.
 ; To use this you must set force_default_enveloper_sender = On and
 ; default_envelope_sender must be set to a valid address in a domain you own.
-; force_dmarc_compliant_from = Off
+; WORJ: an editor's own address moves to Reply-To and the From header is the mailbox, so mail from a Gmail or other outside address is not spoofed
+force_dmarc_compliant_from = On
 
 ; The display name to use with a DMARC compliant from header
 ; By default the DMARC compliant from will have an empty name but this can
 ; be changed by adding a text here.
 ; You can use '%n' to insert the users name from the original from header
 ; and '%s' to insert the localized sitename.
-; dmarc_compliant_from_displayname = '%n via %s'
+; WORJ: the From name is the site title (%s)
+dmarc_compliant_from_displayname = '%s'
 
 ; If enabled, email addresses must be validated before login is possible.
-require_validation = Off
+; WORJ: new accounts must confirm their email address before they can log in (decision of 2026-11-14; the registration page and OJS's own message tell people to check their spam folder). Needs working mail: turn Off only if mail is broken
+require_validation = On
 
 ; The number of days a user has to validate their account before their access key expires.
 validation_timeout = 14

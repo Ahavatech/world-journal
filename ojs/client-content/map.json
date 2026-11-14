@@ -1,0 +1,60 @@
+{
+  "note": "The client's text (ojs/client-content/source-v1.txt, received 2026-11-11) as HTML, one file per page of the site. Every page carries a pending banner naming what is still unconfirmed, so the launch gate (check-placeholders) stays red until a person resolves it. Only pages where the client supplied text are listed; everything else keeps its placeholder. Nothing here is approved for publication.",
+  "source": "source-v1.txt",
+  "pages": [
+    {
+      "id": "about",
+      "file": "pages/about.html"
+    },
+    {
+      "id": "editorial-team",
+      "file": "editorial-team.html"
+    },
+    {
+      "id": "aims-and-scope",
+      "file": "pages/aims-and-scope.html"
+    },
+    {
+      "id": "privacy",
+      "file": "pages/privacy.html"
+    },
+    {
+      "id": "author-guidelines",
+      "file": "pages/author-guidelines.html"
+    },
+    {
+      "id": "disclaimer",
+      "file": "pages/disclaimer.html"
+    },
+    {
+      "id": "open-access",
+      "file": "pages/open-access.html"
+    },
+    {
+      "id": "peer-review",
+      "file": "pages/peer-review.html"
+    },
+    {
+      "id": "publication-ethics",
+      "file": "pages/publication-ethics.html"
+    },
+    {
+      "id": "copyright-licensing",
+      "file": "pages/copyright-licensing.html"
+    },
+    {
+      "id": "awards",
+      "file": "awards/awards.html"
+    },
+    {
+      "id": "awards-winners",
+      "file": "awards/winners.html"
+    }
+  ],
+  "announcement": {
+    "title": "Call for Reviewers",
+    "file": "announcement-call-for-reviewers.html",
+    "short": "We are pleased to invite qualified academics and researchers to join our team of reviewers across all subject areas covered by the journal."
+  },
+  "addendum": "addendum-2026-11-13.txt"
+}

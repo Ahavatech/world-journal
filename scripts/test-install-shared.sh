@@ -40,6 +40,9 @@ chmod +x "$tmp/ssh"
 # the real host disables shell_exec and shows no errors: the OJS installer (stty in backticks) dies silently there
 mkdir -p "$tmp/bin"; realphp="$(command -v php)"
 printf '#!/usr/bin/env bash\nexec %s -d display_errors=0 -d disable_functions=shell_exec "$@"\n' "$realphp" >"$tmp/bin/php"; chmod +x "$tmp/bin/php"
+# the host's mysqldump could not open a defaults file given as /dev/fd/N (process substitution): a stand-in that refuses it too
+realdump="$(command -v mysqldump)"
+printf '#!/usr/bin/env bash\ncase "$*" in *--defaults-extra-file=/dev/fd/*) echo "Could not open required defaults file" >&2; exit 2 ;; esac\nexec %s "$@"\n' "$realdump" >"$tmp/bin/mysqldump"; chmod +x "$tmp/bin/mysqldump"
 export PATH="$tmp/bin:$PATH"
 H=journal.example.org
 R="$tmp/home/domains/$H"; mkdir -p "$R/public_html"
@@ -63,7 +66,7 @@ ADMIN_PASSWORD=$ADMINPW
 SMTP_SERVER=smtp.example.invalid
 SMTP_PORT=465
 SMTP_AUTH=ssl
-SMTP_USERNAME=editorial@example.invalid
+SMTP_USERNAME=editorial@journal.example.org
 SMTP_PASSWORD=smtp-secret-$$
 ENV
   chmod 600 "$1"
@@ -165,6 +168,7 @@ gzip -dc "$tmp/bkx/db.sql.gz" | mariadb "${dbn}_restore"
 yes "the dump RESTORES into a scratch database (administrator row back)" test "$(mariadb -N "${dbn}_restore" -e "select count(*) from users where username='worjadmin'")" = 1
 mariadb -e "DROP DATABASE \`${dbn}_restore\`"
 yes "rclone copied the bundle with the same size" test "$(stat -c %s "$tmp/rcl/$(basename "$bundle")")" = "$(stat -c %s "$bundle")"
+yes "no temporary credentials file is left on the host after the dump" bash -c "! ls \"\$HOME\"/.worj-dump.* >/dev/null 2>&1"
 yes "last-success is written and no FAILED marker" test -f "$tmp/bk/last-success" -a ! -e "$tmp/bk/FAILED"
 sleep 1; BK --env "$tmp/envbk" --no-upload >/dev/null 2>&1; sleep 1; BK --env "$tmp/envbk" --no-upload >/dev/null 2>&1
 yes "retention keeps only BACKUP_KEEP=2 bundles" test "$(find "$tmp/bk" -maxdepth 1 -name 'worj-*.tar.age' | wc -l)" = 2
@@ -182,11 +186,98 @@ STUB_CUT=$((dump_n - 200)) WORJ_SSH="$tmp/ssh" "$tmp/pull-mut.sh" --env "$tmp/en
 yes "mutation: without the completion-line check the truncated dump is accepted (exit $rc)" test "$rc" = 0
 rm -f "$tmp/bk/FAILED"
 
+echo "=== enable-block-plugin.php (the step seeding needs on a fresh journal)"
+yes "without a journal it reports 'no journal' and writes nothing" bash -c "[ \"\$(STUB_SOCKET_STDIN=1 '$tmp/ssh' x \"cd '$R/public_html' && php\" <'$root/scripts/lib/enable-block-plugin.php')\" = 'no journal' ]"
+mariadb "$dbn" -e "INSERT INTO journals (path, seq, primary_locale, enabled) VALUES ('worj', 1, 'en', 1)"
+out1="$(STUB_SOCKET_STDIN=1 "$tmp/ssh" x "cd '$R/public_html' && php" <"$root/scripts/lib/enable-block-plugin.php")"
+yes "with a journal it enables the plugin for the site and the journal" bash -c "grep -q 'enabled makesubmissionblockplugin site' <<<'$out1' && grep -q 'enabled makesubmissionblockplugin journal' <<<'$out1'"
+yes "the database holds the two enabled rows" test "$(mariadb -N "$dbn" -e "select count(*) from plugin_settings where plugin_name='makesubmissionblockplugin' and setting_name='enabled' and setting_value='1'")" = 2
+out2="$(STUB_SOCKET_STDIN=1 "$tmp/ssh" x "cd '$R/public_html' && php" <"$root/scripts/lib/enable-block-plugin.php")"
+yes "running it again changes nothing (idempotent)" bash -c "! grep -q '^enabled' <<<'$out2' && [ \"\$(mariadb -N '$dbn' -e \"select count(*) from plugin_settings where plugin_name='makesubmissionblockplugin'\")\" = 2 ]"
+mariadb "$dbn" -e "DELETE FROM plugin_settings WHERE plugin_name='makesubmissionblockplugin'; DELETE FROM journals WHERE path='worj'"
+
+echo "=== emails-shared.sh: every address the site uses is one of the journal's own"
+EM() { STUB_SOCKET_STDIN=1 WORJ_SSH="$tmp/ssh" "$root/scripts/emails-shared.sh" "$@" </dev/null; }
+mariadb "$dbn" -e "INSERT INTO journals (path, seq, primary_locale, enabled) VALUES ('worj', 1, 'en', 1)"
+EM --env "$tmp/env" >"$tmp/em0.txt" 2>&1; rc=$?
+yes "the audit FAILS while the site contact and the administrator still have the installer's outside address (exit $rc)" test "$rc" = 1
+yes "...naming them" bash -c "grep -q '^FAIL  site contactEmail' '$tmp/em0.txt' && grep -q '^FAIL  user worjadmin' '$tmp/em0.txt'"
+yes "...the mail sender in config.inc.php already passes (the template sets it)" bash -c "grep -q '^ok    config default_envelope_sender = editorial@journal.example.org' '$tmp/em0.txt' && grep -q '^ok    config force_dmarc_compliant_from = On' '$tmp/em0.txt'"
+EM --env "$tmp/env" --apply >"$tmp/em1.txt" 2>&1; rc=$?
+yes "--apply sets the addresses and the audit then passes (exit $rc)" test "$rc" = 0
+yes "...RESULT: PASS" grep -q '^RESULT: PASS' "$tmp/em1.txt"
+yes "the journal contact is editorial@, support is support@" bash -c "[ \"\$(mariadb -N '$dbn' -e \"select setting_value from journal_settings where setting_name='contactEmail'\")\" = editorial@journal.example.org ] && [ \"\$(mariadb -N '$dbn' -e \"select setting_value from journal_settings where setting_name='supportEmail'\")\" = support@journal.example.org ]"
+yes "the site contact and the administrator are admin@" bash -c "[ \"\$(mariadb -N '$dbn' -e \"select setting_value from site_settings where setting_name='contactEmail'\")\" = admin@journal.example.org ] && [ \"\$(mariadb -N '$dbn' -e \"select email from users where username='worjadmin'\")\" = admin@journal.example.org ]"
+yes "no password reached the output" bash -c "! grep -qE '$dbp|$ADMINPW|smtp-secret' '$tmp/em0.txt' '$tmp/em1.txt'"
+yes "the audit says where editorial@, support@ and admin@ are used" bash -c "grep -q '^USED  editorial@journal.example.org: .*journal worj.contactEmail' '$tmp/em1.txt' && grep -q '^USED  support@journal.example.org: .*journal worj.supportEmail' '$tmp/em1.txt' && grep -q '^USED  admin@journal.example.org: .*site contactEmail' '$tmp/em1.txt'"
+yes "...and that privacy@ and doi@ are not used anywhere yet (a NOTE, not a failure)" bash -c "grep -q '^NOTE  privacy@journal.example.org: not used yet' '$tmp/em1.txt' && grep -q '^NOTE  doi@journal.example.org: not used yet' '$tmp/em1.txt'"
+yes "the technical support contact got a marked blank for its name, so OJS shows it on the contact page" test "$(mariadb -N "$dbn" -e "select setting_value from journal_settings where setting_name='supportName'")" = "[PLACEHOLDER: technical support contact name]"
+mariadb "$dbn" -e "INSERT INTO journal_settings (journal_id, locale, setting_name, setting_value) SELECT journal_id, 'en', 'privacyStatement', '<p>Questions: privacy@journal.example.org</p>' FROM journals WHERE path='worj'; INSERT INTO plugin_settings (plugin_name, context_id, setting_name, setting_value, setting_type) SELECT 'crossrefplugin', journal_id, 'depositorEmail', 'doi@journal.example.org', 'string' FROM journals WHERE path='worj'"
+EM --env "$tmp/env" >"$tmp/em1b.txt" 2>&1; rc=$?
+yes "once the privacy statement and the Crossref depositor email name them, the audit shows privacy@ and doi@ as used (exit $rc)" bash -c "[ $rc = 0 ] && grep -q '^USED  privacy@journal.example.org: the privacy statement' '$tmp/em1b.txt' && grep -q '^USED  doi@journal.example.org: the Crossref depositor email' '$tmp/em1b.txt'"
+mariadb "$dbn" -e "DELETE FROM plugin_settings WHERE plugin_name='crossrefplugin'"
+EM --env "$tmp/env" --apply >/dev/null 2>&1; rc=$?
+yes "--apply twice is harmless (exit $rc)" test "$rc" = 0
+sed -i 's/^force_dmarc_compliant_from = .*/force_dmarc_compliant_from = Off/' "$cfg"
+EM --env "$tmp/env" >"$tmp/em2.txt" 2>&1; rc=$?
+yes "the audit FAILS when an editor's own address could end up in the From header (exit $rc)" bash -c "[ $rc = 1 ] && grep -q '^FAIL  config force_dmarc_compliant_from' '$tmp/em2.txt'"
+sed -i 's/^force_dmarc_compliant_from = .*/force_dmarc_compliant_from = On/' "$cfg"
+sed -i 's/^default_envelope_sender = .*/default_envelope_sender = someone@gmail.com/' "$cfg"
+EM --env "$tmp/env" >"$tmp/em3.txt" 2>&1; rc=$?
+yes "the audit FAILS when the mail sender is an outside address (exit $rc)" bash -c "[ $rc = 1 ] && grep -q '^FAIL  config default_envelope_sender' '$tmp/em3.txt'"
+sed -i 's/^default_envelope_sender = .*/default_envelope_sender = editorial@journal.example.org/' "$cfg"
+mariadb "$dbn" -e "DELETE FROM journal_settings WHERE setting_name IN ('contactEmail','supportEmail','supportName','privacyStatement'); DELETE FROM journals WHERE path='worj'; UPDATE users SET email='admin@example.invalid' WHERE username='worjadmin'"
+EM --env "$tmp/env" --apply >"$tmp/em4.txt" 2>&1; rc=$?
+yes "--apply with no journal says so and sets nothing (exit $rc)" bash -c "[ $rc != 0 ] && grep -q 'no journal exists yet' '$tmp/em4.txt'"
+no "an admin mailbox name with odd characters is refused" EM --env "$tmp/env" --admin-mailbox 'a b;x'
+mariadb "$dbn" -e "UPDATE users SET email='admin@example.invalid' WHERE username='worjadmin'"
+
+echo "=== launch-prep-shared.sh (the real run is in scripts/test-launch-prep-sandbox.sh)"
+LPS() { STUB_SOCKET_STDIN=1 WORJ_SSH="$tmp/ssh" "$root/scripts/launch-prep-shared.sh" "$@" </dev/null; }
+LPS --env "$tmp/env" --minimal >"$tmp/lp0.txt" 2>&1; rc=$?
+yes "against a site with no journal the dry run says so and exits 1 (exit $rc)" bash -c "[ $rc = 1 ] && grep -q \"FAILED: no journal 'worj' exists\" '$tmp/lp0.txt'"
+yes "...and says it is a dry run" grep -q '^DRY RUN' "$tmp/lp0.txt"
+no "no option at all is refused" LPS --env "$tmp/env"
+no "an unknown page id is refused" LPS --env "$tmp/env" --approve nonsense
+no "an env file readable by others is refused" LPS --env "$tmp/env644" --minimal
+
+echo "=== count-issues.php (keeps the sample issue from being imported twice)"
+yes "an installed OJS with no issue prints 0" bash -c "[ \"\$(STUB_SOCKET_STDIN=1 '$tmp/ssh' x \"cd '$R/public_html' && php\" <'$root/scripts/lib/count-issues.php')\" = 0 ]"
+
+echo "=== test-smtp-shared.sh: one test message through the SMTP settings in config.inc.php (a fake SMTP server stands in for Hostinger)"
+SM() { WORJ_SSH="$tmp/ssh" "$root/scripts/test-smtp-shared.sh" "$@"; }
+cp "$cfg" "$tmp/cfg.smtp.keep"
+sed -i 's/^smtp_server = .*/smtp_server = 127.0.0.1/; s/^smtp_port = .*/smtp_port = 2525/; s/^smtp_auth = .*/smtp_auth = /' "$cfg"
+python3 -I "$root/scripts/lib/fake-smtp.py" 2525 "$tmp/smtp-capture.jsonl" & fake1=$!
+python3 -I "$root/scripts/lib/fake-smtp.py" 2526 "$tmp/smtp-capture2.jsonl" --reject-auth & fake2=$!
+sleep 1
+SM --env "$tmp/env" --to tester@example.invalid --check >"$tmp/smc.txt" 2>&1; rc=$?
+yes "smtp test --check sends nothing (exit $rc)" test "$rc" = 0 -a ! -e "$tmp/smtp-capture.jsonl"
+SM --env "$tmp/env" --to tester@example.invalid >"$tmp/sm1.txt" 2>&1; rc=$?
+yes "the test message is sent through the configured SMTP server (exit $rc)" test "$rc" = 0
+yes "...the output says OK and names no password" bash -c "grep -q '^OK:' '$tmp/sm1.txt' && ! grep -q 'smtp-secret' '$tmp/sm1.txt'"
+yes "the server saw the mailbox login from config.inc.php" bash -c "python3 -I -c \"import json; d=[json.loads(l) for l in open('$tmp/smtp-capture.jsonl')][-1]; assert d['user']=='editorial@journal.example.org' and d['pass']=='smtp-secret-$$'\""
+yes "...and the message: from the mailbox, to the tester, with the test subject" bash -c "python3 -I -c \"import json; d=[json.loads(l) for l in open('$tmp/smtp-capture.jsonl')][-1]; assert 'editorial@journal.example.org' in d['from'] and 'tester@example.invalid' in d['to'][0] and 'WORJ SMTP test' in d['data']\""
+sed -i 's/^smtp_port = .*/smtp_port = 2526/' "$cfg"
+SM --env "$tmp/env" --to tester@example.invalid >"$tmp/sm2.txt" 2>&1; rc=$?
+yes "a refused login fails with the server's reason (exit $rc)" bash -c "[ $rc != 0 ] && grep -q 'FAILED' '$tmp/sm2.txt'"
+yes "...and the password is not in the output, and the output does NOT say OK" bash -c "! grep -q 'smtp-secret' '$tmp/sm2.txt' && ! grep -q '^OK' '$tmp/sm2.txt' && grep -q '535' '$tmp/sm2.txt'"
+sed -i 's/^smtp_port = .*/smtp_port = 2599/' "$cfg"
+SM --env "$tmp/env" --to tester@example.invalid >"$tmp/sm3.txt" 2>&1; rc=$?
+yes "a server that is not there fails and says why (exit $rc)" bash -c "[ $rc != 0 ] && grep -q 'FAILED' '$tmp/sm3.txt' && grep -qi 'could not be established' '$tmp/sm3.txt' && ! grep -q '^OK' '$tmp/sm3.txt'"
+sed -i 's/^smtp_port = .*/smtp_port = 2525/; s/^default = smtp/default = log/' "$cfg"
+SM --env "$tmp/env" --to tester@example.invalid >"$tmp/sm4.txt" 2>&1; rc=$?
+yes "[email] default other than smtp is reported (PHP's own mail is capped at 100 a day on the host; exit $rc)" bash -c "[ $rc != 0 ] && grep -q 'not smtp' '$tmp/sm4.txt'"
+no "an address that is not a plain email address is refused" SM --env "$tmp/env" --to 'a b@x.invalid;rm'
+no "an env file readable by others is refused" SM --env "$tmp/env644" --to tester@example.invalid
+kill "$fake1" "$fake2" 2>/dev/null; cp "$tmp/cfg.smtp.keep" "$cfg"
+
 echo "=== seed-shared.sh --check (the REST part needs Playwright and a real https site: NOT run here)"
 S() { WORJ_SSH="$tmp/ssh" "$root/scripts/seed-shared.sh" "$@"; }
 S --env "$tmp/env" --check --with-sample-issue >"$tmp/seed.txt" 2>&1; rc=$?
 yes "seed --check exits 0 (exit $rc)" test "$rc" = 0
 yes "seed --check prints WOULD lines for the journal, the pages and the sample issue" bash -c "grep -c '^WOULD: ' '$tmp/seed.txt' | grep -qx 3"
+yes "...and says the sample issue is only imported if there is none" grep -q 'only if the journal has no issue yet' "$tmp/seed.txt"
 yes "seed --check created nothing on the host" test ! -e "$R/worj-ops/scripts" -a ! -e "$R/worj-ops/ojs"
 yes "seed --check printed no secret" bash -c "! grep -qE '$dbp|$ADMINPW|smtp-secret' '$tmp/seed.txt'"
 no "seed refuses an env file readable by others" S --env "$tmp/env644" --check

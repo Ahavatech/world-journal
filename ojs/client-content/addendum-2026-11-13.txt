@@ -1,0 +1,19 @@
+ADDENDUM to the client's document, recorded as the decisions were given on 2026-11-13 (a chat message from the person relaying the client).
+These lines are the ONLY text on the site that is not a passage of source-v1.txt; scripts/check-client-content.py checks that every
+`worj-add` span on a client page is a passage of this file.
+==========================================================================================================================================
+
+Decisions, as given:
+  "Prof John as Editor in chief and the other person as the assistant."
+  "we'll add phone number later"
+  "Award will be done later"
+  "Manuscript template and all other thing and questions or things that are unclear use the document as the source of truth"
+
+What was applied:
+  Editor-in-Chief: Prof. Paul John.
+  Assistant Editor: Dr. Dan Williams.
+  No phone number is published. The awards pages and the awards card stay off.
+  Where the document is blank or silent nothing is added, except what follows from the document's own text:
+  Licence: the document lists these terms (copy and redistribute, remix and adapt, credit the author, no commercial use, changes indicated), which are the terms of Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0), https://creativecommons.org/licenses/by-nc/4.0/.
+  Privacy contact: For privacy questions and requests, write to privacy@worldopenresearchjournal.com.
+  The journal's own mailbox aliases were set up by its owner on 2026-11-10.

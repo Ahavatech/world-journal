@@ -30,21 +30,25 @@
 		<div class="worj-footer__about">
 			{if $currentContext}
 				<p class="worj-footer__title">{$currentContext->getLocalizedData('name')|escape}</p>
-				<p>
-					{if $currentContext->getData('publisherInstitution')}
+				{if $currentContext->getData('publisherInstitution')}
+					<p>
 						{$currentContext->getData('publisherInstitution')|escape}
-					{else}
+					</p>
+				{elseif !($activeTheme && $activeTheme->getOption('omitPublisherLine'))}
+					<p>
 						<span class="worj-placeholder">[PLACEHOLDER: publisher name]</span>
-					{/if}
-				</p>
-				<p>
-					{if $currentContext->getData('onlineIssn') || $currentContext->getData('printIssn')}
+					</p>
+				{/if}
+				{if $currentContext->getData('onlineIssn') || $currentContext->getData('printIssn')}
+					<p>
 						{if $currentContext->getData('onlineIssn')}eISSN {$currentContext->getData('onlineIssn')|escape}{/if}
 						{if $currentContext->getData('printIssn')}ISSN {$currentContext->getData('printIssn')|escape}{/if}
-					{else}
+					</p>
+				{elseif !($activeTheme && $activeTheme->getOption('omitIssnLine'))}
+					<p>
 						<span class="worj-placeholder">[PLACEHOLDER: ISSN, pending]</span>
-					{/if}
-				</p>
+					</p>
+				{/if}
 				<p>
 					{if $currentContext->getData('licenseUrl')}
 						<a href="{$currentContext->getData('licenseUrl')|escape}" rel="license">{translate key="submission.license"}</a>

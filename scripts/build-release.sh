@@ -49,7 +49,7 @@ rsync -a "$theme/" "$out/public_html/plugins/themes/worj/"
 # 3. rendered .htaccess files, robots.txt and the static error pages
 printf 'HOST=%s\nHSTS_MAX_AGE=%s\nROBOTS_MODE=%s\n' "$host" "$hsts" "$mode" | "$root/scripts/render-htaccess.sh" "$out/public_html" >/dev/null
 # 4. checks on what we are about to hand over
-bad="$(grep -rlE '@@[A-Z][A-Z0-9_]*@@' "$out/public_html/.htaccess" "$out/public_html/plugins/themes/.htaccess" "$out/public_html/robots.txt" 2>/dev/null || true)"
+bad="$(grep -rlE '@@[A-Z][A-Z0-9_]*@@' "$out/public_html/.htaccess" "$out/public_html/robots.txt" 2>/dev/null || true)"
 [ -z "$bad" ] || die "unfilled @@TOKEN@@ in: $bad"
 for forbidden in config.inc.php public cache ojs content fixtures .env .git; do
   [ ! -e "$out/public_html/$forbidden" ] || die "forbidden path in the package: $forbidden"

@@ -123,10 +123,11 @@ fi
 # 5. fix what the installer leaves weak, then verify (the live config is pulled to a private temp file, edited here, pushed back)
 if [ "$check" = 0 ]; then
   remote "cat $(printf '%q' "$cfg")" >"$tmp/live.inc.php"; chmod 600 "$tmp/live.inc.php"
-  printf 'general.allowed_hosts=%s\ngeneral.time_zone="%s"\n' "'[\"$HOST\"]'" "$TIME_ZONE" |
+  # the email.* lines make every message leave from the mailbox (added to a config installed before they existed)
+  printf 'general.allowed_hosts=%s\ngeneral.time_zone="%s"\nemail.require_validation=On\nemail.default_envelope_sender=%s\nemail.force_default_envelope_sender=On\nemail.force_dmarc_compliant_from=On\nemail.dmarc_compliant_from_displayname=%s\n' "'[\"$HOST\"]'" "$TIME_ZONE" "$SMTP_USERNAME" "'%s'" |
     python3 -I "$root/scripts/set-ojs-config.py" "$tmp/live.inc.php" --generate-if-weak security.salt --generate-if-weak security.api_key_secret >"$tmp/set.txt" 2>&1 || { cat "$tmp/set.txt" >&2; die "set-ojs-config.py failed"; }
   if grep -qE '^(changed|generated)' "$tmp/set.txt"; then
-    chg "re-applied allowed_hosts, time_zone, salt, API secret after the installer"
+    chg "re-applied allowed_hosts, time_zone, the mail sender settings, salt, API secret"
     remote "umask 077 && cat > $(printf '%q' "$cfg") && chmod 600 $(printf '%q' "$cfg")" <"$tmp/live.inc.php"
   else ok "allowed_hosts, time_zone, salt and API secret are already right"; fi
   python3 -I "$root/scripts/check-live-config.py" "$tmp/live.inc.php" --host "$HOST" --web-root "$webroot" || die "the live config check failed (above): fix before continuing"

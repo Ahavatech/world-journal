@@ -39,6 +39,9 @@ msgstr "Research Awards"
 msgid "plugins.themes.worj.awardsLink"
 msgstr "About the awards"
 
+msgid "plugins.themes.worj.register.validationNote"
+msgstr "After you register we send you an email with a link to confirm your address, and you can log in once you have clicked it. The email can take a few minutes and may land in your spam folder: please check there if you do not see it."
+
 msgid "plugins.themes.worj.option.showAwardsCard.label"
 msgstr "Research Awards card"
 
@@ -47,3 +50,39 @@ msgstr "Shows a Research Awards call-out on the homepage. Turn this on only afte
 
 msgid "plugins.themes.worj.option.showAwardsCard.option"
 msgstr "Show the Research Awards card on the homepage."
+
+msgid "plugins.themes.worj.option.omitIssnLine.label"
+msgstr "ISSN line in the footer"
+
+msgid "plugins.themes.worj.option.omitIssnLine.description"
+msgstr "While the journal has no ISSN the footer shows a visible placeholder. Turn this on only for a journal that launches without an ISSN: the line is then left out until one is entered in the journal settings."
+
+msgid "plugins.themes.worj.option.omitPublisherLine.label"
+msgstr "Publisher line in the footer"
+
+msgid "plugins.themes.worj.option.omitPublisherLine.description"
+msgstr "While the journal has no publisher name the footer shows a visible placeholder. Turn this on only for a journal whose publisher is not stated: the line is then left out until a name is entered in the journal settings."
+
+msgid "plugins.themes.worj.option.omitPublisherLine.option"
+msgstr "Leave the publisher line out of the footer while there is no publisher name."
+
+msgid "plugins.themes.worj.option.omitIssnLine.option"
+msgstr "Leave the ISSN line out of the footer while there is no ISSN."
+
+msgid "plugins.themes.worj.welcome.title"
+msgstr "Welcome. Four quick steps for your first visit"
+
+msgid "plugins.themes.worj.welcome.password"
+msgstr "Use a long password that only you know. If you were given a temporary password, change it now: click your name (top right), then Edit Profile, then Password."
+
+msgid "plugins.themes.worj.welcome.profile"
+msgstr "Check your name, email address and affiliation in Edit Profile. Authors and reviewers are listed and contacted from these."
+
+msgid "plugins.themes.worj.welcome.spam"
+msgstr "The journal sends email from editorial@worldopenresearchjournal.com. If a message does not arrive within a few minutes, look in your spam folder and mark it as not spam."
+
+msgid "plugins.themes.worj.welcome.editorial"
+msgstr "Editors: your dashboard lists the submissions you manage. Open one to assign reviewers and record decisions."
+
+msgid "plugins.themes.worj.welcome.dashboard"
+msgstr "Open my dashboard"

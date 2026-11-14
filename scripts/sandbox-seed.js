@@ -9,6 +9,7 @@ const path = require('path');
 const { chromium } = require('playwright');
 const { guarded, assertId } = require('./lib/sandbox-guard');
 
+const fs = require('fs');
 const target = require('./lib/target');
 
 const t = target.load();
@@ -65,6 +66,25 @@ async function main() {
     console.log(`created placeholder announcement ${n}`);
   }
 
+  // The client's own announcement (WORJ_CLIENT_CONTENT=1): created once, with a pending banner naming what is unconfirmed
+  const clientContent = process.env.WORJ_CLIENT_CONTENT === '1';
+  if (clientContent) {
+    const cmap = JSON.parse(fs.readFileSync(path.join(path.resolve(__dirname, '..'), 'ojs/client-content/map.json'), 'utf8'));
+    const ann = cmap.announcement;
+    const have = await call('GET', '/worj/api/v1/announcements?count=100');
+    if (have.items.some((i) => ((i.title && i.title.en) || '') === ann.title)) {
+      console.log(`announcement "${ann.title}" exists; create-only`);
+    } else {
+      await call('POST', '/worj/api/v1/announcements', {
+        contextId: id,
+        title: { en: ann.title },
+        descriptionShort: { en: ann.short },
+        description: { en: fs.readFileSync(path.join(path.resolve(__dirname, '..'), 'ojs/client-content', ann.file), 'utf8') },
+      });
+      console.log(`created the client's announcement "${ann.title}" (pending banner)`);
+    }
+  }
+
   // Placeholder content (Phase 3). OJS ships default text in some of these settings and an older seed
   // wrote other text; neither is a placeholder, so the content script would (correctly) treat it as
   // human-edited and leave it. In a fresh sandbox, or with SANDBOX_RESET_CONTENT=1, empty them first.
@@ -74,9 +94,9 @@ async function main() {
     console.log('emptied the content settings (fresh sandbox or SANDBOX_RESET_CONTENT=1)');
   }
   const here = __dirname;
-  execFileSync('node', [path.join(here, 'sandbox-content.js'), '--force-sandbox'], { stdio: 'inherit' });
+  execFileSync('node', [path.join(here, 'sandbox-content.js'), '--force-sandbox', ...(clientContent ? ['--client-content'] : [])], { stdio: 'inherit' });
   // on the host the custom pages are imported by scripts/seed-shared.sh (php over ssh)
-  if (!t.remote) execFileSync('php', [path.join(here, 'import-pages.php'), '--journal=worj'], { stdio: ['ignore', 'inherit', 'ignore'] });
+  if (!t.remote) execFileSync('php', [path.join(here, 'import-pages.php'), '--journal=worj', ...(clientContent ? ['--client-content'] : [])], { stdio: ['ignore', 'inherit', 'ignore'] });
 
   // Sidebar state for layout testing: SANDBOX_SIDEBAR=blocks (default) | none | empty
   //   blocks: Make a Submission + Information (the information texts come from the content step)
@@ -90,8 +110,14 @@ async function main() {
     empty: { sidebar: ['informationblockplugin'], readerInformation: info(), authorInformation: info(), librarianInformation: info() },
   };
   if (!sidebars[state]) throw new Error(`SANDBOX_SIDEBAR must be blocks, none or empty (got ${state})`);
-  await call('PUT', `/worj/api/v1/contexts/${id}`, sidebars[state]);
-  console.log(`sidebar state: ${state}`);
+  try {
+    await call('PUT', `/worj/api/v1/contexts/${id}`, sidebars[state]);
+    console.log(`sidebar state: ${state}`);
+  } catch (e) {
+    // a fresh journal has not enabled the Make a Submission block: on the host scripts/seed-shared.sh enables it and runs this again
+    if (!(t.remote && /can not be found/.test(e.message))) throw e;
+    console.log('SIDEBAR_PENDING: a block plugin is not enabled yet');
+  }
 
   // The homepage Awards card links to /awards: turn it on only if that page really returns 200.
   const awards = await ctx.request.get(`${base}/worj/awards`);

@@ -3,7 +3,7 @@ SHELL := /bin/bash
 THEME := ojs/plugins/themes/worj
 
 # Needs php-fpm8.3, mariadbd and nginx in this sandbox; not part of `make lint` (CI has no FPM or MariaDB).
-.PHONY: infra-test infra-test-nginx infra-test-backup infra-test-reset infra-test-chroot infra-test-day0 infra-test-htaccess infra-test-install
+.PHONY: infra-test infra-test-nginx infra-test-backup infra-test-reset infra-test-chroot infra-test-day0 infra-test-htaccess infra-test-install infra-test-client infra-test-email infra-test-launch infra-test-accounts
 infra-test:
 	scripts/test-infra-config.sh
 	scripts/test-provision-preflight.sh | tail -1
@@ -38,6 +38,26 @@ infra-test-htaccess:
 # Needs root (mariadb socket), rsync and ojs-core (make setup). Proves the script, not the host.
 infra-test-install:
 	scripts/test-install-shared.sh
+
+# The client's own text (ojs/client-content) loaded into the sandbox journal and read back over HTTP, then the sandbox is restored.
+# Needs the sandbox (make sandbox-up sandbox-seed) and Playwright. The text-only checks run in `make lint`.
+infra-test-client:
+	scripts/test-client-content-sandbox.sh
+
+# What OJS really sends (a password-reset email read back from a fake SMTP server): From is the mailbox, the contact address only in
+# Reply-To. Needs the sandbox (make sandbox-up sandbox-seed).
+infra-test-email:
+	scripts/test-email-sender-sandbox.sh
+
+# Launch preparation (delete sample content, hide pages with no client text, confirm or hold the client's pages) and the theme option that
+# leaves the ISSN line out, against the sandbox journal. The sandbox is snapshotted and restored. Needs the sandbox and Playwright.
+infra-test-launch:
+	scripts/test-theme-issn-option.sh
+	scripts/test-launch-prep-sandbox.sh
+
+# Creating the client's accounts (random temporary password, forced change at first login) and the first-login welcome box. Needs the sandbox.
+infra-test-accounts:
+	scripts/test-create-accounts-sandbox.sh
 
 .PHONY: setup lint eval check-placeholders sandbox-up sandbox-down sandbox-seed check-citation check-pdf check-discovery check-placeholders-url
 
@@ -97,6 +117,8 @@ lint:
 	scripts/test-check-citation-meta.sh | tail -1
 	scripts/test-release.sh | tail -1
 	scripts/test-run-scheduler.sh | tail -1
+	python3 -I scripts/check-client-content.py | tail -1
+	scripts/test-client-content.sh | tail -1
 	@if [ -n "$$(find ojs scripts -name '*.php' -print -quit)" ]; then \
 	  find ojs scripts -name '*.php' -print0 | xargs -0 -n1 php -l >/dev/null && echo "php -l ok"; \
 	else echo "no PHP files yet"; fi

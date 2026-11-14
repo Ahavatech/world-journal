@@ -41,6 +41,21 @@ class WorjThemePlugin extends \PKP\plugins\ThemePlugin
         }
         $this->removeStyle('swiper');
 
+        // The registration page tells people to look in their spam folder when email validation is on.
+        \PKP\plugins\Hook::add('TemplateManager::display', function ($hookName, $args) {
+            $args[0]->assign('worjRequireValidation', (bool) \PKP\config\Config::getVar('email', 'require_validation'));
+            // A welcome box with the first-login steps, for people who signed in within their first 14 days. No state is stored.
+            $user = \APP\core\Application::get()->getRequest()->getUser();
+            $welcome = '';
+            if ($user && $user->getDateRegistered() && strtotime($user->getDateRegistered()) > time() - 14 * 86400) {
+                $context = \APP\core\Application::get()->getRequest()->getContext();
+                $editorial = $context && $user->hasRole([\PKP\security\Role::ROLE_ID_MANAGER, \PKP\security\Role::ROLE_ID_SUB_EDITOR], $context->getId());
+                $welcome = $editorial ? 'editorial' : 'member';
+            }
+            $args[0]->assign('worjWelcome', $welcome);
+            return \PKP\plugins\Hook::CONTINUE;
+        });
+
         $this->addScript('worj-nav', 'assets/js/nav.js');
         $this->addScript('worj-forms', 'assets/js/forms.js');
 
@@ -61,6 +76,35 @@ class WorjThemePlugin extends \PKP\plugins\ThemePlugin
                 [
                     'value' => true,
                     'label' => __('plugins.themes.worj.option.showAwardsCard.option'),
+                ],
+            ],
+            'default' => false,
+        ]);
+
+        // Off by default: while a journal has no ISSN the footer prints a visible placeholder (the launch gate
+        // must stay red). A journal that launches WITHOUT an ISSN turns this on and the ISSN line is left out
+        // until one is entered. Never prints an invented number.
+        $this->addOption('omitIssnLine', 'FieldOptions', [
+            'label' => __('plugins.themes.worj.option.omitIssnLine.label'),
+            'description' => __('plugins.themes.worj.option.omitIssnLine.description'),
+            'options' => [
+                [
+                    'value' => true,
+                    'label' => __('plugins.themes.worj.option.omitIssnLine.option'),
+                ],
+            ],
+            'default' => false,
+        ]);
+
+        // Same idea for the publisher line: off by default; a journal whose publisher is not stated turns it on and the
+        // line is left out until a publisher name is entered in the journal settings. Never prints an invented name.
+        $this->addOption('omitPublisherLine', 'FieldOptions', [
+            'label' => __('plugins.themes.worj.option.omitPublisherLine.label'),
+            'description' => __('plugins.themes.worj.option.omitPublisherLine.description'),
+            'options' => [
+                [
+                    'value' => true,
+                    'label' => __('plugins.themes.worj.option.omitPublisherLine.option'),
                 ],
             ],
             'default' => false,

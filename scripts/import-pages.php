@@ -20,12 +20,13 @@
  * scripts/sandbox-content.js; this script covers custom pages only.
  */
 
-$opts = getopt('', ['journal:', 'check', 'force-sandbox', 'ojs::']);
+$opts = getopt('', ['journal:', 'check', 'force-sandbox', 'client-content', 'ojs::']);
 $root = dirname(__DIR__);
 $ojsDir = $opts['ojs'] ?? ($root . '/ojs-core');
 $journalPath = $opts['journal'] ?? null;
 $dryRun = array_key_exists('check', $opts);
 $force = array_key_exists('force-sandbox', $opts);
+$client = array_key_exists('client-content', $opts);
 
 if (!$journalPath) {
     fwrite(STDERR, "usage: php scripts/import-pages.php --journal=PATH [--check] [--force-sandbox] [--ojs=DIR]\n");
@@ -53,7 +54,18 @@ if ($force) {
 }
 
 $manifest = json_decode(file_get_contents($root . '/ojs/content/pages.json'), true);
-$banner = '[PLACEHOLDER: replace with client-approved text]';
+// a page is still a placeholder (safe to replace) while it carries the generic banner or the pending banner of the client's own text
+$isPlaceholder = function (string $t): bool {
+    return (bool) preg_match('/\[PLACEHOLDER: (replace with client-approved text|client text)/', $t);
+};
+// with --client-content the client's text (ojs/client-content, received 2026-11-11) replaces the placeholder where the client supplied some
+$overlay = [];
+if ($client) {
+    $cmap = json_decode(file_get_contents($root . '/ojs/client-content/map.json'), true);
+    foreach ($cmap['pages'] as $cp) {
+        $overlay[$cp['id']] = $cp['file'];
+    }
+}
 
 $context = Application::getContextDAO()->getByPath($journalPath);
 if (!$context) {
@@ -71,8 +83,9 @@ foreach ($manifest['pages'] as $page) {
         continue;
     }
     $path = $page['path'];
-    $content = file_get_contents($root . '/ojs/content/' . $page['file']);
-    if (strpos($content, $banner) === false) {
+    $fromClient = isset($overlay[$page['id']]);
+    $content = file_get_contents($root . ($fromClient ? '/ojs/client-content/' . $overlay[$page['id']] : '/ojs/content/' . $page['file']));
+    if (!$isPlaceholder($content)) {
         fwrite(STDERR, "ERROR: {$page['file']} has no placeholder banner; refusing to import it\n");
         exit(2);
     }
@@ -92,17 +105,19 @@ foreach ($manifest['pages'] as $page) {
         continue;
     }
     $stored = (string) $existing->getContent($locale);
-    if (strpos($stored, $banner) === false) {
+    if (!$isPlaceholder($stored)) {
         echo "leave   /$path  (edited by a human: the placeholder banner is gone)\n";
         $counts['edited']++;
         continue;
     }
-    if (!$force) {
+    // the client's text may replace a page that is still a placeholder, without --force-sandbox (a person's edit is never touched)
+    $upgrade = $fromClient && $stored !== $content;
+    if (!$force && !$upgrade) {
         echo "skip    /$path  (exists; create-only)\n";
         $counts['skipped']++;
         continue;
     }
-    echo ($dryRun ? 'would update' : 'update') . "  /$path  (still a placeholder, --force-sandbox)\n";
+    echo ($dryRun ? 'would update' : 'update') . "  /$path  (still a placeholder" . ($fromClient ? ', client text' : ', --force-sandbox') . ")\n";
     if (!$dryRun) {
         $existing->setTitle($page['title'], $locale);
         $existing->setContent($content, $locale);

@@ -73,6 +73,21 @@
 			</div>
 		</header><!-- .worj-header -->
 
+		{if $worjWelcome}
+			<section class="worj-welcome" aria-labelledby="worj-welcome-title">
+				<div class="worj-header__inner">
+					<h2 id="worj-welcome-title">{translate key="plugins.themes.worj.welcome.title"}</h2>
+					<ol>
+						<li>{translate key="plugins.themes.worj.welcome.password"}</li>
+						<li>{translate key="plugins.themes.worj.welcome.profile"}</li>
+						<li>{translate key="plugins.themes.worj.welcome.spam"}</li>
+						{if $worjWelcome == 'editorial'}<li>{translate key="plugins.themes.worj.welcome.editorial"}</li>{/if}
+					</ol>
+					<p><a href="{url page="submissions"}">{translate key="plugins.themes.worj.welcome.dashboard"}</a></p>
+				</div>
+			</section>
+		{/if}
+
 		{* Wrapper for page content and sidebars *}
 		{if $isFullWidth}
 			{assign var=hasSidebar value=0}
