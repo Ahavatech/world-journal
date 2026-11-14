@@ -6,7 +6,8 @@ The plugin is `ojs/plugins/generic/worjAwards`. The client approved the plugin o
 
 1. Build and deploy a release that carries the plugin (`scripts/build-release.sh` copies it).
 2. `scripts/awards-shared.sh` (dry run), then `scripts/awards-shared.sh --apply`: creates the two tables and enables the plugin.
-3. Show the awards pages: `scripts/launch-prep-shared.sh --approve awards,awards-winners --drop-blanks` (dry run first). The pages are held until then.
+3. Put the awards pages back (launch-prep hid them): `scripts/pages-shared.sh --only awards,awards-winners` (dry run), then add `--apply`. The same script refreshes the Author Guidelines page with its new Downloads block while that page still has its pending banner: `scripts/pages-shared.sh --only author-guidelines --apply`.
+4. Approve them when the client confirms: `scripts/launch-prep-shared.sh --approve awards,awards-winners --drop-blanks` (dry run first). Until then they carry the pending banner.
 
 ## Pages
 
