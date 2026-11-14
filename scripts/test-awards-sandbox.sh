@@ -133,4 +133,17 @@ yes "a visitor cannot download the CSV" test "$(curl -s -o /dev/null -w '%{http_
 yes "a judge who is not a manager cannot download the CSV" denied "$j" "awards-manage?export=csv"
 post "$m" awards-manage --data-urlencode "csrfToken=$(tok "$m" awards-manage)" --data-urlencode "action=delete" --data-urlencode "nomination_id=$n2" >/dev/null
 yes "the manager can delete a nomination (and its scores go with it)" bash -c "[ \$(mariadb -N $SANDBOX_DB_NAME -e 'select count(*) from worj_award_nominations where nomination_id=$n2') = 0 ] && [ \$(mariadb -N $SANDBOX_DB_NAME -e 'select count(*) from worj_award_scores where nomination_id=$n2') = 0 ]"
+
+echo "=== putting a held page back (scripts/pages-shared.sh)"
+PS="$root/scripts/pages-shared.sh --local-ojs $core"
+nav() { q "select count(*) from navigation_menu_items where path='$1'"; }
+q "delete from navigation_menu_item_settings where navigation_menu_item_id in (select navigation_menu_item_id from navigation_menu_items where path='awards'); delete from navigation_menu_item_assignments where navigation_menu_item_id in (select navigation_menu_item_id from navigation_menu_items where path='awards'); delete from navigation_menu_items where path='awards'"
+others="$(q "select count(*) from navigation_menu_items")"
+yes "the awards page is gone before" test "$(nav awards)" = 0
+yes "the dry run changes nothing" bash -c "$PS --only awards | grep -q 'would create' && [ \$(mariadb -N $SANDBOX_DB_NAME -e \"select count(*) from navigation_menu_items where path='awards'\") = 0 ]"
+yes "--apply creates the awards page (and only that one)" bash -c "$PS --only awards --apply | grep -q 'create  /awards' && [ \$(mariadb -N $SANDBOX_DB_NAME -e 'select count(*) from navigation_menu_items') = $((others + 1)) ]"
+yes "the page carries the client's text and the nomination link" bash -c "mariadb -N $SANDBOX_DB_NAME -e \"select s.setting_value from navigation_menu_item_settings s join navigation_menu_items i using(navigation_menu_item_id) where i.path='awards' and s.setting_name='content'\" | grep -q 'awards-nominate'"
+q "update navigation_menu_item_settings set setting_value=replace(setting_value,'[PLACEHOLDER: client text','[EDITED') where setting_name='content' and navigation_menu_item_id in (select navigation_menu_item_id from navigation_menu_items where path='awards')"
+yes "a page whose banner is gone (edited or approved) is left alone" bash -c "$PS --only awards --apply | grep -q 'leave'"
+yes "a page id that is not valid is refused" bash -c "! $PS --only 'bad id' 2>/dev/null"
 echo; echo "$pass passed, $fail failed"; [ "$fail" = 0 ]

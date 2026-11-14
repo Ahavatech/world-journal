@@ -13,20 +13,22 @@
  *     is localhost, 127.0.0.1 or ::1.
  *
  * Usage (from the repository root):
- *   php scripts/import-pages.php --journal=worj [--check] [--force-sandbox] [--ojs=ojs-core]
+ *   php scripts/import-pages.php --journal=worj [--check] [--force-sandbox] [--ojs=ojs-core] [--client-content] [--only=id,id]
  *   --check  print what would happen and change nothing
  *
  * Journal settings texts (about, privacy, ...) are handled by
  * scripts/sandbox-content.js; this script covers custom pages only.
  */
 
-$opts = getopt('', ['journal:', 'check', 'force-sandbox', 'client-content', 'ojs::']);
+$opts = getopt('', ['journal:', 'check', 'force-sandbox', 'client-content', 'ojs::', 'only::']);
 $root = dirname(__DIR__);
 $ojsDir = $opts['ojs'] ?? ($root . '/ojs-core');
 $journalPath = $opts['journal'] ?? null;
 $dryRun = array_key_exists('check', $opts);
 $force = array_key_exists('force-sandbox', $opts);
 $client = array_key_exists('client-content', $opts);
+// --only=id,id: touch just these pages (by id in ojs/content/pages.json); without it every page is considered
+$only = isset($opts['only']) && $opts['only'] !== '' ? explode(',', (string) $opts['only']) : null;
 
 if (!$journalPath) {
     fwrite(STDERR, "usage: php scripts/import-pages.php --journal=PATH [--check] [--force-sandbox] [--ojs=DIR]\n");
@@ -79,7 +81,7 @@ $dao = DAORegistry::getDAO('NavigationMenuItemDAO');
 
 $counts = ['created' => 0, 'updated' => 0, 'skipped' => 0, 'edited' => 0];
 foreach ($manifest['pages'] as $page) {
-    if ($page['mechanism'] !== 'custom-page') {
+    if ($page['mechanism'] !== 'custom-page' || ($only !== null && !in_array($page['id'], $only, true))) {
         continue;
     }
     $path = $page['path'];
