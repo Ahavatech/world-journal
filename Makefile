@@ -3,7 +3,7 @@ SHELL := /bin/bash
 THEME := ojs/plugins/themes/worj
 
 # Needs php-fpm8.3, mariadbd and nginx in this sandbox; not part of `make lint` (CI has no FPM or MariaDB).
-.PHONY: infra-test infra-test-nginx infra-test-backup infra-test-reset infra-test-chroot infra-test-day0 infra-test-htaccess infra-test-install infra-test-client infra-test-email infra-test-launch infra-test-accounts
+.PHONY: infra-test infra-test-nginx infra-test-backup infra-test-reset infra-test-chroot infra-test-day0 infra-test-htaccess infra-test-install infra-test-client infra-test-email infra-test-launch infra-test-accounts infra-test-awards
 infra-test:
 	scripts/test-infra-config.sh
 	scripts/test-provision-preflight.sh | tail -1
@@ -59,12 +59,17 @@ infra-test-launch:
 infra-test-accounts:
 	scripts/test-create-accounts-sandbox.sh
 
+# The Research Awards plugin (nominations, scoring, manager, recipients) over HTTP. Needs the sandbox and `make setup`.
+infra-test-awards:
+	scripts/test-awards-sandbox.sh
+
 .PHONY: setup lint eval check-placeholders sandbox-up sandbox-down sandbox-seed check-citation check-pdf check-discovery check-placeholders-url
 
 setup:
 	scripts/fetch-ojs.sh
 	mkdir -p ojs-core/plugins/themes
 	ln -sfn "$(CURDIR)/$(THEME)" ojs-core/plugins/themes/worj
+	ln -sfn "$(CURDIR)/ojs/plugins/generic/worjAwards" ojs-core/plugins/generic/worjAwards
 	# after an OJS pin change this fails until the config template is regenerated and reviewed
 	python3 -I scripts/make-config-template.py --check
 

@@ -42,10 +42,14 @@ rsync -a \
   --exclude=/.eslintrc.cjs --exclude=/.php-cs-fixer.php --exclude=/.prettierignore --exclude=/cypress.config.js \
   --exclude=/cypress.travis.env.json --exclude=/vite.config.js --exclude=/vite.config.frontend.js --exclude=/jsconfig.json \
   --exclude=/phpdoc.dist.xml --exclude=/schemaspy.properties --exclude=/.worj-ojs-version \
-  --exclude=/robots.txt --exclude=/plugins/themes/worj "$ojs/" "$out/public_html/"
+  --exclude=/robots.txt --exclude=/plugins/themes/worj --exclude=/plugins/generic/worjAwards "$ojs/" "$out/public_html/"
 # 2. the theme (a real copy, not the symlink make setup creates)
 mkdir -p "$out/public_html/plugins/themes/worj"
 rsync -a "$theme/" "$out/public_html/plugins/themes/worj/"
+# 2b. the Research Awards plugin (a real copy) and the downloadable templates (served from /downloads/)
+mkdir -p "$out/public_html/plugins/generic/worjAwards" "$out/public_html/downloads"
+rsync -a "$root/ojs/plugins/generic/worjAwards/" "$out/public_html/plugins/generic/worjAwards/"
+rsync -a "$root/ojs/client-content/downloads/" "$out/public_html/downloads/" 2>/dev/null || true
 # 3. rendered .htaccess files, robots.txt and the static error pages
 printf 'HOST=%s\nHSTS_MAX_AGE=%s\nROBOTS_MODE=%s\n' "$host" "$hsts" "$mode" | "$root/scripts/render-htaccess.sh" "$out/public_html" >/dev/null
 # 4. checks on what we are about to hand over

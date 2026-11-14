@@ -1,5 +1,7 @@
 # 04. Research Awards
 
+> **Update 2026-11-14:** the client approved the plugin option (Option B, in a smaller form). It is built; see `docs/AWARDS-HOWTO.md`. The text below is the original plan.
+
 The client wants research awards on the journal site. **This was not in the signed scope**, so the default below is the lightweight option. The heavier option needs a written change request and separate estimate.
 
 ## Option A (default, in-scope): static pages + announcements
