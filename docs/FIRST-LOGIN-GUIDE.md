@@ -2,6 +2,10 @@
 
 For each person's first visit to `https://worldopenresearchjournal.com/worj/login`. Each card takes about five minutes. The administrator sends the matching card (and the message in section 2) when an account is created. The full handbook is `docs/CLIENT-HANDBOOK.md`; the test checklist is `docs/TEST-FLOW-ROLES.md`.
 
+## 0. How the accounts are created (administrator)
+
+`scripts/create-accounts-shared.sh` (dry run first, then `--apply`) creates the Journal editor and Section editor accounts with a random temporary password each. It prints each password once on your screen and stores it nowhere: send it to the person by a different channel than the username. OJS makes every new account change that password at the first login (a change-password page opens before they can enter). For the first 14 days after they register, a "Welcome" box with the steps below shows at the top of the public pages while they are signed in.
+
 ## 1. For everyone, first
 
 1. Open the login page and sign in with the username and temporary password you were given.

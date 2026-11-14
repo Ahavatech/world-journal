@@ -189,3 +189,20 @@
   border-radius: var(--worj-radius);
   color: var(--worj-text);
 }
+
+/* first-login welcome box (signed-in people, first 14 days) */
+.worj-welcome {
+  background: var(--worj-surface, #f3f6fb);
+  border-bottom: 1px solid var(--worj-border, #c9d3e3);
+  padding: 1rem 0;
+}
+
+.worj-welcome h2 {
+  font-size: 1.1rem;
+  margin: 0 0 0.5rem;
+}
+
+.worj-welcome ol {
+  margin: 0 0 0.5rem 1.25rem;
+  padding: 0;
+}
