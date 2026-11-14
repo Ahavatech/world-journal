@@ -76,6 +76,16 @@ q "update journal_settings set setting_value='<ul><li>A checklist item the clien
 LP --drop-default-checklist --apply >"$tmp/cl.txt" 2>&1
 yes "a checklist a person wrote is left alone" bash -c "grep -q 'skip  the submission checklist is not the shipped one' '$tmp/cl.txt' && [ \"\$(mariadb -N '$SANDBOX_DB_NAME' -e \"select setting_value from journal_settings where setting_name='submissionChecklist'\")\" = '<ul><li>A checklist item the client wrote.</li></ul>' ]"
 
+echo "=== submissions open or closed"
+q "update journal_settings set setting_value='1' where setting_name='disableSubmissions'"
+LP --open-submissions --apply >"$tmp/os.txt" 2>&1
+yes "--open-submissions turns Disable Submissions off" bash -c "grep -q '^DONE:  open submissions' '$tmp/os.txt' && [ \"\$(mariadb -N '$SANDBOX_DB_NAME' -e \"select setting_value from journal_settings where setting_name='disableSubmissions'\")\" = 0 ]"
+LP --open-submissions --apply >"$tmp/os2.txt" 2>&1
+yes "...and running it again changes nothing" grep -q 'skip  submissions are already open' "$tmp/os2.txt"
+LP --close-submissions --apply >/dev/null 2>&1
+yes "--close-submissions turns it on" test "$(q "select setting_value from journal_settings where setting_name='disableSubmissions'")" = 1
+LP --open-submissions --apply >/dev/null 2>&1
+
 echo "=== the licence, the ISSN and the publisher decisions"
 LP --licence-from-document --launch-without-issn --launch-without-publisher --apply >"$tmp/li.txt" 2>&1; rc=$?
 yes "applies (exit $rc)" test "$rc" = 0

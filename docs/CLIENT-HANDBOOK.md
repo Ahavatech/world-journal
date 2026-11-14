@@ -39,7 +39,7 @@ Give people **the smallest role they need**. A person can hold several roles. Ad
 - The login page is `https://worldopenresearchjournal.com/worj/login`. Use the **administrator** login only for settings that need it, and a normal editor account for daily work.
 - OJS has **no two-factor login**. Protect accounts with a **long, unique password** kept in a password manager, never shared in a message. Do not use the same password anywhere else.
 - If someone forgets a password, use **Forgot your password** on the login page: a reset link is emailed to their address. If the email does not arrive within a few minutes, look in the spam folder, then ask the administrator to set a new password for them (open the person under **Settings > Users & Roles > Users** and edit the account).
-- **Registering an account sends no email.** This is how the journal is set up now (email validation is off). Someone who registers can log in straight away. If you later switch email validation on, new accounts must click a link in an email first: only do that once you have confirmed your mail reaches inboxes (see section 9).
+- **New accounts must confirm their email address.** After someone registers, the journal emails them a link ("Validate Your Account"); they can log in once they have clicked it. The registration page and the message after registering both tell them the email may be in their **spam folder**. If someone says they never received it, ask them to check spam first, then check their address in Users. This is a deliberate setting (email validation is on); it keeps fake addresses out.
 - Remove or disable accounts of people who leave (Users > the person > *Disable*).
 
 ## 4. The daily work, step by step
@@ -134,7 +134,7 @@ Everything on the public pages is your own text from the document you supplied (
 
 | Problem | What to do |
 |---|---|
-| An author says they received no email | Ask them to check spam; check their address in Users; resend from the submission page; tell the developer the time it was sent |
+| An author says they received no email (including the account confirmation) | Ask them to check spam; check their address in Users; for a submission email resend from the submission page; tell the developer the time it was sent |
 | Nobody can log in | Use *Forgot your password*; if that fails, the developer can reset the administrator password from the server |
 | A page shows old text after you changed it | Add `?x=1` to the web address to bypass the cache, or wait up to an hour |
 | The site shows an error page | Take a screenshot with the address bar and send it to the developer |

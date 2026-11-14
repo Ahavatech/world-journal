@@ -41,6 +41,7 @@ OVERRIDES = {
     ("email", "smtp_auth"): ("@@SMTP_AUTH@@", "tls or ssl, from the mail provider"),
     ("email", "smtp_username"): ("@@SMTP_USERNAME@@", "from the mail provider"),
     ("email", "smtp_password"): ("@@SMTP_PASSWORD@@", "from the mail provider; never committed"),
+    ("email", "require_validation"): ("On", "new accounts must confirm their email address before they can log in (decision of 2026-11-14; the registration page and OJS's own message tell people to check their spam folder). Needs working mail: turn Off only if mail is broken"),
     ("email", "default_envelope_sender"): ("@@SMTP_USERNAME@@", "every message leaves from the mailbox the SMTP login belongs to (the host refuses or rewrites other senders)"),
     ("email", "force_default_envelope_sender"): ("On", "the envelope sender is always the mailbox, never a user's own address"),
     ("email", "force_dmarc_compliant_from"): ("On", "an editor's own address moves to Reply-To and the From header is the mailbox, so mail from a Gmail or other outside address is not spoofed"),

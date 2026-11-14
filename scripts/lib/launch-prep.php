@@ -225,6 +225,18 @@ if (!empty($o['drop_default_checklist'])) {
     }
 }
 
+// ---- 3c2. submissions open or closed (Settings > Workflow > Submission > Disable Submissions)
+if (!empty($o['submissions']) && in_array($o['submissions'], ['open', 'close'], true)) {
+    $want = $o['submissions'] === 'close' ? '1' : '0';
+    if ((string) js($jid, '', 'disableSubmissions') === $want) {
+        say('skip ', 'submissions are already ' . ($want === '1' ? 'closed' : 'open'));
+    } else {
+        act($apply, $want === '1' ? 'close submissions (authors see that the journal is not accepting them)' : 'open submissions', function () use ($jid, $want) {
+            setjs($jid, '', 'disableSubmissions', $want);
+        });
+    }
+}
+
 // ---- 4. the home page summary and the contact name
 if (!empty($o['summary']) && isPlaceholder(js($jid, 'en', 'description'))) {
     $text = (string) $o['summary'];

@@ -85,7 +85,7 @@ Send the temporary password in a separate message or in person, never in the sam
 
 ### Author
 
-1. **Register** at `https://worldopenresearchjournal.com/worj/user/register` (tick the privacy box and the Author role). No email is sent; you can log in straight away.
+1. **Register** at `https://worldopenresearchjournal.com/worj/user/register` (tick the privacy box and the Author role). The journal then emails you a link to confirm your address: click it, then log in. The email can take a few minutes and may be in your **spam folder**.
 2. Read the **Author Guidelines** (menu: About > Submissions) before you start.
 3. Choose **New Submission**, pick the section, and follow the five steps: **Details, Upload Files, Contributors, For the Editors, Review**, then **Submit**.
 4. You receive a confirmation email. Follow your article from your own dashboard: you see only your own submissions.
@@ -102,6 +102,6 @@ Send the temporary password in a separate message or in person, never in the sam
 | Symptom | What to try |
 |---|---|
 | "Invalid username or password" | Check upper and lower case; use **Forgot your password**; ask the administrator to reset it |
-| No email arrives | Look in spam; wait a few minutes (emails are sent by a job that runs every minute); ask the administrator to check your address in Users |
+| No email arrives (including the account confirmation) | Look in spam; wait a few minutes (emails are sent by a job that runs every minute); ask the administrator to check your address in Users |
 | You see less than you expect | The administrator assigns roles and submissions: ask them to check your role |
 | You see more than you should | Tell the administrator at once so the role can be reduced |

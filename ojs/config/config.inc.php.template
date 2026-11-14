@@ -397,7 +397,8 @@ force_dmarc_compliant_from = On
 dmarc_compliant_from_displayname = '%s'
 
 ; If enabled, email addresses must be validated before login is possible.
-require_validation = Off
+; WORJ: new accounts must confirm their email address before they can log in (decision of 2026-11-14; the registration page and OJS's own message tell people to check their spam folder). Needs working mail: turn Off only if mail is broken
+require_validation = On
 
 ; The number of days a user has to validate their account before their access key expires.
 validation_timeout = 14
