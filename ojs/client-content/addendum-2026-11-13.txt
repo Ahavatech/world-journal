@@ -17,3 +17,19 @@ What was applied:
   Licence: the document lists these terms (copy and redistribute, remix and adapt, credit the author, no commercial use, changes indicated), which are the terms of Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0), https://creativecommons.org/licenses/by-nc/4.0/.
   Privacy contact: For privacy questions and requests, write to privacy@worldopenresearchjournal.com.
   The journal's own mailbox aliases were set up by its owner on 2026-11-10.
+
+==========================================================================================================================================
+ADDENDUM 2 (2026-11-14), recorded as given by the person relaying the client (a chat message):
+  "after a few publications we give out best researcher not only sent to the author as certificate but put on the site too"
+  "work on a befitting journal manuscript template also cover letter template and the copyright and publication agreement and put them where they should be"
+  "the author keeps copyright with a non-exclusive licence to the journal what the client wants"
+  "Add nomination form and scoring" (the client's go-ahead for the awards section, with nominations and judges' scoring)
+
+What was applied (these lines are checked as passages for worj-add spans):
+  Award: After a few publications, the journal gives a Best Researcher award. The recipient receives a certificate and is also listed on the journal's website.
+  Nominations: Nominate a researcher for a Research Award.
+  Recipients: See the Research Award recipients.
+  Downloads: Downloads for authors
+  Manuscript template (Word)
+  Cover letter template (Word)
+  Copyright and publication agreement (Word, draft for review)
