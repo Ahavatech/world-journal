@@ -88,7 +88,10 @@ msgid "plugins.themes.worj.welcome.dashboard"
 msgstr "Open my dashboard"
 
 msgid "plugins.themes.worj.galley.preview"
-msgstr "Preview {$label}"
+msgstr "Preview"
 
 msgid "plugins.themes.worj.galley.download"
+msgstr "Download"
+
+msgid "plugins.themes.worj.galley.downloadLabel"
 msgstr "Download {$label}"
