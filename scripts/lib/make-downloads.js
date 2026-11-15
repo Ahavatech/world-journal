@@ -1,4 +1,4 @@
-// Builds the Word templates the journal offers: manuscript, cover letter, copyright and publication agreement (ojs/client-content/downloads/),
+// Builds the Word templates the journal offers: cover letter, copyright and publication agreement (ojs/client-content/downloads/),
 // and the award certificate (ojs/client-content/internal/, not published). Run: NODE_PATH=$(npm root -g) node scripts/lib/make-downloads.js
 // Nothing here states a fact the client has not given: unknown names are blank lines to fill in; the agreement was approved by the client on 2026-11-14 and keeps two blanks for the journal (publisher's legal name, governing law).
 const fs = require('fs');
@@ -19,43 +19,7 @@ const page = { size: { width: 11906, height: 16838 }, margin: { top: 1440, botto
 const out = (dir, name, doc) => Packer.toBuffer(doc).then((b) => { fs.mkdirSync(path.join(root, dir), { recursive: true }); fs.writeFileSync(path.join(root, dir, name), b); console.log('wrote', dir + '/' + name); });
 const rule = () => new Paragraph({ border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: '000000', space: 1 } }, spacing: { after: 160 }, children: [] });
 
-// ---------------- manuscript template ----------------
-const ms = [
-  new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 60 }, children: [run(JOURNAL.toUpperCase(), { bold: true, size: 28 })] }),
-  new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 200 }, children: [run('Manuscript template', { size: 24 })] }),
-  note('How to use this template. Prepare your manuscript in Microsoft Word (.doc or .docx) in Times New Roman, size 12, in English. Replace every line in square brackets with your own text, keep the headings, and delete these grey instruction boxes before you submit. The journal uses double-blind review: page 1 (the title page) is entered in the submission system and must not be inside the anonymised manuscript file. Upload the title page as a separate file and delete page 1 from the manuscript file.'),
-  head('PART A. TITLE PAGE (upload separately; not in the anonymised file)'),
-  blank('Title of the article'),
-  blank('Running title (short)'),
-  para('Authors, affiliations and ORCID iD (one block per author, in the order they should appear):'),
-  blank('Author 1: full name'), blank('Affiliation (department, institution, city, country)'), blank('Email'), blank('ORCID iD (optional)'),
-  blank('Author 2 (copy this block for each further author)'),
-  blank('Corresponding author (name and email)'),
-  blank('Article type (for example Original Research, Review)'),
-  new Paragraph({ pageBreakBefore: true, spacing: { after: 160 }, children: [run('PART B. ANONYMISED MANUSCRIPT', { bold: true, size: 26 })] }),
-  note('Do not put author names, affiliations or acknowledgements that could identify the authors anywhere in Part B. Refer to your own earlier work in the third person ("Smith (2021) showed…").'),
-  new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 200, after: 200 }, children: [run('[Title of the article]', { bold: true, size: 30 })] }),
-  head('Abstract'),
-  note('One paragraph that states the problem, the method, the main results and the conclusion. Do not cite references in the abstract.'),
-  para('[Abstract text]'),
-  para([run('Keywords: ', { bold: true }), run('[keyword one; keyword two; keyword three; keyword four]')]),
-  head('1. Introduction'), para('[Background, the gap in the literature, and the aim of the study.]'),
-  head('2. Methods'), para('[Design, participants or materials, data collection, analysis, and enough detail for another researcher to repeat the work. State ethics approval here if it applies.]'),
-  head('3. Results'), para('[Report the findings. Number each table and figure and refer to it in the text. Give each table and figure a short caption. Put tables in the text, not as images.]'),
-  head('4. Discussion'), para('[Interpret the results, compare them with earlier work, and state the limitations.]'),
-  head('5. Conclusion'), para('[The main conclusion and its significance, in a few sentences.]'),
-  head('Declarations'),
-  para([run('Author contributions: ', { bold: true }), run('[Say who did what. This can be added after review if it would identify the authors.]')]),
-  para([run('Funding: ', { bold: true }), run('[Name the funder and grant number, or write "None".]')]),
-  para([run('Conflicts of interest: ', { bold: true }), run('[State any, or write "The authors declare no conflict of interest."]')]),
-  para([run('Ethics approval: ', { bold: true }), run('[Name the approving body and reference, or write "Not applicable".]')]),
-  para([run('Data availability: ', { bold: true }), run('[Say where the data can be found, or why they cannot be shared.]')]),
-  para([run('Acknowledgements: ', { bold: true }), run('[Add after review if it would identify the authors.]')]),
-  head('References'),
-  note('Use one consistent reference style throughout. Every reference cited in the text must be listed here, and every listed reference must be cited. Give a DOI or web address where one exists.'),
-  para('[1] Author, A. A., & Author, B. B. (Year). Title of the article. Journal Name, volume(issue), pages. https://doi.org/...'),
-];
-const manuscript = new Document({ creator: JOURNAL, title: 'Manuscript template', styles, sections: [{ properties: { page }, footers: footer('manuscript template'), children: ms }] });
+// The manuscript template is NOT built here: it is the journal's own formatted layout made empty by scripts/lib/make-manuscript-template.py.
 
 // ---------------- cover letter ----------------
 const cl = [
@@ -122,7 +86,6 @@ const cert = new Document({ creator: JOURNAL, title: 'Research Award certificate
   ] }] });
 
 Promise.all([
-  out('ojs/client-content/downloads', 'WORJ-Manuscript-Template.docx', manuscript),
   out('ojs/client-content/downloads', 'WORJ-Cover-Letter-Template.docx', cover),
   out('ojs/client-content/downloads', 'WORJ-Copyright-and-Publication-Agreement.docx', agreement),
   out('ojs/client-content/internal', 'WORJ-Award-Certificate-Template.docx', cert),
