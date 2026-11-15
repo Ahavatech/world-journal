@@ -62,6 +62,9 @@ class WorjThemePlugin extends \PKP\plugins\ThemePlugin
             return \PKP\plugins\Hook::CONTINUE;
         });
 
+        // downloaded article files are named from the article's own details
+        WorjDownloadName::register();
+
         $this->addScript('worj-nav', 'assets/js/nav.js');
         $this->addScript('worj-forms', 'assets/js/forms.js');
 
