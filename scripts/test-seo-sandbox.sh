@@ -47,6 +47,13 @@ yes "the JSON-LD is valid JSON and a ScholarlyArticle with the headline, author,
 yes "no ISSN or DOI is printed when the journal has none" bash -c "! grep -q '\"issn\"\|\"DOI\"' '$tmp/page.html'"
 yes "each keyword on the page is a link to a search for it" bash -c "[ \$(grep -o 'class=\"worj-keyword\" href=\"[^\"]*search/search?query=' '$tmp/page.html' | wc -l) = 2 ]"
 
+echo "=== a keyword with spaces: the link is encoded once and the search box shows plain words"
+q "update controlled_vocab_entry_settings set setting_value='Digital financial technology' where controlled_vocab_entry_id=3 and setting_name='name'"
+get article/view/1
+kwurl="$(grep -o 'class="worj-keyword" href="[^"]*Digital[^"]*"' "$tmp/page.html" | sed 's/.*href="//; s/"$//; s/&amp;/\&/g')"
+yes "the link has the spaces encoded once (%20), not twice (%2520)" bash -c "[[ '$kwurl' == *'query=Digital%20financial%20technology' ]] && [[ '$kwurl' != *'%25'* ]]"
+yes "the search page opened from it shows the words with plain spaces in the search box" bash -c "curl -s --noproxy '*' '$kwurl' | grep -q 'name=\"query\" value=\"Digital financial technology\"'"
+
 echo "=== an ISSN, once there is one"
 q "insert into journal_settings (journal_id, locale, setting_name, setting_value) values (1, '', 'onlineIssn', '1234-5678') on duplicate key update setting_value='1234-5678'"
 get article/view/1
