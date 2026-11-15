@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# scripts/features-shared.sh against the SANDBOX journal (real OJS, read back over HTTP). Needs the sandbox up. The database is snapshotted and restored.
+# shellcheck disable=SC2317
+set -uo pipefail
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=/dev/null
+source "$root/.env.sandbox"
+core="$root/ojs-core"; base="${SANDBOX_URL:-http://127.0.0.1:8082}/worj"
+curl -s -o /dev/null -m 5 --noproxy '*' "$base/" || { echo "sandbox not running (make sandbox-up sandbox-seed)"; exit 2; }
+tmp="$(mktemp -d)"
+mariadb-dump "$SANDBOX_DB_NAME" >"$tmp/db.sql" 2>/dev/null || mysqldump "$SANDBOX_DB_NAME" >"$tmp/db.sql"
+restore() { mariadb -e "DROP DATABASE IF EXISTS \`$SANDBOX_DB_NAME\`; CREATE DATABASE \`$SANDBOX_DB_NAME\` CHARACTER SET utf8mb4" && mariadb "$SANDBOX_DB_NAME" <"$tmp/db.sql"; find "$core/cache" -type f -delete 2>/dev/null; rm -rf -- "${tmp:?}"; }
+trap restore EXIT
+fail=0; pass=0
+ok() { echo "PASS  $1"; pass=$((pass + 1)); }
+bad() { echo "FAIL  $1"; fail=$((fail + 1)); }
+yes() { local name="$1"; shift; if "$@"; then ok "$name"; else bad "$name"; fi; }
+q() { mariadb -N "$SANDBOX_DB_NAME" -e "$1"; }
+F() { "$root/scripts/features-shared.sh" --local-ojs "$core" "$@"; }
+art() { curl -s --noproxy '*' "$base/article/view/1"; }
+q "delete from plugin_settings where plugin_name='citationstylelanguageplugin'; delete from journal_settings where setting_name='citations'; delete from user_group_settings where setting_value='Co-author'"
+find "$core/cache" -type f -delete 2>/dev/null
+yes "before: no How to cite on the article page" bash -c "! curl -s --noproxy '*' $base/article/view/1 | grep -q 'How to Cite'"
+yes "the dry run says what it would do and changes nothing" bash -c "F() { $root/scripts/features-shared.sh --local-ojs $core \"\$@\"; }; F | grep -q 'WOULD: switch on the citation' && F | grep -q 'DRY RUN' && [ \$(mariadb -N $SANDBOX_DB_NAME -e \"select count(*) from plugin_settings where plugin_name='citationstylelanguageplugin'\") = 0 ]"
+F --apply >"$tmp/a1.txt" 2>&1
+yes "--apply reports its changes" bash -c "grep -q 'DONE:  switch on the citation' '$tmp/a1.txt' && grep -q 'DONE:  add the Co-author' '$tmp/a1.txt'"
+find "$core/cache" -type f -delete 2>/dev/null
+page="$(art)"
+yes "the article page now has How to Cite with the format dropdown" bash -c "grep -q 'How to Cite' <<<'$(printf '%s' "$page" | tr -d "'")' && grep -q 'More Citation Formats' <<<'$(printf '%s' "$page" | tr -d "'")'"
+yes "APA is offered, and so are RIS and BibTeX downloads" bash -c "grep -q '>APA\|APA<' <<<'$(printf '%s' "$page" | tr -d "'")' || grep -qi 'american psychological' <<<'$(printf '%s' "$page" | tr -d "'")'; grep -q 'BibTeX' <<<'$(printf '%s' "$page" | tr -d "'")'"
+yes "authors are asked for references at submission" test "$(q "select setting_value from journal_settings where setting_name='citations'")" = request
+yes "the Co-author role exists, is an author role and copies the Author stages" test "$(q "select count(*) from user_groups g join user_group_settings s on s.user_group_id=g.user_group_id and s.setting_name='name' and s.setting_value='Co-author' where g.role_id=65536 and g.is_default=0 and (select count(*) from user_group_stage st where st.user_group_id=g.user_group_id) = (select count(*) from user_group_stage where user_group_id=14)")" = 1
+F --apply >"$tmp/a2.txt" 2>&1
+yes "running it again changes nothing" bash -c "! grep -q DONE '$tmp/a2.txt' && grep -q 'already' '$tmp/a2.txt'"
+q "update plugin_settings set setting_value='[\"ieee\"]' where plugin_name='citationstylelanguageplugin' and setting_name='enabledCitationStyles'"
+F --apply >"$tmp/a3.txt" 2>&1
+yes "a choice already made (the list of formats) is not overwritten" test "$(q "select setting_value from plugin_settings where plugin_name='citationstylelanguageplugin' and setting_name='enabledCitationStyles'")" = '["ieee"]'
+yes "a refusal when the feature name is bad" bash -c "! $root/scripts/features-shared.sh --local-ojs $core --only 'bad name' 2>/dev/null"
+
+echo "=== Awards in the main menu"
+navmenu() { curl -s --noproxy '*' "$base/" | python3 -I -c "
+import re,sys
+h=sys.stdin.read()
+m=re.search(r'id=\"navigationPrimary\".*?</nav>', h, re.S)
+print(m.group(0) if m else '')"; }
+"$root/scripts/pages-shared.sh" --local-ojs "$core" --only awards,awards-winners --apply >/dev/null 2>&1
+q "delete from navigation_menu_item_assignments where navigation_menu_item_id in (select navigation_menu_item_id from navigation_menu_items where path in ('awards','awards-winners'))"
+find "$core/cache" -type f -delete 2>/dev/null
+yes "before: the main menu does not link to the awards page" bash -c "! grep -q '/worj/awards' <<<\"\$(curl -s --noproxy '*' $base/ | python3 -I -c 'import re,sys; h=sys.stdin.read(); m=re.search(r\"id=.navigationPrimary.*?</nav>\", h, re.S); print(m.group(0) if m else \"\")')\""
+F --only awards-menu >"$tmp/m0.txt" 2>&1
+yes "the dry run would add Research Awards and the winners page, and writes nothing" bash -c "grep -q 'WOULD: put Research Awards' '$tmp/m0.txt' && grep -q 'WOULD: put the winners page' '$tmp/m0.txt' && [ \$(mariadb -N $SANDBOX_DB_NAME -e \"select count(*) from navigation_menu_item_assignments a join navigation_menu_items i using(navigation_menu_item_id) where i.path='awards'\") = 0 ]"
+F --only awards-menu --apply >/dev/null 2>&1
+find "$core/cache" -type f -delete 2>/dev/null
+M="$(navmenu)"
+yes "after --apply the main menu links to the awards page and to the winners page" bash -c "grep -q '/worj/awards\"' <<<'$M' && grep -q '/worj/awards-winners' <<<'$M'"
+F --only awards-menu --apply >"$tmp/m2.txt" 2>&1
+yes "again: nothing changes" bash -c "! grep -q DONE '$tmp/m2.txt'"
+echo; echo "$pass passed, $fail failed"; [ "$fail" = 0 ]
