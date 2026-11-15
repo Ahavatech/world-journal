@@ -86,3 +86,9 @@ msgstr "Editors: your dashboard lists the submissions you manage. Open one to as
 
 msgid "plugins.themes.worj.welcome.dashboard"
 msgstr "Open my dashboard"
+
+msgid "plugins.themes.worj.galley.preview"
+msgstr "Preview {$label}"
+
+msgid "plugins.themes.worj.galley.download"
+msgstr "Download {$label}"
