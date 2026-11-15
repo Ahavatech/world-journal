@@ -101,10 +101,30 @@
   text-decoration: none;
 }
 
+.obj_galley_link_download {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  margin-inline-start: var(--worj-space-2);
+  padding: 0.5rem var(--worj-space-3);
+  border: 2px solid var(--worj-primary);
+  border-radius: var(--worj-radius);
+  background: var(--worj-primary);
+  color: var(--worj-bg);
+  font-weight: 600;
+  text-decoration: none;
+}
+
 .obj_galley_link:hover,
 .obj_galley_link:focus {
   background: var(--worj-surface);
   color: var(--worj-primary-dark);
+}
+
+.obj_galley_link_download:hover,
+.obj_galley_link_download:focus {
+  background: var(--worj-primary-dark);
+  color: var(--worj-bg);
 }
 
 /* issue archive */
