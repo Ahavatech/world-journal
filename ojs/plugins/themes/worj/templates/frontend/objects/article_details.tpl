@@ -176,7 +176,7 @@
 				</h2>
 				<span class="value">
 					{foreach name="keywords" from=$publication->getLocalizedData('keywords') item="keyword"}
-						<a class="worj-keyword" href="{url page="search" op="search" query=$keyword.name|escape:"url"}">{$keyword.name|escape}</a>{if !$smarty.foreach.keywords.last}{translate key="common.commaListSeparator"}{/if}
+						<a class="worj-keyword" href="{url page="search" op="search" query=$keyword.name}">{$keyword.name|escape}</a>{if !$smarty.foreach.keywords.last}{translate key="common.commaListSeparator"}{/if}
 					{/foreach}
 				</span>
 			</section>
