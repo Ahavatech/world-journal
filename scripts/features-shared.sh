@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Switch on small journal features on the shared host: How to cite (format dropdown), references at submission, a Co-author role, Awards in the menu.
+# Switch on small journal features on the shared host: How to cite (format dropdown), references at submission, a Co-author role, Awards in the menu, the Downloads block on the Author Guidelines.
 #
-#   scripts/features-shared.sh [--only citations,coauthor,awards-menu] [--apply] [--env FILE] [--local-ojs DIR  (tests)]
+#   scripts/features-shared.sh [--only citations,coauthor,awards-menu,downloads] [--apply] [--env FILE] [--local-ojs DIR  (tests)]
 #
 # Dry run unless --apply. Each feature is safe to repeat and never overwrites a choice a person made. UNVERIFIED (not run on the host) until you run it.
 set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-envfile="$root/.env.shared"; only="citations,coauthor,awards-menu"; apply=false; localojs=""
+envfile="$root/.env.shared"; only="citations,coauthor,awards-menu,downloads"; apply=false; localojs=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --only) only="${2:-}"; shift 2 ;;

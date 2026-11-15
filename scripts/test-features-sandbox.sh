@@ -16,7 +16,8 @@ ok() { echo "PASS  $1"; pass=$((pass + 1)); }
 bad() { echo "FAIL  $1"; fail=$((fail + 1)); }
 yes() { local name="$1"; shift; if "$@"; then ok "$name"; else bad "$name"; fi; }
 q() { mariadb -N "$SANDBOX_DB_NAME" -e "$1"; }
-F() { "$root/scripts/features-shared.sh" --local-ojs "$core" "$@"; }
+# the script runs as root here and the web server as www-data: let the cache stay writable for both (the host has one user)
+F() { "$root/scripts/features-shared.sh" --local-ojs "$core" "$@"; local rc=$?; chmod -R a+rwX "$core/cache" 2>/dev/null; return $rc; }
 art() { curl -s --noproxy '*' "$base/article/view/1"; }
 q "delete from plugin_settings where plugin_name='citationstylelanguageplugin'; delete from journal_settings where setting_name='citations'; delete from user_group_settings where setting_value='Co-author'"
 find "$core/cache" -type f -delete 2>/dev/null
@@ -55,4 +56,17 @@ M="$(navmenu)"
 yes "after --apply the main menu links to the awards page and to the winners page" bash -c "grep -q '/worj/awards\"' <<<'$M' && grep -q '/worj/awards-winners' <<<'$M'"
 F --only awards-menu --apply >"$tmp/m2.txt" 2>&1
 yes "again: nothing changes" bash -c "! grep -q DONE '$tmp/m2.txt'"
+
+echo "=== the Downloads block on an approved Author Guidelines page"
+ag() { q "select setting_value from journal_settings where journal_id=1 and locale='en' and setting_name='authorGuidelines'"; }
+q "update journal_settings set setting_value='<h2>Author Guidelines</h2><p>Approved text without the banner.</p>' where journal_id=1 and locale='en' and setting_name='authorGuidelines'"
+F --only downloads >"$tmp/d0.txt" 2>&1
+yes "the dry run says it would add the block and changes nothing" bash -c "grep -q 'WOULD: add the Downloads' '$tmp/d0.txt' && ! mariadb -N $SANDBOX_DB_NAME -e \"select setting_value from journal_settings where journal_id=1 and setting_name='authorGuidelines'\" | grep -q Downloads"
+F --only downloads --apply >"$tmp/d1.txt" 2>&1
+yes "--apply appends the block and keeps the approved text, and the cache clears without a fatal error" bash -c "grep -q 'DONE:  add the Downloads' '$tmp/d1.txt' && ! grep -qi 'fatal' '$tmp/d1.txt' && mariadb -N $SANDBOX_DB_NAME -e \"select setting_value from journal_settings where journal_id=1 and setting_name='authorGuidelines'\" | grep -q 'Approved text without the banner' && mariadb -N $SANDBOX_DB_NAME -e \"select setting_value from journal_settings where journal_id=1 and setting_name='authorGuidelines'\" | grep -q 'Agreement.docx'"
+F --only downloads --apply >"$tmp/d2.txt" 2>&1
+yes "again: nothing changes" bash -c "! grep -q DONE '$tmp/d2.txt' && grep -q 'already have the Downloads' '$tmp/d2.txt'"
+q "update journal_settings set setting_value=replace(setting_value,'Agreement.docx\">Copyright and publication agreement (Word)','Agreement-DRAFT.docx\">Copyright and publication agreement (Word, draft for review)') where journal_id=1 and locale='en' and setting_name='authorGuidelines'"
+F --only downloads --apply >/dev/null 2>&1
+yes "a link to the old DRAFT agreement file is repointed to the current file" bash -c "v=\$(mariadb -N $SANDBOX_DB_NAME -e \"select setting_value from journal_settings where journal_id=1 and setting_name='authorGuidelines'\"); ! grep -q 'DRAFT' <<<\"\$v\" && grep -q 'Agreement.docx' <<<\"\$v\""
 echo; echo "$pass passed, $fail failed"; [ "$fail" = 0 ]

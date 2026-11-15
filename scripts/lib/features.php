@@ -2,13 +2,25 @@
 // Small journal features, each on its own switch, each safe to repeat. Run from the OJS root, script on stdin, options as base64 JSON:
 //   {"journal":"worj","apply":false,"ops":["citations","coauthor","awards-menu"]}
 // Prints WOULD:/DONE:/skip lines. Nothing here writes a credential or removes anything.
+// a CLI run has no URL: give OJS the one it needs to find the journal (the template cache clearing asks the request for it)
+$_SERVER['SCRIPT_NAME'] = '/index.php';
+$_SERVER['PATH_INFO'] = '/' . (json_decode(base64_decode($argv[1] ?? ''), true)['journal'] ?? '');
+$_SERVER['REQUEST_URI'] = '/index.php' . $_SERVER['PATH_INFO'];
+$_SERVER['HTTP_HOST'] = $_SERVER['HTTP_HOST'] ?? 'localhost';
 require 'tools/bootstrap.php';
 ini_set('display_errors', 'stderr');
 error_reporting(E_ALL & ~E_WARNING & ~E_NOTICE & ~E_DEPRECATED);
 use Illuminate\Support\Facades\DB;
+use APP\core\Application;
+use APP\core\PageRouter;
+use APP\template\TemplateManager;
 use PKP\core\PKPContainer;
 
 $o = json_decode(base64_decode($argv[1] ?? ''), true);
+$request = Application::get()->getRequest();
+$router = new PageRouter();
+$router->setApplication(Application::get());
+$request->setRouter($router);
 $apply = !empty($o['apply']);
 $jid = (int) DB::table('journals')->where('path', $o['journal'] ?? '')->value('journal_id');
 if (!$jid) {
@@ -87,6 +99,29 @@ foreach ($o['ops'] ?? [] as $op) {
             });
         }
     }
+    if ($op === 'downloads') {
+        // the Downloads block (manuscript template, cover letter, copyright agreement) on the Author Guidelines page, which a person may already have approved:
+        // append-only and repeatable; a link to the old DRAFT agreement file is repointed to the current one
+        $key = ['journal_id' => $jid, 'locale' => 'en', 'setting_name' => 'authorGuidelines'];
+        $txt = (string) DB::table('journal_settings')->where($key)->value('setting_value');
+        $block = "\n<h3>Downloads for authors</h3>\n<ul>\n<li><a href=\"/downloads/WORJ-Manuscript-Template.docx\">Manuscript template (Word)</a></li>\n<li><a href=\"/downloads/WORJ-Cover-Letter-Template.docx\">Cover letter template (Word)</a></li>\n<li><a href=\"/downloads/WORJ-Copyright-and-Publication-Agreement.docx\">Copyright and publication agreement (Word)</a></li>\n</ul>\n";
+        $new = $txt;
+        if (strpos($new, 'WORJ-Copyright-and-Publication-Agreement-DRAFT.docx') !== false) {
+            $new = str_replace('WORJ-Copyright-and-Publication-Agreement-DRAFT.docx">Copyright and publication agreement (Word, draft for review)', 'WORJ-Copyright-and-Publication-Agreement.docx">Copyright and publication agreement (Word)', $new);
+        }
+        if (strpos($new, 'WORJ-Manuscript-Template.docx') === false) {
+            if ($txt === '') {
+                echo "skip   the Author Guidelines are empty: nothing to add the Downloads block to\n";
+                continue;
+            }
+            $new = rtrim($new) . $block;
+        }
+        if ($new === $txt) {
+            echo "skip   the Author Guidelines already have the Downloads block\n";
+        } else {
+            act($apply, 'add the Downloads block to the Author Guidelines (append only)', fn () => DB::table('journal_settings')->where($key)->update(['setting_value' => $new]));
+        }
+    }
     if ($op === 'awards-menu') {
         // Research Awards in the main menu: the awards page, with the winners page under it
         $mid = DB::table('navigation_menus')->where(['context_id' => $jid, 'area_name' => 'primary'])->value('navigation_menu_id');
@@ -113,9 +148,14 @@ foreach ($o['ops'] ?? [] as $op) {
     }
 }
 if ($changed) {
-    // what was written must show up at once: OJS caches rendered menus and templates
-    PKPContainer::getInstance()['cache']->store()->flush();
-    $tm = \APP\template\TemplateManager::getManager(\APP\core\Application::get()->getRequest());
-    $tm->clearTemplateCache();
-    $tm->clearCssCache();
+    // what was written must show up at once: OJS caches rendered menus and templates. A cache problem must not hide that the writes happened.
+    try {
+        PKPContainer::getInstance()['cache']->store()->flush();
+        $tm = TemplateManager::getManager($request);
+        $tm->clearTemplateCache();
+        $tm->clearCssCache();
+        echo "DONE:  cleared the caches\n";
+    } catch (\Throwable $e) {
+        echo "NOTE:  the changes are saved, but the caches could not be cleared here (" . $e->getMessage() . "). Clear them in Administration > Clear Data Caches and Clear Template Cache.\n";
+    }
 }
