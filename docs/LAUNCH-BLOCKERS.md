@@ -2,12 +2,45 @@
 
 > **Reworked for shared hosting (2026-11-10).** Decision **D-VPS is resolved**: there is no VPS (the client bought shared hosting, `docs/DEPLOY-SHARED.md`) and no staging site; the closed main domain is the rehearsal. Rows below about the firewall, SSH hardening, certbot, Cloudflare and the reboot step were replaced by their shared-hosting versions; four new rows (A35 to A38) hold the open items the change created. Everything about the host is `UNVERIFIED (not run on the host)`.
 
-Every human step that nobody can do from the repository, in one table per kind, so the handover does not depend on anyone's memory. **Nothing in this file is done.** A row is ticked only by the person who did it, with a date and a name, and only after the "how we know" check passed.
+Every human step that nobody can do from the repository, in one table per kind, so the handover does not depend on anyone's memory. **The status block below lists what is done as of 2026-11-15.** A row is ticked only by the person who did it, with a date and a name, and only after the "how we know" check passed.
 
 - **Owner:** *client*, *developer*, *operator* (whoever runs the server: normally the developer unless the client names someone else), or a **named third party** (for example Crossref support, a sponsor, the hosting provider, the mail provider).
 - **Named person:** left empty for the client or developer to fill. This file never invents a name.
 - **Gates the launch date:** **Yes** means launch cannot happen until the row is done. **No (can follow)** means it can be done after launch.
 - **Documented in:** where the details are. The gate numbers refer to `docs/LAUNCH-GATES.md`; the DOI and indexing items refer to `docs/DOI-SETUP.md` and `docs/INDEXING-READINESS.md`.
+
+## Status on 2026-11-15 (read this first; the tables below keep their original wording)
+
+The client is launching **without an ISSN and without DOIs**. Both are being applied for and are added after launch (rows A01, C01 and DOI-SETUP). The footer leaves the ISSN and publisher lines out until they exist, and the page metadata prints no ISSN or DOI until one is set.
+
+### Done since the rows were written
+
+| Row | What | Evidence |
+|---|---|---|
+| A05, A07 | Policy pages and licence confirmed by the client (CC BY-NC 4.0); the copyright and publication agreement approved | Addendum 3 in `ojs/client-content/addendum-2026-11-13.txt`; pending banners already gone on the host |
+| A13, A14, A15, A19, A20 | Hosting, SSH, DNS, mailbox, HTTPS | working on the host |
+| A21 | The runbook run on the closed site | install, deploy, seed, accounts, awards and features all run on the host |
+| A28 | SPF, DKIM and DMARC pass; validation email works | Gmail "Show original" 2026-11-14 |
+| A04, A06 | Editorial team accounts, role mailboxes | Prof. John, Dr. Williams; editorial@, support@, privacy@, doi@, admin@ |
+
+### Still blocks launch
+
+| Row | What | Owner | State |
+|---|---|---|---|
+| A33 | A signed change request for the work added after the original scope (awards plugin, templates, features) | client and developer | not signed, as far as the repository knows |
+| A03 | Legal publisher name (also two blanks in the agreement) | client | not given: the footer line stays out |
+| A10 | The date submissions open | client | not given (submissions are currently open) |
+| A18, A34 | Who receives the administrator account; the developer's own account removed or transferred | client, developer | not named |
+| A02 | Do article pages need first and last page numbers (`citation_firstpage`, `citation_lastpage`)? | client | not decided |
+| A09 | A client reviewer reads every enabled email template | client | not done |
+| A29 | The QA script run by a person | client tester | in progress |
+| A32 | Support contact and the date the 14 days start | client, developer | not set |
+| A38 | Who runs a pulled backup and where the age key lives | client decides | decided: Hostinger's daily backups; the key custody is not written down |
+| A22 | A real backup restored with the client's key | operator | not done; the plan was to do it just after launch: a decision for the developer |
+| A25, A26, A27 | Launch checks and the forced first-password change | developer | run on launch day |
+| B01-B07 | Placeholders at zero, launch-day commit, every suite on the release commit, secret scan, repository delivery, token revocation, no unsupported claims | developer | launch day |
+
+**Can follow launch:** Crossref membership and DOIs (C01), the ISSN, indexer applications (C02), Search Console (A31, C03, with the steps in `docs/SEO.md`), HSTS stages (C05), `open_basedir` (C06), the scheduler's first-day check (A24), the plan check (C07), MariaDB status (A37), the mailbox SMTP limit and price (A36).
 
 **At a glance:** 66 rows. **41 gate the launch date** and **25 can be done afterwards**. Of the outside-the-repository items in section A, 32 gate the launch date and 3 can follow. Section B is the developer's repository work (7 gating); section C (8) can wait; section D lists 16 research tasks, each with a source to read and an owner.
 

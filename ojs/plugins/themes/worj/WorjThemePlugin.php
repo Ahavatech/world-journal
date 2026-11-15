@@ -53,6 +53,12 @@ class WorjThemePlugin extends \PKP\plugins\ThemePlugin
                 $welcome = $editorial ? 'editorial' : 'member';
             }
             $args[0]->assign('worjWelcome', $welcome);
+            // search engine and social metadata (canonical, description, Open Graph, JSON-LD); a failure here must never break a page
+            try {
+                WorjSeo::inject($args[0], \APP\core\Application::get()->getRequest());
+            } catch (\Throwable $e) {
+                error_log('worj SEO metadata skipped: ' . $e->getMessage());
+            }
             return \PKP\plugins\Hook::CONTINUE;
         });
 
