@@ -74,7 +74,7 @@
 		</span>
 	{/if}
 
-	{translate key="plugins.themes.worj.galley.preview" label=$galley->getGalleyLabel()|escape}
+	{translate key="plugins.themes.worj.galley.preview"}
 
 	{if $restricted && $purchaseFee && $purchaseCurrency}
 		<span class="purchase_cost">
@@ -83,5 +83,5 @@
 	{/if}
 </a>
 {if !$restricted}
-	<a class="obj_galley_link_download {$type|escape}" href="{if $currentJournal}{url router=PKP\core\PKPApplication::ROUTE_PAGE journal=$currentJournal->getPath() page=$page op="download" path=$path}{else}{url router=PKP\core\PKPApplication::ROUTE_PAGE page=$page op="download" path=$path}{/if}">{translate key="plugins.themes.worj.galley.download" label=$galley->getGalleyLabel()|escape}</a>
+	<a class="obj_galley_link_download {$type|escape}" href="{if $currentJournal}{url router=PKP\core\PKPApplication::ROUTE_PAGE journal=$currentJournal->getPath() page=$page op="download" path=$path}{else}{url router=PKP\core\PKPApplication::ROUTE_PAGE page=$page op="download" path=$path}{/if}" aria-label="{translate key="plugins.themes.worj.galley.downloadLabel" label=$galley->getGalleyLabel()|escape}">{translate key="plugins.themes.worj.galley.download"}</a>
 {/if}
