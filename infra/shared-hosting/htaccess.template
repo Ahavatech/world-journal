@@ -25,6 +25,12 @@ SetEnvIf Request_URI "\$\$\$call\$\$\$" NO_CSP=1
 Header always set Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'self'; form-action 'self'; base-uri 'self'; object-src 'none'" env=!NO_CSP
 </IfModule>
 
+# --- the PDF preview (pdf.js) is made of .mjs module scripts. A browser refuses a module that is not served as JavaScript, which leaves
+#     the preview black and empty (seen on the sandbox, 2026-11-16: .mjs came back as text/plain). ---
+<IfModule mod_mime.c>
+AddType text/javascript .mjs
+</IfModule>
+
 # --- static assets: ONE hour for all of them (clients revalidate with the ETag afterwards). OJS appends ?v=<OJS version>, never the
 #     theme version, to theme CSS and JS, and theme images carry no version, so a theme update keeps its URL. LiteSpeed on the host
 #     ignored a more specific rule in plugins/themes/.htaccess (Day-0 run, 2026-11-10), so there is one rule for everything. ---

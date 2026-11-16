@@ -61,6 +61,9 @@ eq "the Day-0 kit is gone (/worj-day0/probe.php)" "$(status "$base/worj-day0/pro
 # headers
 h="$(hdr "$base/$journal/")"
 for x in "Strict-Transport-Security: max-age=" "X-Content-Type-Options: nosniff" "X-Frame-Options: SAMEORIGIN" "Referrer-Policy: strict-origin-when-cross-origin" "Permissions-Policy:" "Content-Security-Policy-Report-Only:"; do has "home page sends $x" "$h" "$x"; done
+# the PDF preview's scripts are .mjs modules: a browser runs them only when they are served as JavaScript
+mjs_h="$(hdr "$base/plugins/generic/pdfJsViewer/pdf.js/build/pdf.worker.mjs")"
+has "the PDF preview's .mjs scripts are served as JavaScript" "$mjs_h" "javascript"
 # the host itself adds `Content-Security-Policy: upgrade-insecure-requests` (harmless: it only upgrades http links); anything else enforcing is a failure
 if grep -iE '^Content-Security-Policy:' <<<"$h" | grep -viE '^Content-Security-Policy:[[:space:]]*upgrade-insecure-requests[[:space:]]*;?[[:space:]]*$' | grep -q .; then bad "home page sends an ENFORCING Content-Security-Policy"; else ok "home page sends no enforcing CSP (the host's upgrade-insecure-requests is allowed)"; fi
 # Our report-only policy is meant to skip the backend and the API. LiteSpeed ignored that exemption on the real host (Day-0 t07), so there
