@@ -39,6 +39,8 @@ ExpiresActive On
 # One line per type (ExpiresByType): on the host a FilesMatch + ExpiresDefault rule was ignored and the host's own 7-day default won,
 # while ExpiresByType worked (Day-0 t09 and the live check, 2026-11-11).
 ExpiresByType text/css "access plus 1 hour"
+# robots.txt (text/plain) must not sit in the host CDN for days: a closed copy kept after launch would tell Google not to crawl (seen 2026-11-16)
+ExpiresByType text/plain "access plus 1 hour"
 ExpiresByType text/javascript "access plus 1 hour"
 ExpiresByType application/javascript "access plus 1 hour"
 ExpiresByType application/x-javascript "access plus 1 hour"

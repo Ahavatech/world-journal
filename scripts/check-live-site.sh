@@ -61,6 +61,9 @@ eq "the Day-0 kit is gone (/worj-day0/probe.php)" "$(status "$base/worj-day0/pro
 # headers
 h="$(hdr "$base/$journal/")"
 for x in "Strict-Transport-Security: max-age=" "X-Content-Type-Options: nosniff" "X-Frame-Options: SAMEORIGIN" "Referrer-Policy: strict-origin-when-cross-origin" "Permissions-Policy:" "Content-Security-Policy-Report-Only:"; do has "home page sends $x" "$h" "$x"; done
+# robots.txt must not be cached for long (a stale closed copy in the CDN keeps crawlers out)
+rb_h="$(hdr "$base/robots.txt?x=$RANDOM")"
+if grep -qiE "^cache-control:.*max-age=([0-9]{1,4})([^0-9]|$)" <<<"$rb_h"; then ok "robots.txt is cached for under three hours at most"; else warn "robots.txt has no short cache lifetime (a stale copy could stay in the CDN)"; fi
 # the PDF preview's scripts are .mjs modules: a browser runs them only when they are served as JavaScript
 mjs_h="$(hdr "$base/plugins/generic/pdfJsViewer/pdf.js/build/pdf.worker.mjs")"
 has "the PDF preview's .mjs scripts are served as JavaScript" "$mjs_h" "javascript"

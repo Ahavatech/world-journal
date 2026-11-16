@@ -172,6 +172,7 @@ yes "...as JavaScript, so the browser will run it" has "$mjs_h" "javascript"
 echo "=== discovery: production robots.txt, sitemap and OAI-PMH"
 rb_h="$(hdr "$S/robots.txt")"; rb_body="$(cu "$S/robots.txt")"
 yes "robots.txt is served (200, text/plain)" has "$rb_h" "content-type: text/plain"
+yes "robots.txt is cached for one hour at most (a stale closed copy in the CDN would keep Google out)" has "$rb_h" "max-age=3600"
 yes "production robots.txt names the sitemap index" has "$rb_body" "Sitemap: https://$H/index/sitemap"
 yes "production robots.txt does not close the site" lacksline "$rb_body" "Disallow: /"
 yes "production sends no X-Robots-Tag" lacks "$home_h" "x-robots-tag"
@@ -285,6 +286,8 @@ mutate "one-hour cache for CSS" 'ExpiresByType text/css "access plus 1 hour"' p_
 mutate "theme CSS cache" 'ExpiresByType text/css "access plus 1 hour"' p_theme1h
 p_logo1h() { has "$(hdr "$S/plugins/themes/worj/assets/img/logo-header.jpg")" "max-age=3600"; }
 mutate "one-hour cache for images" 'ExpiresByType image/jpeg "access plus 1 hour"' p_logo1h
+p_robotscache() { has "$(hdr "$S/robots.txt")" "max-age=3600"; }
+mutate "one-hour cache for robots.txt" 'ExpiresByType text/plain "access plus 1 hour"' p_robotscache
 mutate "static 404 page" 'ErrorDocument 404' p_404page
 # no mutation proof for the .mjs rule: Apache already types .mjs as JavaScript, so the stand-in cannot show the rule doing work (LiteSpeed on the host does not; scripts/check-live-site.sh checks it there)
 
