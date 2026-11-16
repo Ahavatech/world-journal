@@ -6,7 +6,7 @@
 METADATA.json (the authors' details are personal data: never commit it):
   {"issue": {"volume": 1, "number": "1", "year": 2026, "title": "...", "date_published": "YYYY-MM-DD"},
    "section": {"abbrev": "ART", "title": "Articles"}, "uploader": "administrator", "licence_url": "https://...",
-   "articles": [{"title": "...", "abstract": "...", "keywords": ["..."], "pages": "1-12", "pdf": "article-1.pdf",
+   "articles": [{"title": "...", "abstract": "...", "keywords": ["..."], "pages": "1-12", "pdf": "article-1.pdf", "date_published": "YYYY-MM-DD (optional)",
                  "authors": [{"given": "...", "family": "...", "affiliation": "...", "email": "..."}], "references": ["..."]}]}
 Nothing is invented: a field missing from the metadata is left out of the XML. The result is checked against OJS's own schema when
 ojs-core/ is present (xmllint). Import it with scripts/import-issue-shared.sh (the host) or `php tools/importExport.php NativeImportExportPlugin import FILE JOURNAL USER`."""
@@ -29,6 +29,7 @@ for k in ("volume", "number", "year", "title", "date_published"):
 arts, fid, aid = [], 0, 100
 for n, a in enumerate(meta["articles"], 1):
     fid += 1
+    adate = a.get("date_published", date)      # an article may carry its own publication date; the issue's date is the default
     pdf = pdf_dir / a["pdf"]
     if not pdf.is_file() or pdf.read_bytes()[:4] != b"%PDF":
         sys.exit(f"{pdf} is not a PDF file")
@@ -48,15 +49,15 @@ for n, a in enumerate(meta["articles"], 1):
     lic = f"<licenseUrl>{esc(meta['licence_url'])}</licenseUrl>" if meta.get("licence_url") else ""
     arts.append(f"""
     <article xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://pkp.sfu.ca"
-        date_submitted="{date}" stage="production" locale="en" status="3" current_publication_id="{fid}">
+        date_submitted="{adate}" stage="production" locale="en" status="3" current_publication_id="{fid}">
       <id type="internal" advice="ignore">{fid}</id>
       <submission_file stage="proof" id="{fid}" file_id="{fid}" genre="Article Text" viewable="true"
-          date_created="{date}" uploader="{esc(uploader)}" xsi:schemaLocation="http://pkp.sfu.ca native.xsd">
+          date_created="{adate}" uploader="{esc(uploader)}" xsi:schemaLocation="http://pkp.sfu.ca native.xsd">
         <name locale="en">{esc(a['title'])}</name>
         <file id="{fid}" filesize="{pdf.stat().st_size}" extension="pdf"><embed encoding="base64">{data}</embed></file>
       </submission_file>
       <publication xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1" status="3"
-          date_published="{date}" section_ref="{esc(sec['abbrev'])}" seq="{n}" access_status="0"
+          date_published="{adate}" section_ref="{esc(sec['abbrev'])}" seq="{n}" access_status="0"
           xsi:schemaLocation="http://pkp.sfu.ca native.xsd">
         <id type="internal" advice="ignore">{fid}</id>
         <title locale="en">{esc(a['title'])}</title>
