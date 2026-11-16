@@ -164,6 +164,11 @@ yes "an unknown OJS route keeps status 404 (got $nf_status; OJS prints its own b
 api_h="$(hdr "$S/worj/api/v1/nonexistent")"
 yes "API 404 is still JSON" has "$api_h" "application/json"
 
+echo "=== the PDF preview's module scripts"
+mjs_h="$(hdr "$S/plugins/generic/pdfJsViewer/pdf.js/build/pdf.worker.mjs")"
+yes "pdf.worker.mjs is served (200)" has "$mjs_h" " 200"
+yes "...as JavaScript, so the browser will run it" has "$mjs_h" "javascript"
+
 echo "=== discovery: production robots.txt, sitemap and OAI-PMH"
 rb_h="$(hdr "$S/robots.txt")"; rb_body="$(cu "$S/robots.txt")"
 yes "robots.txt is served (200, text/plain)" has "$rb_h" "content-type: text/plain"
@@ -281,6 +286,7 @@ mutate "theme CSS cache" 'ExpiresByType text/css "access plus 1 hour"' p_theme1h
 p_logo1h() { has "$(hdr "$S/plugins/themes/worj/assets/img/logo-header.jpg")" "max-age=3600"; }
 mutate "one-hour cache for images" 'ExpiresByType image/jpeg "access plus 1 hour"' p_logo1h
 mutate "static 404 page" 'ErrorDocument 404' p_404page
+# no mutation proof for the .mjs rule: Apache already types .mjs as JavaScript, so the stand-in cannot show the rule doing work (LiteSpeed on the host does not; scripts/check-live-site.sh checks it there)
 
 if [ "$fail" = 0 ]; then echo "ALL PASS"; else echo "$fail FAILED"; fi
 exit "$fail"
