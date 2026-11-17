@@ -29,7 +29,7 @@ cat >"$tmp/meta.json" <<JSON
 {"issue":{"volume":7,"number":"2","year":2031,"title":"Test Issue & <Co>","date_published":"2031-03-04"},
  "section":{"abbrev":"ART","title":"Articles"},"uploader":"$SANDBOX_ADMIN_USER","licence_url":"https://creativecommons.org/licenses/by-nc/4.0/",
  "articles":[
-  {"title":"Fake Study A & B <i>of</i> Things","abstract":"Fake abstract one. It has \"quotes\" & an ampersand.","keywords":["alpha beta","gamma"],"pages":"5-9","pdf":"a1.pdf",
+  {"title":"Fake Study A & B <i>of</i> Things","abstract":"Fake abstract one. It has \"quotes\" & an ampersand.","keywords":["alpha beta","gamma"],"pages":"5-9","pdf":"a1.pdf","date_published":"2029-08-20",
    "authors":[{"given":"Test","family":"Zeta-Ünïcode","affiliation":"Test Institute","email":"test.one@example.invalid"},{"given":"Second","family":"Writer","email":"test.two@example.invalid"}],
    "references":["Doe, J. (2020). A fake reference. Journal of Fakes, 1(1), 1-2."]},
   {"title":"Fake Study B","abstract":"Fake abstract two.","keywords":["delta"],"pages":"10-14","pdf":"a2.pdf",
@@ -55,6 +55,7 @@ iid="$(q "select issue_id from issues where volume=7 and number='2' and year=203
 sid="$(q "select s.submission_id from submissions s join publication_settings p on p.publication_id=s.current_publication_id and p.setting_name='title' where p.setting_value like 'Fake Study A%'")"
 curl -s --noproxy '*' "$base/article/view/$sid" >"$tmp/art.html"
 yes "the article is published in the issue, with the pages as first and last page" bash -c "grep -q 'citation_firstpage\" content=\"5\"' '$tmp/art.html' && grep -q 'citation_lastpage\" content=\"9\"' '$tmp/art.html' && grep -q 'citation_volume\" content=\"7\"' '$tmp/art.html'"
+yes "the article keeps its own publication date (2029-08-20, also in its structured data); the cited year is the issue's (2031), OJS's rule when they differ" bash -c "grep -q '\"datePublished\":\"2029-08-20\"' '$tmp/art.html' && grep -q 'citation_date\" content=\"2031\"' '$tmp/art.html' && [ \$(mariadb -N $SANDBOX_DB_NAME -e \"select count(*) from publications where date_published like '2029-08-20%'\") = 1 ]"
 yes "both authors, with their order, and the keywords" bash -c "[ \$(grep -c 'name=\"citation_author\"' '$tmp/art.html') = 2 ] && grep -q 'Zeta' '$tmp/art.html' && [ \$(grep -c 'name=\"citation_keywords\"' '$tmp/art.html') = 2 ]"
 yes "the reference list is on the page" grep -q 'A fake reference' "$tmp/art.html"
 yes "Preview and Download are there" bash -c "grep -q 'obj_galley_link_download' '$tmp/art.html' && grep -qE '^[[:space:]]*Preview[[:space:]]*$' '$tmp/art.html'"
