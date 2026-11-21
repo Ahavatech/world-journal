@@ -27,23 +27,29 @@ summary="$(python3 -I - "$xml" <<'PY'
 import sys, xml.etree.ElementTree as ET
 ns = {"p": "http://pkp.sfu.ca"}
 r = ET.parse(sys.argv[1]).getroot()
-i = r.find("p:issue", ns)
-idn = i.find("p:issue_identification", ns)
+tag = r.tag.split("}")[-1]
+if tag == "issues":
+    i = r.find("p:issue", ns)
+    idn = i.find("p:issue_identification", ns)
+    arts = i.findall("p:articles/p:article", ns)
+    kind = "issue"
+else:
+    arts = r.findall("p:article", ns)
+    idn = arts[0].find("p:publication/p:issue_identification", ns)
+    kind = "articles"
 v, n, y = (idn.findtext(f"p:{k}", namespaces=ns) for k in ("volume", "number", "year"))
 t = idn.findtext("p:title", namespaces=ns)
-arts = i.findall("p:articles/p:article", ns)
-print(f"{v}|{n}|{y}|{t}|{len(arts)}")
+print(f"{kind}|{v}|{n}|{y}|{t}|{len(arts)}")
 for a in arts:
     print("A|" + a.find("p:publication/p:title", ns).text)
 PY
 )" || die "could not read the issue from the file"
-head="$(printf '%s\n' "$summary" | head -1)"; IFS='|' read -r vol num year title count <<<"$head"
-echo "FILE  Volume $vol, Number $num, $year: $title ($count article(s))"
+head="$(printf '%s\n' "$summary" | head -1)"; IFS='|' read -r kind vol num year title count <<<"$head"
+if [ "$kind" = issue ]; then echo "FILE  a NEW issue: Volume $vol, Number $num, $year: $title ($count article(s))"; else echo "FILE  $count article(s) to ADD to the existing issue Volume $vol, Number $num, $year: $title"; fi
 printf '%s\n' "$summary" | sed -n 's/^A|/      - /p'
-exist() { grep -E "^issue\|[0-9]+\|vol $vol no $num $year\|" || true; }
 q() { printf '%q' "$1"; }
 if [ -n "$localojs" ]; then
-  found="$(cd "$localojs" && php -- list <"$root/scripts/lib/accounts.php" | exist)"
+  listing="$(cd "$localojs" && php -- list <"$root/scripts/lib/accounts.php")"
 else
   [ -f "$envfile" ] || die "env file not found: $envfile"
   fm="$(stat -c '%a' "$envfile")"; [ $((8#$fm & 8#077)) -eq 0 ] || die "$envfile is readable by others (mode $fm): chmod 600 it"
@@ -52,9 +58,18 @@ else
   SSH_KEY="$(get SSH_KEY)"; [[ "$REMOTE_ROOT" =~ ^/[A-Za-z0-9._/-]+$ ]] || die "REMOTE_ROOT must be an absolute path of plain characters"
   webroot="$REMOTE_ROOT/public_html"; ops="$REMOTE_ROOT/worj-ops"
   sshbase=("${WORJ_SSH:-ssh}" -p "$SSH_PORT" -o BatchMode=yes); [ -z "$SSH_KEY" ] || sshbase+=(-i "$SSH_KEY")
-  found="$("${sshbase[@]}" "$SSH_TARGET" "cd $(q "$webroot") && php -- list" <"$root/scripts/lib/accounts.php" | exist)"
+  listing="$("${sshbase[@]}" "$SSH_TARGET" "cd $(q "$webroot") && php -- list" <"$root/scripts/lib/accounts.php")"
 fi
-[ -z "$found" ] || die "the journal already has an issue Volume $vol, Number $num, $year: importing again would duplicate it"
+issue_rows="$(printf '%s\n' "$listing" | grep -E "^issue\|[0-9]+\|vol $vol no $num $year\|" || true)"
+if [ "$kind" = issue ]; then
+  [ -z "$issue_rows" ] || die "the journal already has an issue Volume $vol, Number $num, $year: importing again would duplicate it"
+else
+  [ "$(printf '%s' "$issue_rows" | grep -c .)" = 1 ] || die "the journal must have exactly one issue Volume $vol, Number $num, $year to add the articles to (found $(printf '%s' "$issue_rows" | grep -c .))"
+  while IFS= read -r line; do
+    t="${line#A|}"; [ "$line" != "$t" ] || continue
+    if printf '%s\n' "$listing" | sed -n 's/^submission|[0-9]*|status [0-9]*|//p' | grep -qxF -- "${t:0:70}"; then die "an article titled '${t:0:60}...' already exists: importing again would duplicate it"; fi
+  done <<<"$summary"
+fi
 if [ "$apply" != true ]; then echo "WOULD: import the file as $user. DRY RUN: nothing was changed (add --apply)"; exit 0; fi
 if [ -n "$localojs" ]; then
   (cd "$localojs" && php tools/importExport.php NativeImportExportPlugin import "$(readlink -f "$xml")" worj "$user" 2>&1 | grep -v "tempnam" | tail -12)
