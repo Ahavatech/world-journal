@@ -169,6 +169,14 @@ mjs_h="$(hdr "$S/plugins/generic/pdfJsViewer/pdf.js/build/pdf.worker.mjs")"
 yes "pdf.worker.mjs is served (200)" has "$mjs_h" " 200"
 yes "...as JavaScript, so the browser will run it" has "$mjs_h" "javascript"
 
+echo "=== Word downloads (the author templates)"
+printf 'PK\003\004 fake word file' >"$core/public/worj-harness.docx"; touched+=(public/worj-harness.docx)
+mkdir -p "$core/downloads"; printf 'PK\003\004 fake word file' >"$core/downloads/WORJ-Manuscript-Template.docx"; touched+=(downloads)   # the file scripts/check-live-site.sh looks for
+dx_h="$(hdr "$S/public/worj-harness.docx")"
+yes "a .docx is served with the Word document type" has "$dx_h" "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+yes "...and as an attachment, so the browser downloads it instead of showing it as text" has "$dx_h" "content-disposition: attachment"
+p_docx_attach() { has "$(hdr "$S/public/worj-harness.docx")" "content-disposition: attachment"; }
+
 echo "=== discovery: production robots.txt, sitemap and OAI-PMH"
 rb_h="$(hdr "$S/robots.txt")"; rb_body="$(cu "$S/robots.txt")"
 yes "robots.txt is served (200, text/plain)" has "$rb_h" "content-type: text/plain"
@@ -289,6 +297,7 @@ mutate "one-hour cache for images" 'ExpiresByType image/jpeg "access plus 1 hour
 p_robotscache() { has "$(hdr "$S/robots.txt")" "max-age=3600"; }
 mutate "one-hour cache for robots.txt" 'ExpiresByType text/plain "access plus 1 hour"' p_robotscache
 mutate "static 404 page" 'ErrorDocument 404' p_404page
+mutate "Word downloads as attachments" 'Header set Content-Disposition "attachment"' p_docx_attach
 # no mutation proof for the .mjs rule: Apache already types .mjs as JavaScript, so the stand-in cannot show the rule doing work (LiteSpeed on the host does not; scripts/check-live-site.sh checks it there)
 
 if [ "$fail" = 0 ]; then echo "ALL PASS"; else echo "$fail FAILED"; fi

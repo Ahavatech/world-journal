@@ -29,6 +29,15 @@ Header always set Content-Security-Policy-Report-Only "default-src 'self'; scrip
 #     the preview black and empty (seen on the sandbox, 2026-11-16: .mjs came back as text/plain). ---
 <IfModule mod_mime.c>
 AddType text/javascript .mjs
+# Word files: a browser must DOWNLOAD them. Served as text (an unknown type), the author templates opened as black-and-white gibberish.
+AddType application/vnd.openxmlformats-officedocument.wordprocessingml.document .docx
+AddType application/vnd.openxmlformats-officedocument.wordprocessingml.template .dotx
+AddType application/msword .doc
+</IfModule>
+<IfModule mod_headers.c>
+<FilesMatch "\.(docx|dotx|doc)$">
+Header set Content-Disposition "attachment"
+</FilesMatch>
 </IfModule>
 
 # --- static assets: ONE hour for all of them (clients revalidate with the ETag afterwards). OJS appends ?v=<OJS version>, never the
