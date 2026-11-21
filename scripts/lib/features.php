@@ -104,8 +104,10 @@ foreach ($o['ops'] ?? [] as $op) {
         // append-only and repeatable; a link to the old DRAFT agreement file is repointed to the current one
         $key = ['journal_id' => $jid, 'locale' => 'en', 'setting_name' => 'authorGuidelines'];
         $txt = (string) DB::table('journal_settings')->where($key)->value('setting_value');
-        $block = "\n<h3>Downloads for authors</h3>\n<ul>\n<li><a href=\"/downloads/WORJ-Manuscript-Template.docx\">Manuscript template (Word)</a></li>\n<li><a href=\"/downloads/WORJ-Cover-Letter-Template.docx\">Cover letter template (Word)</a></li>\n<li><a href=\"/downloads/WORJ-Copyright-and-Publication-Agreement.docx\">Copyright and publication agreement (Word)</a></li>\n</ul>\n";
+        $block = "\n<h3>Downloads for authors</h3>\n<ul>\n<li><a href=\"/downloads/WORJ-Manuscript-Template.docx\" download>Manuscript template (Word)</a></li>\n<li><a href=\"/downloads/WORJ-Cover-Letter-Template.docx\" download>Cover letter template (Word)</a></li>\n<li><a href=\"/downloads/WORJ-Copyright-and-Publication-Agreement.docx\" download>Copyright and publication agreement (Word)</a></li>\n</ul>\n";
         $new = $txt;
+        // the links ask the browser to download the file (a Word file served with the wrong type opened as text on the host)
+        $new = preg_replace('#<a href="(/downloads/[^"]+\.docx)">#', '<a href="$1" download>', $new);
         if (strpos($new, 'WORJ-Copyright-and-Publication-Agreement-DRAFT.docx') !== false) {
             $new = str_replace('WORJ-Copyright-and-Publication-Agreement-DRAFT.docx">Copyright and publication agreement (Word, draft for review)', 'WORJ-Copyright-and-Publication-Agreement.docx">Copyright and publication agreement (Word)', $new);
         }

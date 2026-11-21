@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Build OJS Native XML for ONE published issue with its articles (PDFs embedded), from a metadata file you keep OUTSIDE the repository.
 
-  python3 -I scripts/build-issue-import.py METADATA.json PDF_DIR OUT.xml
+  python3 -I scripts/build-issue-import.py METADATA.json PDF_DIR OUT.xml [--into-existing]
+
+With --into-existing the file carries ONLY the articles, each pointing at the issue that already exists (matched by the issue's volume, number,
+year and title, which must match exactly one issue): use it to add articles to a published issue.
 
 METADATA.json (the authors' details are personal data: never commit it):
   {"issue": {"volume": 1, "number": "1", "year": 2026, "title": "...", "date_published": "YYYY-MM-DD"},
@@ -12,11 +15,26 @@ Nothing is invented: a field missing from the metadata is left out of the XML. T
 ojs-core/ is present (xmllint). Import it with scripts/import-issue-shared.sh (the host) or `php tools/importExport.php NativeImportExportPlugin import FILE JOURNAL USER`."""
 import base64, json, subprocess, sys
 from pathlib import Path
-from xml.sax.saxutils import escape as esc
+from xml.sax.saxutils import escape as _esc
 
-if len(sys.argv) != 4:
+_dropped = []
+
+
+def esc(s):
+    """XML-escape, and drop characters outside the basic plane (emoji and the like): OJS's database columns (utf8, three bytes) refuse them and the
+    whole import fails. What was dropped is reported at the end."""
+    s = str(s)
+    cleaned = "".join(c for c in s if ord(c) <= 0xFFFF)
+    if cleaned != s:
+        _dropped.append("".join(c for c in s if ord(c) > 0xFFFF))
+    return _esc(cleaned)
+
+into_existing = "--into-existing" in sys.argv
+args = [a for a in sys.argv[1:] if a != "--into-existing"]
+if len(args) != 3:
     print(__doc__)
     sys.exit(2)
+sys.argv = [sys.argv[0]] + args
 meta = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 pdf_dir, out = Path(sys.argv[2]), Path(sys.argv[3])
 iss, sec = meta["issue"], meta["section"]
@@ -47,6 +65,8 @@ for n, a in enumerate(meta["articles"], 1):
           </author>"""
     refs = "".join(f"<citation>{esc(r)}</citation>" for r in a.get("references", []))
     lic = f"<licenseUrl>{esc(meta['licence_url'])}</licenseUrl>" if meta.get("licence_url") else ""
+    issue_ref = (f'<issue_identification><volume>{iss["volume"]}</volume><number>{esc(str(iss["number"]))}</number>'
+                 f'<year>{iss["year"]}</year><title locale="en">{esc(iss["title"])}</title></issue_identification>') if into_existing else ""
     arts.append(f"""
     <article xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://pkp.sfu.ca"
         date_submitted="{adate}" stage="production" locale="en" status="3" current_publication_id="{fid}">
@@ -74,11 +94,19 @@ for n, a in enumerate(meta["articles"], 1):
           <submission_file_ref id="{fid}"/>
         </article_galley>
         {f'<citations locale="en">{refs}</citations>' if refs else ''}
+        {issue_ref}
         {f'<pages>{esc(a["pages"])}</pages>' if a.get('pages') else ''}
       </publication>
     </article>""")
 
-xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+if into_existing:
+    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<articles xmlns="http://pkp.sfu.ca" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://pkp.sfu.ca native.xsd">{''.join(arts)}
+</articles>
+"""
+else:
+    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <issues xmlns="http://pkp.sfu.ca" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://pkp.sfu.ca native.xsd">
   <issue published="1" current="1" access_status="1">
@@ -105,6 +133,8 @@ xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 </issues>
 """
 out.write_text(xml, encoding="utf-8")
+if _dropped:
+    print("NOTE: dropped characters the database cannot store: " + " ".join(sorted(set(_dropped))))
 print(f"wrote {out} ({out.stat().st_size} bytes, {len(arts)} article(s))")
 xsd = Path(__file__).resolve().parent.parent / "ojs-core" / "plugins" / "importexport" / "native" / "native.xsd"
 if xsd.is_file():

@@ -68,5 +68,8 @@ F --only downloads --apply >"$tmp/d2.txt" 2>&1
 yes "again: nothing changes" bash -c "! grep -q DONE '$tmp/d2.txt' && grep -q 'already have the Downloads' '$tmp/d2.txt'"
 q "update journal_settings set setting_value=replace(setting_value,'Agreement.docx\">Copyright and publication agreement (Word)','Agreement-DRAFT.docx\">Copyright and publication agreement (Word, draft for review)') where journal_id=1 and locale='en' and setting_name='authorGuidelines'"
 F --only downloads --apply >/dev/null 2>&1
+q "update journal_settings set setting_value=replace(setting_value,' download>','>') where journal_id=1 and locale='en' and setting_name='authorGuidelines'"
+F --only downloads --apply >/dev/null 2>&1
+yes "the three links ask the browser to download (the attribute is added to links already on the page)" bash -c "[ \$(mariadb -N $SANDBOX_DB_NAME -e \"select setting_value from journal_settings where journal_id=1 and setting_name='authorGuidelines'\" | grep -o 'download>' | wc -l) -ge 3 ]"
 yes "a link to the old DRAFT agreement file is repointed to the current file" bash -c "v=\$(mariadb -N $SANDBOX_DB_NAME -e \"select setting_value from journal_settings where journal_id=1 and setting_name='authorGuidelines'\"); ! grep -q 'DRAFT' <<<\"\$v\" && grep -q 'Agreement.docx' <<<\"\$v\""
 echo; echo "$pass passed, $fail failed"; [ "$fail" = 0 ]

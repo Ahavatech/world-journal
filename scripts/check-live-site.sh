@@ -64,6 +64,9 @@ for x in "Strict-Transport-Security: max-age=" "X-Content-Type-Options: nosniff"
 # robots.txt must not be cached for long (a stale closed copy in the CDN keeps crawlers out)
 rb_h="$(hdr "$base/robots.txt?x=$RANDOM")"
 if grep -qiE "^cache-control:.*max-age=([0-9]{1,4})([^0-9]|$)" <<<"$rb_h"; then ok "robots.txt is cached for under three hours at most"; else warn "robots.txt has no short cache lifetime (a stale copy could stay in the CDN)"; fi
+# the author templates must DOWNLOAD (a wrong type made them open as gibberish): a Word type, or an attachment disposition
+dl_h="$(hdr "$base/downloads/WORJ-Manuscript-Template.docx?x=$RANDOM")"
+if grep -qiE '^content-disposition: *attachment' <<<"$dl_h" || grep -qiE '^content-type:.*(wordprocessingml|octet-stream)' <<<"$dl_h"; then ok "the Word template downloads (attachment or a Word type)"; else bad "the Word template would open in the browser instead of downloading ($(grep -i '^content-type' <<<"$dl_h" | tr -d '\r'))"; fi
 # the PDF preview's scripts are .mjs modules: a browser runs them only when they are served as JavaScript
 mjs_h="$(hdr "$base/plugins/generic/pdfJsViewer/pdf.js/build/pdf.worker.mjs")"
 has "the PDF preview's .mjs scripts are served as JavaScript" "$mjs_h" "javascript"
