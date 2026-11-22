@@ -1,16 +1,18 @@
 #!/usr/bin/env bash
 # Switch on small journal features on the shared host: How to cite (format dropdown), references at submission, a Co-author role, Awards in the menu, the Downloads block on the Author Guidelines.
 #
+#   scripts/features-shared.sh --phone "+44 7852 556872" [--apply]      the phone number in every contact section (this feature alone)
 #   scripts/features-shared.sh [--only citations,coauthor,awards-menu,downloads] [--apply] [--env FILE] [--local-ojs DIR  (tests)]
 #
-# Dry run unless --apply. Each feature is safe to repeat and never overwrites a choice a person made. UNVERIFIED (not run on the host) until you run it.
+# Dry run unless --apply. Each feature is safe to repeat and never overwrites a choice a person made (the one exception: --phone sets the number you give, replacing a different one). UNVERIFIED (not run on the host) until you run it.
 set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-envfile="$root/.env.shared"; only="citations,coauthor,awards-menu,downloads"; apply=false; localojs=""
+envfile="$root/.env.shared"; only="citations,coauthor,awards-menu,downloads"; apply=false; localojs=""; phone=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --only) only="${2:-}"; shift 2 ;;
     --apply) apply=true; shift ;;
+    --phone) phone="${2:-}"; only="phone"; shift 2 ;;
     --env) envfile="${2:-}"; shift 2 ;;
     --local-ojs) localojs="${2:-}"; shift 2 ;;
     *) sed -n '2,7p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2; exit 2 ;;
@@ -19,10 +21,13 @@ done
 die() { echo "FAIL  $*" >&2; exit 1; }
 [[ "$only" =~ ^[a-z,-]+$ ]] || die "--only needs feature names, for example --only citations,coauthor"
 journal="worj"
-json_for() { python3 - "$journal" "$apply" "$only" <<'PY'
+json_for() { python3 - "$journal" "$apply" "$only" "$phone" <<'PY'
 import base64, json, sys
-j, a, o = sys.argv[1:4]
-print(base64.b64encode(json.dumps({"journal": j, "apply": a == "true", "ops": o.split(",")}).encode()).decode())
+j, a, o, ph = sys.argv[1:5]
+d = {"journal": j, "apply": a == "true", "ops": o.split(",")}
+if ph:
+    d["phone"] = ph
+print(base64.b64encode(json.dumps(d).encode()).decode())
 PY
 }
 if [ -n "$localojs" ]; then
