@@ -72,4 +72,24 @@ q "update journal_settings set setting_value=replace(setting_value,' download>',
 F --only downloads --apply >/dev/null 2>&1
 yes "the three links ask the browser to download (the attribute is added to links already on the page)" bash -c "[ \$(mariadb -N $SANDBOX_DB_NAME -e \"select setting_value from journal_settings where journal_id=1 and setting_name='authorGuidelines'\" | grep -o 'download>' | wc -l) -ge 3 ]"
 yes "a link to the old DRAFT agreement file is repointed to the current file" bash -c "v=\$(mariadb -N $SANDBOX_DB_NAME -e \"select setting_value from journal_settings where journal_id=1 and setting_name='authorGuidelines'\"); ! grep -q 'DRAFT' <<<\"\$v\" && grep -q 'Agreement.docx' <<<\"\$v\""
+
+echo "=== the phone number in every contact section"
+q "delete from journal_settings where journal_id=1 and setting_name in ('contactPhone','supportPhone')"
+q "update journal_settings set setting_value='Test Name' where journal_id=1 and setting_name in ('contactName','supportName') and setting_value=''"
+contact() { find "$core/cache" -type f -delete 2>/dev/null; curl -s --noproxy '*' "$base/about/contact"; }
+yes "before: the contact page shows no phone number" bash -c "! curl -s --noproxy '*' $base/about/contact | grep -q '7852'"
+F --phone "+44 7852 556872" >"$tmp/p0.txt" 2>&1
+yes "the dry run names both contact sections and writes nothing" bash -c "grep -q 'WOULD: set the phone of the principal contact' '$tmp/p0.txt' && grep -q 'WOULD: set the phone of the technical support contact' '$tmp/p0.txt' && [ \$(mariadb -N $SANDBOX_DB_NAME -e \"select count(*) from journal_settings where setting_name in ('contactPhone','supportPhone')\") = 0 ]"
+F --phone "+44 7852 556872" --apply >"$tmp/p1.txt" 2>&1
+page="$(contact)"
+yes "--apply puts the number in both settings" test "$(q "select count(*) from journal_settings where journal_id=1 and setting_name in ('contactPhone','supportPhone') and setting_value='+44 7852 556872'")" = 2
+yes "the contact page shows it in the principal contact AND in the technical support section" bash -c "[ \$(printf '%s' '$(printf '%s' "$page" | tr -d "'")' | grep -o '+44 7852 556872' | wc -l) -ge 2 ]"
+F --phone "+44 7852 556872" --apply >"$tmp/p2.txt" 2>&1
+yes "again: nothing changes" bash -c "! grep -q DONE '$tmp/p2.txt' && grep -c 'already has' '$tmp/p2.txt' | grep -q 2"
+F --phone "+44 1234 567890" --apply >/dev/null 2>&1
+yes "a different number replaces the old one in both" test "$(q "select count(*) from journal_settings where journal_id=1 and setting_name in ('contactPhone','supportPhone') and setting_value='+44 1234 567890'")" = 2
+for bad in "07852 556872" "+44 78<b>52" "+44" "+44 7852  556872 ext 5" "phone"; do
+  yes "a bad number is refused: $bad" bash -c "! '$root/scripts/features-shared.sh' --local-ojs '$core' --phone '$bad' --apply >/dev/null 2>&1"
+done
+yes "...and the stored number is unchanged after the refusals" test "$(q "select count(*) from journal_settings where journal_id=1 and setting_name in ('contactPhone','supportPhone') and setting_value='+44 1234 567890'")" = 2
 echo; echo "$pass passed, $fail failed"; [ "$fail" = 0 ]

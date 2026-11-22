@@ -124,6 +124,23 @@ foreach ($o['ops'] ?? [] as $op) {
             act($apply, 'add the Downloads block to the Author Guidelines (append only)', fn () => DB::table('journal_settings')->where($key)->update(['setting_value' => $new]));
         }
     }
+    if ($op === 'phone') {
+        // the journal's phone number in every contact section (the principal contact and the technical support contact on the contact page)
+        $phone = trim((string) ($o['phone'] ?? ''));
+        if (!preg_match('/^\+[0-9][0-9 ]{6,18}[0-9]$/', $phone)) {
+            echo "FAILED: the phone number must look like +44 7852 556872 (a plus, the country code, digits and single spaces)\n";
+            exit(1);
+        }
+        foreach (['contactPhone' => 'principal contact', 'supportPhone' => 'technical support contact'] as $name => $label) {
+            $key = ['journal_id' => $jid, 'locale' => '', 'setting_name' => $name];
+            $old = (string) DB::table('journal_settings')->where($key)->value('setting_value');
+            if ($old === $phone) {
+                echo "skip   the $label already has $phone\n";
+            } else {
+                act($apply, "set the phone of the $label to $phone" . ($old !== '' ? " (it was $old)" : ' (it was empty)'), fn () => DB::table('journal_settings')->updateOrInsert($key, ['setting_value' => $phone]));
+            }
+        }
+    }
     if ($op === 'awards-menu') {
         // Research Awards in the main menu: the awards page, with the winners page under it
         $mid = DB::table('navigation_menus')->where(['context_id' => $jid, 'area_name' => 'primary'])->value('navigation_menu_id');

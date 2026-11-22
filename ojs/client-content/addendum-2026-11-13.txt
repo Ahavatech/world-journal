@@ -45,3 +45,11 @@ What was applied:
   The policy pages are approved; the pending banners come off with scripts/launch-prep-shared.sh --approve.
   The copyright and publication agreement is approved. Its draft box and the word DRAFT are gone. The publisher's legal name and the governing law are still blanks in it, because the client has not given them.
   Downloads: Copyright and publication agreement (Word)
+
+==========================================================================================================================================
+ADDENDUM 4 (2026-11-22), recorded as given by the person relaying the client (a chat message):
+  "Put this phone number in all the contact section +44 7852 556872"
+
+What was applied:
+  The phone number +44 7852 556872 is published in the contact sections of the contact page (the principal contact and the technical support
+  contact). This replaces "we'll add phone number later" (Addendum 1: no phone number was published until now).

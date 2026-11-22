@@ -7,7 +7,7 @@ Send section 2 and section 3 to the client. Section 1 says what we will do with 
 ## 0. Decisions given on 2026-11-13 (recorded in `ojs/client-content/addendum-2026-11-13.txt`)
 
 - **Editorial Team:** Prof. Paul John is **Editor-in-Chief** and Dr. Dan Williams is **Assistant Editor**. The reviewers are listed exactly as the document lists them (name, affiliation, area of interest); the one personal email address in the document is **left out** (no consent to publish it). The document gives no institution or country for the two editors, so none is shown.
-- **Phone number:** later. No phone number is published.
+- **Phone number:** supplied on 2026-11-22 (+44 7852 556872, Addendum 4) and published in both contact sections of the contact page with `scripts/features-shared.sh --phone`. Before that none was published.
 - **Awards:** later. The awards pages and the awards card stay off.
 - **Everything else that was unclear:** the document is the source of truth. Nothing is added to it except what follows from its own text, listed in the addendum: the **licence** (the document's terms are those of CC BY-NC 4.0, https://creativecommons.org/licenses/by-nc/4.0/) and the **privacy contact line** (`privacy@`). Items the document is silent on stay out: no publisher name, no ISSN (the footer's ISSN line is left out for a launch without one), no support contact other than the journal's own mailboxes.
 - **Resolved 2026-11-14:** the client confirmed the licence (CC BY-NC 4.0, "keep what is there"), approved the policy pages and approved the copyright and publication agreement (Addendum 3). Still open: the publisher's name, and the two blanks in the agreement (publisher's legal name, governing law).
