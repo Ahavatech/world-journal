@@ -18,6 +18,8 @@ The client is launching **without an ISSN and without DOIs**. Both are being app
 | Row | What | Evidence |
 |---|---|---|
 | A05, A07 | Policy pages and licence confirmed by the client (CC BY-NC 4.0); the copyright and publication agreement approved | Addendum 3 in `ojs/client-content/addendum-2026-11-13.txt`; pending banners already gone on the host |
+| A33 | The change request for the work added after the original scope (awards plugin, templates, features) is signed | reported done by the developer 2026-11-16 |
+| A02 | First and last page numbers: the client wants them. Editors fill the Pages field before publishing, so `citation_firstpage` and `citation_lastpage` are written | decided 2026-11-16 |
 | A13, A14, A15, A19, A20 | Hosting, SSH, DNS, mailbox, HTTPS | working on the host |
 | A21 | The runbook run on the closed site | install, deploy, seed, accounts, awards and features all run on the host |
 | A28 | SPF, DKIM and DMARC pass; validation email works | Gmail "Show original" 2026-11-14 |
@@ -27,11 +29,8 @@ The client is launching **without an ISSN and without DOIs**. Both are being app
 
 | Row | What | Owner | State |
 |---|---|---|---|
-| A33 | A signed change request for the work added after the original scope (awards plugin, templates, features) | client and developer | not signed, as far as the repository knows |
-| A03 | Legal publisher name (also two blanks in the agreement) | client | not given: the footer line stays out |
 | A10 | The date submissions open | client | not given (submissions are currently open) |
-| A18, A34 | Who receives the administrator account; the developer's own account removed or transferred | client, developer | not named |
-| A02 | Do article pages need first and last page numbers (`citation_firstpage`, `citation_lastpage`)? | client | not decided |
+| A18, A34 | The client takes the administrator account; the developer's own access removed after the support window | client, developer | the client receives it (decided 2026-11-16); the removal and the first-password change (`install-shared.sh --finish`) happen at handover |
 | A09 | A client reviewer reads every enabled email template | client | not done |
 | A29 | The QA script run by a person | client tester | in progress |
 | A32 | Support contact and the date the 14 days start | client, developer | not set |
@@ -40,7 +39,7 @@ The client is launching **without an ISSN and without DOIs**. Both are being app
 | A25, A26, A27 | Launch checks and the forced first-password change | developer | run on launch day |
 | B01-B07 | Placeholders at zero, launch-day commit, every suite on the release commit, secret scan, repository delivery, token revocation, no unsupported claims | developer | launch day |
 
-**Can follow launch:** Crossref membership and DOIs (C01), the ISSN, indexer applications (C02), Search Console (A31, C03, with the steps in `docs/SEO.md`), HSTS stages (C05), `open_basedir` (C06), the scheduler's first-day check (A24), the plan check (C07), MariaDB status (A37), the mailbox SMTP limit and price (A36).
+**Can follow launch:** the legal publisher name (A03: the client gives it once the ISSN is granted; the footer and the agreement's blank stay as they are until then), Crossref membership and DOIs (C01), the ISSN, indexer applications (C02), Search Console (A31, C03, with the steps in `docs/SEO.md`), HSTS stages (C05), `open_basedir` (C06), the scheduler's first-day check (A24), the plan check (C07), MariaDB status (A37), the mailbox SMTP limit and price (A36).
 
 **At a glance:** 66 rows. **41 gate the launch date** and **25 can be done afterwards**. Of the outside-the-repository items in section A, 32 gate the launch date and 3 can follow. Section B is the developer's repository work (7 gating); section C (8) can wait; section D lists 16 research tasks, each with a source to read and an owner.
 
